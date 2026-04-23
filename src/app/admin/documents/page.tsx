@@ -1,0 +1,259 @@
+'use client'
+
+import { useEffect, useState, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { FileText, Download, Trash2, Search, FolderOpen, ExternalLink, Building2, Calendar, Upload } from 'lucide-react'
+
+const CATEGORIES = [
+  '전체', '일지보고서', '사진대지', '도면마킹', '안전서류', '견적서',
+  '시공계획서', '장비계획서', '기타서류', '확인서'
+]
+
+interface Document {
+  id: string
+  site_id: string
+  category: string
+  title: string
+  file_url: string
+  file_type: string | null
+  required: boolean
+  uploaded_by: string | null
+  created_at: string
+  site_name?: string
+  uploader_name?: string
+}
+
+interface Site { id: string; name: string }
+
+type DocumentRow = Omit<Document, 'site_name' | 'uploader_name'> & {
+  site?: { name?: string } | Array<{ name?: string }> | null
+  uploader?: { name?: string } | Array<{ name?: string }> | null
+}
+
+export default function AdminDocumentsPage() {
+  const [docs, setDocs] = useState<Document[]>([])
+  const [sites, setSites] = useState<Site[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('전체')
+  const [siteFilter, setSiteFilter] = useState<string>('all')
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const supabase = createClient()
+
+  const fetchDocs = useCallback(async () => {
+    setLoading(true)
+    const [{ data, error }, { data: sitesData }] = await Promise.all([
+      supabase.from('documents').select(`
+        id, site_id, category, title, file_url, file_type, required, uploaded_by, created_at,
+        site:sites(name),
+        uploader:workers(name)
+      `).order('created_at', { ascending: false }).limit(300),
+      supabase.from('sites').select('id, name').order('name'),
+    ])
+
+    if (!error && data) {
+      const mappedDocs: Document[] = (data as DocumentRow[]).map(doc => {
+        const site = Array.isArray(doc.site) ? doc.site[0] : doc.site
+        const uploader = Array.isArray(doc.uploader) ? doc.uploader[0] : doc.uploader
+
+        return {
+          id: doc.id,
+          site_id: doc.site_id,
+          category: doc.category,
+          title: doc.title,
+          file_url: doc.file_url,
+          file_type: doc.file_type,
+          required: doc.required,
+          uploaded_by: doc.uploaded_by,
+          created_at: doc.created_at,
+          site_name: site?.name,
+          uploader_name: uploader?.name,
+        }
+      })
+
+      setDocs(mappedDocs)
+    }
+    if (sitesData) setSites(sitesData)
+    setLoading(false)
+  }, [supabase])
+
+  useEffect(() => { fetchDocs() }, [fetchDocs])
+
+  const handleDelete = useCallback(async (id: string) => {
+    setDeleting(id)
+    const doc = docs.find(d => d.id === id)
+    if (doc?.file_url) {
+      const path = doc.file_url.replace(/.*\/storage\/v1\/object\/public\//, '')
+      await supabase.storage.from('documents').remove([path]).catch(() => {})
+    }
+    await supabase.from('documents').delete().eq('id', id)
+    setDocs(prev => prev.filter(d => d.id !== id))
+    setDeleting(null)
+    setConfirmDelete(null)
+  }, [supabase, docs])
+
+  const filtered = docs.filter(d => {
+    if (categoryFilter !== '전체' && d.category !== categoryFilter) return false
+    if (siteFilter !== 'all' && d.site_id !== siteFilter) return false
+    if (search) {
+      const q = search.toLowerCase()
+      return d.title.toLowerCase().includes(q) || d.site_name?.toLowerCase().includes(q)
+    }
+    return true
+  })
+
+  const categoryCounts: Record<string, number> = {}
+  docs.forEach(d => {
+    categoryCounts[d.category] = (categoryCounts[d.category] || 0) + 1
+  })
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-[var(--color-navy)]">문서/안전서류</h1>
+        <p className="text-sm text-[var(--color-text-secondary)]">총 {docs.length}개 문서</p>
+      </div>
+
+      {/* Category Tabs */}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
+        {CATEGORIES.map(cat => {
+          const count = cat === '전체' ? docs.length : (categoryCounts[cat] || 0)
+          return (
+            <button
+              key={cat}
+              onClick={() => setCategoryFilter(cat)}
+              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                categoryFilter === cat
+                  ? 'bg-[var(--color-navy)] text-white'
+                  : 'bg-white text-[var(--color-text-secondary)] border border-[var(--color-border)]'
+              }`}
+            >
+              {cat} {count > 0 && <span className="ml-1 opacity-70">({count})</span>}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" strokeWidth={1.9} />
+          <input
+            type="text"
+            placeholder="문서명, 현장명 검색..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+          />
+        </div>
+        <select
+          value={siteFilter}
+          onChange={e => setSiteFilter(e.target.value)}
+          className="px-4 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] bg-white"
+        >
+          <option value="all">전체 현장</option>
+          {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+      </div>
+
+      {/* Confirm Delete */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6">
+            <h3 className="text-lg font-semibold text-red-600 mb-2">문서 삭제</h3>
+            <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+              이 문서를 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2 border border-[var(--color-border)] rounded-lg hover:bg-gray-50 transition">취소</button>
+              <button
+                onClick={() => handleDelete(confirmDelete)}
+                disabled={deleting === confirmDelete}
+                className="flex-1 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition disabled:opacity-50"
+              >
+                {deleting === confirmDelete ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* List */}
+      {loading ? (
+        <div className="text-center py-12 text-[var(--color-text-secondary)]">로딩 중...</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12 text-[var(--color-text-secondary)]">문서가 없습니다.</div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">문서명</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">분류</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">현장</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">업로더</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">날짜</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">필수</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">작업</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map(d => (
+                  <tr key={d.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" strokeWidth={1.9} />
+                        <span className="text-sm font-medium">{d.title}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">{d.category}</span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{d.site_name || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{d.uploader_name || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{d.created_at?.slice(0, 10)}</td>
+                    <td className="px-4 py-3 text-center">
+                      {d.required
+                        ? <span className="text-xs text-red-500 font-medium">필수</span>
+                        : <span className="text-xs text-gray-400">선택</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        <a
+                          href={d.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition"
+                          title="새 창에서 열기"
+                        >
+                          <ExternalLink className="h-4 w-4" strokeWidth={1.9} />
+                        </a>
+                        <a
+                          href={d.file_url}
+                          download
+                          className="p-1.5 rounded-lg hover:bg-gray-100 text-blue-600 transition"
+                          title="다운로드"
+                        >
+                          <Download className="h-4 w-4" strokeWidth={1.9} />
+                        </a>
+                        <button
+                          onClick={() => setConfirmDelete(d.id)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition"
+                          title="삭제"
+                        >
+                          <Trash2 className="h-4 w-4" strokeWidth={1.9} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
