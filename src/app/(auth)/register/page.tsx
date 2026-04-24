@@ -166,7 +166,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="text-center mb-8">
-            <img src="/images/logo.png" alt="INOPNC" className="h-10 mx-auto" />
+            <img src="/images/logo_w.png" alt="INOPNC" className="h-10 mx-auto" />
             <p className="text-[var(--color-text-secondary)] mt-3">회원 유형을 선택하세요.</p>
           </div>
 
@@ -210,7 +210,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src="/images/logo.png" alt="INOPNC" className="h-10 mx-auto" />
+          <img src="/images/logo_w.png" alt="INOPNC" className="h-10 mx-auto" />
           <p className="text-[var(--color-text-secondary)] mt-3">{roleLabel} 등록</p>
         </div>
 

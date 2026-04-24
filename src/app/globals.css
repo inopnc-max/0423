@@ -1445,7 +1445,7 @@ select option {
   justify-content: center;
   gap: 2px;
   min-height: 52px;
-  color: var(--color-text-sub);
+  color: var(--color-text-title);
   transition: color var(--transition-fast), transform var(--transition-fast);
 }
 

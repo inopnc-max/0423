@@ -81,7 +81,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src="/images/logo.png" alt="INOPNC" className="h-10 mx-auto" />
+          <img src="/images/logo_w.png" alt="INOPNC" className="h-10 mx-auto" />
           <p className="text-[var(--color-text-secondary)] mt-3">계정으로 로그인하세요.</p>
         </div>
 
@@ -160,6 +160,20 @@ export default function LoginPage() {
             {/* Submit Error */}
             {submitError && <AlertBox message={submitError} variant="danger" />}
 
+            {/* Auto Login + Register Link */}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-[var(--form-border)] text-[var(--color-primary-strong)] focus:ring-[var(--color-accent-ring)]"
+                />
+                <span className="text-sm text-[var(--color-text-secondary)]">자동로그인</span>
+              </label>
+              <Link href="/register" className="text-[var(--color-primary-strong)] text-sm font-semibold hover:underline">
+                회원가입
+              </Link>
+            </div>
+
             {/* Submit Button */}
             <button
               type="submit"
@@ -169,14 +183,6 @@ export default function LoginPage() {
               {loading ? '로그인 중...' : '로그인'}
             </button>
           </form>
-
-          {/* Register Link */}
-          <div className="mt-4 text-center">
-            <span className="text-[var(--color-text-secondary)] text-sm">아직 계정이 없으신가요? </span>
-            <Link href="/register" className="text-[var(--color-primary-strong)] text-sm font-semibold hover:underline">
-              회원가입
-            </Link>
-          </div>
         </div>
 
         {/* Support Contact */}

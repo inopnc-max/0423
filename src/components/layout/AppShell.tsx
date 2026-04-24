@@ -119,7 +119,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         }
       : {
           kind: 'logo',
-          src: '/images/logo.png',
+          src: '/images/logo_g.png',
           alt: 'INOPNC',
           href: ROUTES.home,
         }

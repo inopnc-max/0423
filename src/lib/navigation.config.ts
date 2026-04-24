@@ -6,14 +6,11 @@ import {
   CalendarDays,
   ClipboardCheck,
   ClipboardList,
-  FileSignature,
   Files,
   FolderOpen,
   History,
   House,
-  MessageSquareMore,
   Package,
-  Search,
   Settings,
   ShieldCheck,
   Upload,
@@ -76,49 +73,7 @@ export const APP_NAV_ITEMS: NavigationItem[] = [
   { href: ROUTES.settings, label: ROUTE_LABELS[ROUTES.settings], icon: Settings },
 ]
 
-export const HEADER_ACTION_ITEMS: HeaderActionItem[] = [
-  {
-    id: 'search',
-    kind: 'link',
-    href: ROUTES.search,
-    label: ROUTE_LABELS[ROUTES.search],
-    title: ROUTE_LABELS[ROUTES.search],
-    icon: Search,
-    mobilePriority: 4,
-    visible: context => canShowLinkedAction(context, ROUTES.search),
-  },
-  {
-    id: 'confirm-sheet',
-    kind: 'link',
-    href: ROUTES.confirmSheet,
-    label: ROUTE_LABELS[ROUTES.confirmSheet],
-    title: ROUTE_LABELS[ROUTES.confirmSheet],
-    icon: FileSignature,
-    mobilePriority: 3,
-    visible: context => canShowLinkedAction(context, ROUTES.confirmSheet),
-  },
-  {
-    id: 'hq-requests',
-    kind: 'link',
-    href: ROUTES.hqRequests,
-    label: ROUTE_LABELS[ROUTES.hqRequests],
-    title: ROUTE_LABELS[ROUTES.hqRequests],
-    icon: MessageSquareMore,
-    mobilePriority: 2,
-    visible: context => canShowLinkedAction(context, ROUTES.hqRequests),
-  },
-  {
-    id: 'notifications',
-    kind: 'link',
-    href: ROUTES.notifications,
-    label: ROUTE_LABELS[ROUTES.notifications],
-    title: ROUTE_LABELS[ROUTES.notifications],
-    icon: Bell,
-    badge: 'notifications',
-    mobilePriority: 4,
-    visible: context => canShowLinkedAction(context, ROUTES.notifications),
-  },
-]
+export const HEADER_ACTION_ITEMS: HeaderActionItem[] = []
 
 export const SECONDARY_APP_ACTIONS: NavigationItem[] = [
   { href: ROUTES.materials, label: ROUTE_LABELS[ROUTES.materials], icon: Package },
