@@ -359,6 +359,11 @@ export default function ConfirmSheetPage() {
     }
   }, [draft.siteName, draft.projectName, generatePDF])
 
+  // 탭 전환 핸들러
+  const handleShowPreview = useCallback(() => {
+    setShowPreview(prev => !prev)
+  }, [])
+
   return (
     <PreviewCenter>
       {/* 탭 전환 */}
