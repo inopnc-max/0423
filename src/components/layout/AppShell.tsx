@@ -184,9 +184,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         },
       ]
 
-  // 메인 네비게이션 라우트에서는 헤더 타이틀 숨김 (하단 네비와 중복 방지)
-  const mainNavRoutes = ['/home', '/output', '/worklog', '/site', '/documents', '/settings']
-  const headerTitle = mainNavRoutes.includes(pathname) ? '' : getRouteLabel(pathname)
+  // 메인 네비게이션 및 헤더 액션 라우트에서는 헤더 타이틀 숨김
+  const hideTitleRoutes = ['/home', '/output', '/worklog', '/site', '/documents', '/settings', '/search', '/confirm-sheet', '/hq-requests', '/notifications']
+  const headerTitle = hideTitleRoutes.includes(pathname) ? '' : getRouteLabel(pathname)
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">
