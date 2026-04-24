@@ -81,7 +81,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src="/images/logo.png" alt="INOPNC" className="h-10 mx-auto" />
+          <img src="/logo_w.png" alt="INOPNC" className="h-12 w-auto mx-auto" />
           <p className="text-[var(--color-text-secondary)] mt-3">계정으로 로그인하세요.</p>
         </div>
 

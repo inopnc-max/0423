@@ -236,7 +236,7 @@ function HeaderLeadingSlot({ leading }: { leading: AppHeaderLeading }) {
       <img
         src={leading.src}
         alt={leading.alt ?? '로고'}
-        className="ui-header__logo"
+        className="h-8 w-auto object-contain"
       />
     )
 
