@@ -6,9 +6,9 @@ import { ROUTES } from './routes.constants'
 import type { Role } from './roles'
 
 export const ROUTE_ROLE_ACCESS: Record<string, readonly Role[]> = {
-  [ROUTES.login]: ['worker', 'partner', 'site_manager', 'admin'],
-  [ROUTES.register]: ['worker', 'partner', 'site_manager', 'admin'],
-  [ROUTES.home]: ['worker', 'partner', 'site_manager', 'admin'],
+  [ROUTES.login]: ['worker', 'partner', 'site_manager', 'admin', 'production_manager'],
+  [ROUTES.register]: ['worker', 'partner', 'site_manager', 'admin', 'production_manager'],
+  [ROUTES.home]: ['worker', 'partner', 'site_manager', 'admin', 'production_manager'],
   [ROUTES.output]: ['worker', 'partner', 'site_manager', 'admin'],
   [ROUTES.worklog]: ['worker', 'site_manager', 'admin'],
   [ROUTES.site]: ['worker', 'partner', 'site_manager', 'admin'],
@@ -16,10 +16,11 @@ export const ROUTE_ROLE_ACCESS: Record<string, readonly Role[]> = {
   [ROUTES.materials]: ['worker', 'site_manager', 'admin'],
   [ROUTES.confirmSheet]: ['worker', 'partner', 'site_manager', 'admin'],
   [ROUTES.search]: ['worker', 'partner', 'site_manager', 'admin'],
-  [ROUTES.settings]: ['worker', 'partner', 'site_manager', 'admin'],
+  [ROUTES.settings]: ['worker', 'partner', 'site_manager', 'admin', 'production_manager'],
   [ROUTES.notifications]: ['worker', 'partner', 'site_manager', 'admin'],
   [ROUTES.hqRequests]: ['worker', 'partner', 'site_manager', 'admin'],
   [ROUTES.admin]: ['admin'],
+  [ROUTES.production]: ['production_manager', 'admin'],
 }
 
 function findParentRoute(route: string): string | null {
@@ -70,6 +71,7 @@ export function getRouteLabel(pathname: string): string {
       [ROUTES.notifications]: '알림',
       [ROUTES.hqRequests]: '본사요청',
       [ROUTES.admin]: '관리자콘솔',
+      [ROUTES.production]: '생산관리',
     }
     return labels[matchedRoute] || 'INOPNC'
   }

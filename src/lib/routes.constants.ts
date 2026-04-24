@@ -17,6 +17,7 @@ export const ROUTES = {
   notifications: '/notifications',
   hqRequests: '/hq-requests',
   admin: '/admin',
+  production: '/production',
 } as const
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES]
@@ -36,4 +37,5 @@ export const ROUTE_LABELS: Record<AppRoute, string> = {
   [ROUTES.notifications]: '알림',
   [ROUTES.hqRequests]: '본사요청',
   [ROUTES.admin]: '관리자콘솔',
+  [ROUTES.production]: '생산관리',
 }

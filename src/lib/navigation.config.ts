@@ -150,6 +150,26 @@ export const ADMIN_NAV_ITEMS: NavigationItem[] = [
   { href: ADMIN_ROUTES.csvUpload, label: 'CSV 업로드', icon: Upload },
 ]
 
+export const PRODUCTION_ROUTES = {
+  dashboard: ROUTES.production,
+  npc1000: '/production/npc1000',
+  npc3000q: '/production/npc3000q',
+  other: '/production/other',
+  transport: '/production/transport',
+  selfUse: '/production/self-use',
+  sales: '/production/sales',
+} as const
+
+export const PRODUCTION_NAV_ITEMS: NavigationItem[] = [
+  { href: PRODUCTION_ROUTES.dashboard, label: '생산관리', icon: Boxes },
+  { href: PRODUCTION_ROUTES.npc1000, label: 'NPC-1000', icon: Package },
+  { href: PRODUCTION_ROUTES.npc3000q, label: 'NPC-3000Q', icon: Package },
+  { href: PRODUCTION_ROUTES.other, label: '기타', icon: Package },
+  { href: PRODUCTION_ROUTES.transport, label: '운송비', icon: Wallet },
+  { href: PRODUCTION_ROUTES.selfUse, label: '자체사용', icon: Boxes },
+  { href: PRODUCTION_ROUTES.sales, label: '판매', icon: Wallet },
+]
+
 export function getHeaderActionItems(
   context: HeaderActionVisibilityContext
 ): HeaderActionItem[] {
