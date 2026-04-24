@@ -360,26 +360,6 @@ export default function ConfirmSheetPage() {
   }, [draft.siteName, draft.projectName, generatePDF])
 
   // 탭 변경
-  const handleShowPreview = () => setShowPreview(true)
-  const handleShowForm = () => setShowPreview(false)
-
-  return (
-    <PreviewCenter
-      mode="fullscreen"
-      title="작업완료확인서"
-      subtitle={draft.siteName || '현장을 선택하세요'}
-      showBack={true}
-      onBack={() => router.back()}
-      dockMode="edit"
-      onDownload={isValid ? generatePDF : undefined}
-      onShare={handleShare}
-      dockDisabled={generating || !isValid}
-    >
-      <div className="space-y-4">
-        {/* 탭 전환 */}
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={handleShowForm}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition ${
               !showPreview
                 ? 'bg-[var(--color-primary-strong)] text-white'

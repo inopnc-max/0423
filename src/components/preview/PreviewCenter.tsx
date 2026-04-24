@@ -100,7 +100,7 @@ export function PreviewCenter({
 
       {/* Body - 하단 Dock 높이만큼 padding 추가하여 콘텐츠 가림 방지 */}
       <div
-        className={`flex-1 overflow-auto pb-[calc(80px+var(--safe-bottom))] ${
+        className={`flex-1 overflow-auto pb-[calc(100px+var(--safe-bottom))] ${
           contentType === 'report'
             ? 'bg-[var(--color-bg-soft)]'
             : 'bg-[var(--color-bg)]'
