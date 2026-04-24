@@ -10,13 +10,17 @@ import {
 } from '@/lib/auth-utils'
 import { getLoginRedirectPath } from '@/lib/routes'
 
+const AUTO_LOGIN_KEY = 'supabase_autologin_enabled'
+
 interface AuthContextType {
   user: AuthSession | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  autoLoginEnabled: boolean
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
   canAccess: (requiredRoles: string[]) => boolean
+  setAutoLoginEnabled: (enabled: boolean) => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -30,6 +34,12 @@ export function AuthProvider({
 }) {
   const [user, setUser] = useState<AuthSession | null>(initialSession ?? null)
   const [loading, setLoading] = useState(!initialSession)
+  const [autoLoginEnabled, setAutoLoginEnabled] = useState(false)
+
+  useEffect(() => {
+    const stored = localStorage.getItem(AUTO_LOGIN_KEY)
+    setAutoLoginEnabled(stored === 'true')
+  }, [])
 
   const buildSession = useCallback(
     async (userId: string, email: string, metadata?: Record<string, unknown>) => {
@@ -59,6 +69,10 @@ export function AuthProvider({
       .getSession()
       .then(async ({ data: { session } }: { data: { session: { user: { id: string; email?: string; user_metadata?: Record<string, unknown> } } | null } }) => {
         if (session?.user) {
+          if (!autoLoginEnabled) {
+            await supabase.auth.signOut()
+            return
+          }
           const builtSession = await buildSession(
             session.user.id,
             session.user.email || '',
@@ -73,7 +87,7 @@ export function AuthProvider({
       .finally(() => {
         setLoading(false)
       })
-  }, [initialSession, buildSession])
+  }, [initialSession, buildSession, autoLoginEnabled])
 
   useEffect(() => {
     const supabase = createClient()
@@ -103,7 +117,12 @@ export function AuthProvider({
     }
   }, [buildSession])
 
-  const signIn = useCallback(async (email: string, password: string) => {
+  const setAutoLogin = useCallback((enabled: boolean) => {
+    localStorage.setItem(AUTO_LOGIN_KEY, enabled ? 'true' : 'false')
+    setAutoLoginEnabled(enabled)
+  }, [])
+
+  const signIn = useCallback(async (email: string, password: string, rememberMe = false) => {
     setLoading(true)
     try {
       const supabase = createClient()
@@ -117,6 +136,14 @@ export function AuthProvider({
 
       if (error || !authUser) {
         return { success: false, error: error?.message || 'Login failed.' }
+      }
+
+      if (rememberMe) {
+        localStorage.setItem(AUTO_LOGIN_KEY, 'true')
+        setAutoLoginEnabled(true)
+      } else {
+        localStorage.setItem(AUTO_LOGIN_KEY, 'false')
+        setAutoLoginEnabled(false)
       }
 
       const profile = await fetchWorkerProfile(supabase, authUser.id)
@@ -184,7 +211,7 @@ export function AuthProvider({
   )
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, refreshProfile, canAccess }}>
+    <AuthContext.Provider value={{ user, loading, autoLoginEnabled, signIn, signOut, refreshProfile, canAccess, setAutoLoginEnabled: setAutoLogin }}>
       {children}
     </AuthContext.Provider>
   )

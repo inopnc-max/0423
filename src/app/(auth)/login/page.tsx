@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff } from 'lucide-react'
@@ -42,9 +42,14 @@ const EMPTY_FIELD_MESSAGE = '이메일과 비밀번호를 입력해주세요.'
 /* ── Component ── */
 export default function LoginPage() {
   const router = useRouter()
-  const { signIn, loading } = useAuth()
+  const { signIn, loading, autoLoginEnabled, setAutoLoginEnabled } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [rememberMe, setRememberMe] = useState(autoLoginEnabled)
+
+  useEffect(() => {
+    setRememberMe(autoLoginEnabled)
+  }, [autoLoginEnabled])
 
   const { values, errors, handleChange, handleBlur, validateAll, hasErrors } =
     useFormValidation(LOGIN_FIELDS)
@@ -65,7 +70,7 @@ export default function LoginPage() {
       }
 
       /* Sign in */
-      const result = await signIn(values.email.trim().toLowerCase(), values.password)
+      const result = await signIn(values.email.trim().toLowerCase(), values.password, rememberMe)
       if (!result.success) {
         setSubmitError(result.error || '로그인에 실패했습니다.')
         return
@@ -155,6 +160,33 @@ export default function LoginPage() {
               {errors.password && (
                 <p className="mt-1.5 text-xs font-medium text-[var(--color-danger)]">{errors.password}</p>
               )}
+            </div>
+
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={rememberMe}
+                onClick={() => setRememberMe(!rememberMe)}
+                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                  rememberMe
+                    ? 'bg-[var(--color-primary-strong)] border-[var(--color-primary-strong)]'
+                    : 'bg-transparent border-[var(--form-border)] hover:border-[var(--color-primary-strong)]'
+                }`}
+              >
+                {rememberMe && (
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+              <label
+                onClick={() => setRememberMe(!rememberMe)}
+                className="text-sm text-[var(--color-text-secondary)] cursor-pointer select-none"
+              >
+                자동로그인
+              </label>
             </div>
 
             {/* Submit Error */}
