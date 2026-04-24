@@ -188,9 +188,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const hideTitleRoutes = ['/home', '/output', '/worklog', '/site', '/documents', '/settings', '/search', '/confirm-sheet', '/hq-requests', '/notifications']
   const headerTitle = hideTitleRoutes.includes(pathname) ? '' : getRouteLabel(pathname)
 
-  // confirm-sheet 페이지는 BottomNav 숨김 (PreviewDock과 충돌 방지)
-  const isConfirmSheet = pathname === ROUTES.confirmSheet
-
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">
       <AppHeader
@@ -225,7 +222,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         ))}
 
-      {!isConfirmSheet && !isPartnerUser && (
+      {!isPartnerUser && (
         <BottomNav items={bottomNavItems} pathname={pathname} />
       )}
     </div>
