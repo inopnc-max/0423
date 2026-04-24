@@ -73,6 +73,7 @@
   --form-select-text: #46558c;
   --form-select-option-text: #23262f;
   --form-dashed-border: #d3dae5;
+  --color-accent-ring: rgba(137, 207, 235, 0.32);
 
   /* Semantic Status */
   --color-success: #2f9a72;

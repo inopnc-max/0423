@@ -64,8 +64,7 @@ export function ConfirmSheetForm({ draft, sites, onDraftChange, onSiteSelect }: 
           <select
             value={draft.siteId}
             onChange={e => handleSiteChange(e.target.value)}
-            className="w-full px-3 py-2.5 border rounded-lg bg-[var(--form-surface)] text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent-ring)]"
-            style={{ borderColor: 'rgba(219, 227, 236, 1)' }}
+            className="w-full px-3 py-2.5 border rounded-lg bg-[var(--form-surface)] text-sm text-[var(--color-text-main)] focus:outline-none"
           >
             <option value="">현장을 선택하세요</option>
             {sites.map(site => (
@@ -199,8 +198,7 @@ export function ConfirmSheetForm({ draft, sites, onDraftChange, onSiteSelect }: 
           onChange={e => onDraftChange({ specialNotes: e.target.value })}
           placeholder="특기사항을 입력하세요 (없으면 비워두세요)"
           rows={3}
-          className="w-full px-3 py-2.5 border rounded-lg bg-white text-sm resize-none"
-          style={{ borderColor: 'rgba(219, 227, 236, 1)' }}
+          className="w-full px-3 py-2.5 border rounded-lg bg-white text-sm resize-none focus:outline-none"
         />
       </section>
 

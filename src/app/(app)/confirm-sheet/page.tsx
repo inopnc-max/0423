@@ -412,8 +412,7 @@ export default function ConfirmSheetPage() {
                 <select
                   value={selectedSiteId}
                   onChange={e => handleSiteSelect(e.target.value)}
-                  className="w-full px-3 py-2.5 border rounded-lg bg-[var(--color-bg-surface)] text-sm"
-                  style={{ borderColor: 'rgba(219, 227, 236, 1)' }}
+                  className="w-full px-3 py-2.5 border rounded-lg bg-[var(--color-bg-surface)] text-sm focus:outline-none"
                 >
                   <option value="">현장 선택</option>
                   {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
