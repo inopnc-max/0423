@@ -34,16 +34,6 @@ a {
   color: var(--form-placeholder);
 }
 
-:where(
-  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),
-  select,
-  textarea
-):focus {
-  border-color: var(--form-border-focus);
-  box-shadow: 0 0 0 2px var(--color-accent-ring);
-  outline: none;
-}
-
 select {
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -1445,8 +1435,12 @@ select option {
   justify-content: center;
   gap: 2px;
   min-height: 52px;
-  color: var(--color-text-title);
+  color: var(--color-text-muted);
   transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.ui-bottom-nav__item:hover {
+  color: var(--color-text-sub);
 }
 
 .ui-bottom-nav__item-label {
