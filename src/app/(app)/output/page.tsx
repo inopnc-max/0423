@@ -124,7 +124,7 @@ function PayStubContent({
             <td className="font-medium text-[13px] p-2 border border-[#d1d5db] text-center">{stub.man.toFixed(1)}</td>
             <th className="bg-[#f8fafc] text-[var(--color-navy)] font-semibold text-[13px] p-2 border border-[#d1d5db] w-1/4 text-center">일당</th>
             <td className="font-medium text-[13px] p-2 border border-[#d1d5db] text-center">
-              ₩{formatCurrency(stub.price)}
+              ₩{formatCurrency(stub.price ?? 0)}
             </td>
           </tr>
         </tbody>
@@ -179,7 +179,7 @@ function PayStubContent({
           <div className="divide-y divide-[#e5e7eb]">
             {[
               { label: '일수', value: stub.man.toFixed(1) },
-              { label: '일당', value: `₩${formatCurrency(stub.price)}` },
+              { label: '일당', value: `₩${formatCurrency(stub.price ?? 0)}` },
               { label: '공제', value: `₩${formatCurrency(paystubGross)}` },
               { label: '공제', value: `-₩${formatCurrency(paystubDeductions)}`, valueClass: 'text-red-500' },
               { label: '실수령액', value: `₩${formatCurrency(paystubNet)}`, highlight: true },
@@ -204,7 +204,7 @@ function PayStubContent({
           <tr>
             {[
               stub.man.toFixed(1),
-              `₩${formatCurrency(stub.price)}`,
+              `₩${formatCurrency(stub.price ?? 0)}`,
               `₩${formatCurrency(paystubGross)}`,
               `₩${formatCurrency(paystubDeductions)}`,
               `₩${formatCurrency(paystubNet)}`,
@@ -299,7 +299,7 @@ function PayRequestContent({
             const totalPay = cell.entries.reduce((s, e) => s + e.price, 0)
             let siteLabel = ''
             if (cell.entries.length > 0) {
-              const base = cell.entries[0].site.replace(/\s+/g, '')
+              const base = (cell.entries[0].site ?? '').replace(/\s+/g, '')
               siteLabel = cell.entries.length > 1 ? `${base.slice(0, 4)}+${cell.entries.length - 1}` : base.slice(0, 4)
             }
 
@@ -451,7 +451,7 @@ export default function OutputPage() {
       if (cell.entries.length > 0) {
         workedDays++
         cell.entries.forEach(e => {
-          sites.add(e.site)
+          if (e.site) sites.add(e.site)
           totalMan += e.man
         })
       }
@@ -824,7 +824,7 @@ export default function OutputPage() {
                             {(totalPrice / 10000).toFixed(0)}만
                           </span>
                           {cell.entries.length === 1 && (
-                            <span className="ui-date-cell__meta">{compactSiteLabel(cell.entries[0].site)}</span>
+                            <span className="ui-date-cell__meta">{compactSiteLabel(cell.entries[0].site ?? '')}</span>
                           )}
                         </div>
                       ) : (
