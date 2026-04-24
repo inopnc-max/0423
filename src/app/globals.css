@@ -1416,7 +1416,7 @@ select option {
   max-width: 960px;
   width: 100%;
   bottom: 0;
-  z-index: 45;
+  z-index: 55;
   display: grid;
   align-items: center;
   min-height: calc(var(--bottom-nav-height) + var(--safe-bottom));

@@ -85,7 +85,7 @@ export function PreviewCenter({
       className={`flex flex-col bg-[var(--color-bg-surface)] ${
         isModal
           ? `mx-auto h-[85dvh] ${maxWidth} rounded-2xl shadow-2xl`
-          : 'h-screen'
+          : 'min-h-screen'
       }`}
     >
       {/* Header */}
