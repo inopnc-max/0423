@@ -212,7 +212,6 @@
   --color-surface: var(--color-bg-surface);
 
   /* Legacy Border mapped to v5.1 */
-  --color-border: var(--color-border);
   --color-border-dark: var(--color-border-strong);
 
   /* Legacy Semantic Status mapped to v5.1 */

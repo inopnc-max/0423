@@ -1,9 +1,9 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+@import '../lib/design-tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
-@import '../lib/design-tokens.css';
 
 * {
   box-sizing: border-box;
