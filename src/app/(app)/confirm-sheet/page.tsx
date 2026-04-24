@@ -359,30 +359,35 @@ export default function ConfirmSheetPage() {
     }
   }, [draft.siteName, draft.projectName, generatePDF])
 
-  // 탭 변경
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition ${
-              !showPreview
-                ? 'bg-[var(--color-primary-strong)] text-white'
-                : 'bg-[var(--color-bg-soft)] text-[var(--color-text-sub)]'
-            }`}
-          >
-            <FileText className="h-4 w-4" />
-            입력
-          </button>
-          <button
-            onClick={handleShowPreview}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition ${
-              showPreview
-                ? 'bg-[var(--color-primary-strong)] text-white'
-                : 'bg-[var(--color-bg-soft)] text-[var(--color-text-sub)]'
-            }`}
-          >
-            <Eye className="h-4 w-4" />
-            미리보기
-          </button>
-        </div>
+  return (
+    <PreviewCenter>
+      {/* 탭 전환 */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={handleShowPreview}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition ${
+            !showPreview
+              ? 'bg-[var(--color-primary-strong)] text-white'
+              : 'bg-[var(--color-bg-soft)] text-[var(--color-text-sub)]'
+          }`}
+        >
+          <FileText className="h-4 w-4" />
+          입력
+        </button>
+        <button
+          onClick={handleShowPreview}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition ${
+            showPreview
+              ? 'bg-[var(--color-primary-strong)] text-white'
+              : 'bg-[var(--color-bg-soft)] text-[var(--color-text-sub)]'
+          }`}
+        >
+          <Eye className="h-4 w-4" />
+          미리보기
+        </button>
+      </div>
 
-        {/* 입력 폼 탭 */}
+      {/* 입력 폼 탭 */}
         {!showPreview && (
           <>
             {/* 현장/날짜 선택 (기존 로직 연동) */}
