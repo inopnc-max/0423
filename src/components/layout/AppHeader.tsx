@@ -167,12 +167,12 @@ function HeaderMenuItem({
         className={className}
         role="menuitem"
         aria-current={action.active ? 'page' : undefined}
+        aria-label={action.label}
         onClick={onNavigate}
       >
         <span className="ui-header-overflow__icon">
           <Icon />
         </span>
-        <span className="ui-header-overflow__label">{action.label}</span>
         {action.badgeContent ? (
           <span className="ui-header-overflow__badge">{action.badgeContent}</span>
         ) : null}
@@ -185,6 +185,7 @@ function HeaderMenuItem({
       type="button"
       className={className}
       role="menuitem"
+      aria-label={action.label}
       onClick={() => {
         action.onSelect?.()
         onNavigate()
@@ -194,7 +195,6 @@ function HeaderMenuItem({
       <span className="ui-header-overflow__icon">
         <Icon />
       </span>
-      <span className="ui-header-overflow__label">{action.label}</span>
       {action.badgeContent ? (
         <span className="ui-header-overflow__badge">{action.badgeContent}</span>
       ) : null}
