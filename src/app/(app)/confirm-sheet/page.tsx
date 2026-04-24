@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
-import { ko } from 'date-fns/locale'
 import { PreviewCenter } from '@/components/preview'
 import {
   ConfirmSheetForm,
@@ -13,7 +12,7 @@ import {
   ConfirmSheetPdfTemplate,
   type ConfirmSheetDraft,
 } from '@/components/confirm-sheet'
-import { Share2, Eye, FileText, CheckCircle, ArrowLeft, RotateCcw } from 'lucide-react'
+import { Eye, FileText, CheckCircle, ArrowLeft, RotateCcw, Save } from 'lucide-react'
 
 interface Site {
   id: string
@@ -58,14 +57,12 @@ export default function ConfirmSheetPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  // 기존 데이터 fetch 상태
+  // 데이터 fetch 상태
   const [sites, setSites] = useState<Site[]>([])
   const [selectedSiteId, setSelectedSiteId] = useState<string>('')
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [log, setLog] = useState<DailyLog | null>(null)
-  const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
-  const [saving, setSaving] = useState(false)
 
   // Draft 상태 (작업완료확인서 입력값)
   const [draft, setDraft] = useState<ConfirmSheetDraft>(createInitialDraft)
@@ -337,39 +334,39 @@ export default function ConfirmSheetPage() {
       alert(err instanceof Error ? err.message : 'PDF 생성에 실패했습니다.')
     } finally {
       setGenerating(false)
-      setSaving(false)
     }
   }, [draft, isValid, supabase, user?.userId, log?.id])
 
-  // 공유 기능 (Web Share API)
-  const handleShare = useCallback(async () => {
-    if (!navigator.share) {
-      // Web Share API 미지원: 다운로드로 fallback
-      generatePDF()
-      return
-    }
-    try {
-      await navigator.share({
-        title: `작업완료확인서 - ${draft.siteName}`,
-        text: `${draft.projectName} 작업이 완료되었습니다.`,
-      })
-    } catch (err) {
-      // 사용자가 취소하거나 실패 시
-      console.log('Share cancelled or failed:', err)
-    }
-  }, [draft.siteName, draft.projectName, generatePDF])
+  // 탭 변경
+  const handleShowPreview = () => setShowPreview(true)
+  const handleShowForm = () => setShowPreview(false)
 
-  // 탭 전환 핸들러
-  const handleShowPreview = useCallback(() => {
-    setShowPreview(prev => !prev)
-  }, [])
+  // 미리보기 모드: PreviewCenter 사용
+  if (showPreview) {
+    return (
+      <PreviewCenter
+        title="미리보기"
+        subtitle={draft.siteName || '작업완료확인서'}
+        showBack={true}
+        onBack={handleShowForm}
+        dockMode="readonly"
+        onDownload={generatePDF}
+        dockDisabled={generating || !isValid}
+      >
+        <div className="ui-card p-4 overflow-x-auto">
+          <ConfirmSheetPdfTemplate draft={draft} showPlaceholder={!isValid} />
+        </div>
+      </PreviewCenter>
+    )
+  }
 
+  // 입력 모드: 일반 페이지 (BottomNav 유지)
   return (
-    <PreviewCenter title="작업완료확인서">
+    <div className="space-y-4">
       {/* 탭 전환 */}
       <div className="flex gap-2 mb-4">
         <button
-          onClick={handleShowPreview}
+          onClick={handleShowForm}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition ${
             !showPreview
               ? 'bg-[var(--color-primary-strong)] text-white'
@@ -392,77 +389,79 @@ export default function ConfirmSheetPage() {
         </button>
       </div>
 
-      {/* 입력 폼 탭 */}
-      {!showPreview && (
-        <>
-          {/* 현장/날짜 선택 (기존 로직 연동) */}
-          <div className="ui-card p-4 space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-sub)] mb-1.5">현장</label>
-              <select
-                value={selectedSiteId}
-                onChange={e => handleSiteSelect(e.target.value)}
-                className="w-full px-3 py-2.5 border rounded-lg bg-[var(--color-bg-surface)] text-sm"
-                style={{ borderColor: 'rgba(219, 227, 236, 1)' }}
-              >
-                <option value="">현장 선택</option>
-                {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-sub)] mb-1.5">작업일</label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={e => setSelectedDate(e.target.value)}
-                className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg bg-[var(--color-bg-surface)] text-sm"
-              />
-              {log && (
-                <p className="text-xs text-emerald-600 mt-1.5">
-                  ✓ {format(new Date(log.work_date), 'yyyy년 M월 d일')} 작업 기록 자동 로드됨
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* 확인서 입력 폼 */}
-          <ConfirmSheetForm
-            draft={draft}
-            sites={sites}
-            onDraftChange={handleDraftChange}
-            onSiteSelect={handleSiteSelect}
+      {/* 현장/날짜 선택 */}
+      <div className="ui-card p-4 space-y-3">
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text-sub)] mb-1.5">현장</label>
+          <select
+            value={selectedSiteId}
+            onChange={e => handleSiteSelect(e.target.value)}
+            className="w-full px-3 py-2.5 border rounded-lg bg-[var(--color-bg-surface)] text-sm"
+            style={{ borderColor: 'rgba(219, 227, 236, 1)' }}
+          >
+            <option value="">현장 선택</option>
+            {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text-sub)] mb-1.5">작업일</label>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={e => setSelectedDate(e.target.value)}
+            className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg bg-[var(--color-bg-surface)] text-sm"
           />
-
-          {/* 서명 패드 */}
-          <div className="ui-card p-4">
-            <ConfirmSheetSignaturePad
-              signatureDataUrl={draft.signatureDataUrl}
-              onSignatureChange={handleSignatureChange}
-            />
-          </div>
-
-          {/* 유효성 체크 */}
-          {!isValid && (
-            <div className="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg">
-              <p className="font-medium">필수 입력 항목:</p>
-              <ul className="list-disc list-inside mt-1 space-y-0.5">
-                {!draft.siteId && <li>현장 선택</li>}
-                {!draft.projectName && <li>공사명</li>}
-                {!draft.workContent && <li>작업내용</li>}
-                {!draft.signatureDataUrl && <li>서명</li>}
-                {!draft.signerName && <li>성명</li>}
-              </ul>
-            </div>
+          {log && (
+            <p className="text-xs text-emerald-600 mt-1.5">
+              ✓ {format(new Date(log.work_date), 'yyyy년 M월 d일')} 작업 기록 자동 로드됨
+            </p>
           )}
-        </>
-      )}
+        </div>
+      </div>
 
-      {/* 미리보기 탭 */}
-      {showPreview && (
-        <div className="ui-card p-4 overflow-x-auto">
-          <ConfirmSheetPdfTemplate draft={draft} showPlaceholder={!isValid} />
+      {/* 확인서 입력 폼 */}
+      <ConfirmSheetForm
+        draft={draft}
+        sites={sites}
+        onDraftChange={handleDraftChange}
+        onSiteSelect={handleSiteSelect}
+      />
+
+      {/* 서명 패드 */}
+      <div className="ui-card p-4">
+        <ConfirmSheetSignaturePad
+          signatureDataUrl={draft.signatureDataUrl}
+          onSignatureChange={handleSignatureChange}
+        />
+      </div>
+
+      {/* 유효성 체크 */}
+      {!isValid && (
+        <div className="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg">
+          <p className="font-medium">필수 입력 항목:</p>
+          <ul className="list-disc list-inside mt-1 space-y-0.5">
+            {!draft.siteId && <li>현장 선택</li>}
+            {!draft.projectName && <li>공사명</li>}
+            {!draft.workContent && <li>작업내용</li>}
+            {!draft.signatureDataUrl && <li>서명</li>}
+            {!draft.signerName && <li>성명</li>}
+          </ul>
         </div>
       )}
+
+      {/* 저장 버튼 */}
+      <button
+        onClick={generatePDF}
+        disabled={generating || !isValid}
+        className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-medium transition ${
+          isValid && !generating
+            ? 'bg-[var(--color-primary-strong)] text-white hover:opacity-90'
+            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+        }`}
+      >
+        <Save className="h-4 w-4" />
+        {generating ? '저장 중...' : '저장 및 PDF 다운로드'}
+      </button>
 
       {/* 저장 완료 성공 모달 */}
       {showSuccess && (
@@ -507,6 +506,6 @@ export default function ConfirmSheetPage() {
           </div>
         </div>
       )}
-    </PreviewCenter>
+    </div>
   )
 }
