@@ -1,0 +1,377 @@
+/* ═══════════════════════════════════════════════════════════════════
+   INOPNC Unified Design Tokens v5.1
+   Mobile-first integrated design system
+   Primary: refined navy family from #484F7F + sky blue #89cfeb
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────────
+   V5.1 Source of Truth Tokens
+   ───────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand Primary - Navy Family */
+  --color-primary: #484F7F;
+  --color-primary-strong: #46558C;
+  --color-primary-deep: #394679;
+  --color-primary-ink: #2f3a64;
+  --color-primary-hover: #3d497c;
+  --color-primary-pressed: #333d67;
+  --color-primary-soft: #eef1f8;
+  --color-primary-soft-2: #e6ebf6;
+  --color-primary-soft-3: #d4ddef;
+  --color-primary-ring: rgba(67, 81, 135, 0.22);
+
+  /* Brand Accent - Sky Blue */
+  --color-accent: #89cfeb;
+  --color-accent-strong: #74c5e6;
+  --color-accent-deep: #5ab8df;
+  --color-accent-soft: #edf8fc;
+  --color-accent-soft-2: #e1f2fa;
+  --color-accent-soft-3: #cce8f5;
+  --color-accent-ring: rgba(137, 207, 235, 0.32);
+
+  /* Text Colors */
+  --color-text-main: #23262f;
+  --color-text-strong: #171a22;
+  --color-text-title: #33416d;
+  --color-text-sub: #667085;
+  --color-text-muted: #9199aa;
+  --color-text-disabled: #bdc4d1;
+  --color-text-white: #ffffff;
+  --color-text-on-accent: #2f5366;
+
+  /* Surface Colors */
+  --color-bg-page: #f5f7fb;
+  --color-bg-surface: #ffffff;
+  --color-bg-surface-2: #fafbfd;
+  --color-bg-muted: #f1f4f8;
+  --color-bg-soft: #edf1f6;
+  --color-bg-highlight: #f3f6fc;
+  --color-bg-selected: #edf7fb;
+  --color-bg-disabled: #f3f5f7;
+  --color-bg-overlay: rgba(15, 19, 33, 0.44);
+  --color-bg-bottom-nav: rgba(255, 255, 255, 0.98);
+  --color-bg-header: rgba(255, 255, 255, 0.96);
+  --color-bg-coachmark: #ffffff;
+  --color-bg-coachmark-icon: #edf2fb;
+
+  /* Border & Divider */
+  --color-border: #e3e8f0;
+  --color-border-strong: #d3dae5;
+  --color-border-soft: #edf1f6;
+  --color-divider: #edf1f5;
+  --color-separator: #d8dee8;
+
+  /* Form controls */
+  --form-surface: #ffffff;
+  --form-surface-soft: #fafbfd;
+  --form-surface-selected: #edf7fb;
+  --form-border: #d3dae5;
+  --form-border-focus: #89cfeb;
+  --form-icon: #667085;
+  --form-icon-strong: #46558c;
+  --form-placeholder: #9199aa;
+  --form-select-text: #46558c;
+  --form-select-option-text: #23262f;
+  --form-dashed-border: #d3dae5;
+
+  /* Semantic Status */
+  --color-success: #2f9a72;
+  --color-warning: #cb8b2d;
+  --color-danger: #dd6363;
+  --color-danger-ring: rgba(221, 99, 99, 0.22);
+  --color-info: #4a91ea;
+
+  /* Typography Scale */
+  --font-family-base: "Pretendard", "Pretendard Variable", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-family-number: "Pretendard", "SF Pro Display", "Segoe UI", sans-serif;
+
+  --font-size-display: 28px;
+  --font-size-h1: 24px;
+  --font-size-h2: 20px;
+  --font-size-h3: 18px;
+  --font-size-title: 17px;
+  --font-size-body: 16px;
+  --font-size-sub: 15px;
+  --font-size-label: 14px;
+  --font-size-caption: 12px;
+  --font-size-micro: 11px;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-black: 800;
+
+  --line-height-dense: 1.2;
+  --line-height-tight: 1.35;
+  --line-height-base: 1.5;
+  --line-height-relaxed: 1.6;
+
+  --letter-spacing-display: -0.045em;
+  --letter-spacing-title: -0.03em;
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-normal: -0.015em;
+  --letter-spacing-loose: -0.005em;
+
+  /* Radius */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-pill: 999px;
+  --radius-sheet: 28px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(17, 24, 39, 0.04);
+  --shadow-sm: 0 6px 16px rgba(17, 24, 39, 0.06);
+  --shadow-md: 0 12px 28px rgba(17, 24, 39, 0.10);
+  --shadow-lg: 0 18px 40px rgba(17, 24, 39, 0.14);
+  --shadow-sheet: 0 -14px 32px rgba(17, 24, 39, 0.14);
+  --shadow-coachmark: 0 8px 22px rgba(17, 24, 39, 0.12);
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-9: 36px;
+  --space-10: 40px;
+
+  /* Layout */
+  --page-max-width: 1180px;
+  --header-height: 56px;
+  --bottom-nav-height: 68px;
+  --search-height: 46px;
+  --tool-btn-height: 44px;
+  --select-box-height: 76px;
+  --button-height-sm: 38px;
+  --button-height-md: 44px;
+  --button-height-lg: 52px;
+  --icon-touch-size: 40px;
+  --icon-size-xs: 14px;
+  --icon-size-sm: 16px;
+  --icon-size-md: 18px;
+  --icon-size-lg: 20px;
+  --icon-size-xl: 22px;
+  --icon-size-2xl: 24px;
+  --toolbar-gap: 10px;
+  --toolbar-action-width: 108px;
+
+  /* Calendar */
+  --calendar-month-size: 22px;
+  --calendar-weekday-size: 13px;
+  --calendar-day-size: 17px;
+  --calendar-meta-size: 10px;
+  --calendar-cell-height: 64px;
+  --calendar-gap: 2px;
+
+  /* Bottom Sheet */
+  --sheet-handle-width: 44px;
+  --sheet-handle-height: 5px;
+  --sheet-footer-height: 82px;
+
+  /* State */
+  --disabled-opacity: 0.38;
+  --readonly-opacity: 0.78;
+  --transition-fast: 140ms ease;
+  --transition-base: 220ms ease;
+  --transition-slow: 320ms ease;
+
+  /* Safe Area */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Legacy Bridge Tokens (Backward Compatibility)
+   ───────────────────────────────────────────────────────────────── */
+:root {
+  /* Legacy Navy Palette mapped to v5.1 */
+  --color-navy: var(--color-primary);
+  --color-navy-hover: var(--color-primary-hover);
+  --color-navy-light: #5a6aa8;
+  --color-accent-blue: var(--color-accent);
+  --color-accent-light: var(--color-accent-soft);
+
+  /* Legacy Text mapped to v5.1 */
+  --color-text: var(--color-text-main);
+  --color-text-secondary: var(--color-text-sub);
+  --color-text-tertiary: var(--color-text-muted);
+  --color-text-inverse: var(--color-text-white);
+
+  /* Legacy Background mapped to v5.1 */
+  --color-bg: var(--color-bg-page);
+  --color-surface: var(--color-bg-surface);
+
+  /* Legacy Border mapped to v5.1 */
+  --color-border: var(--color-border);
+  --color-border-dark: var(--color-border-strong);
+
+  /* Legacy Semantic Status mapped to v5.1 */
+  --color-success: var(--color-success);
+  --color-danger: var(--color-danger);
+  --color-warning: var(--color-warning);
+  --color-info: var(--color-info);
+
+  /* Legacy Layout */
+  --sidebar-bg: var(--color-primary-ink);
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 72px;
+
+  /* Legacy Typography Scale mapped to v5.1 */
+  --text-display: var(--font-size-h1);
+  --text-display-lh: var(--line-height-tight);
+  --text-display-ls: var(--letter-spacing-tight);
+
+  --text-title: var(--font-size-h2);
+  --text-title-lh: var(--line-height-tight);
+  --text-title-ls: var(--letter-spacing-tight);
+
+  --text-subtitle: var(--font-size-h3);
+  --text-subtitle-lh: var(--line-height-base);
+  --text-subtitle-ls: var(--letter-spacing-normal);
+
+  --text-body: var(--font-size-body);
+  --text-body-lh: var(--line-height-base);
+  --text-body-ls: var(--letter-spacing-normal);
+
+  --text-body-sm: var(--font-size-label);
+  --text-body-sm-lh: var(--line-height-base);
+  --text-body-sm-ls: var(--letter-spacing-normal);
+
+  --text-caption: var(--font-size-caption);
+  --text-caption-lh: 1.4;
+  --text-caption-ls: var(--letter-spacing-loose);
+
+  /* Legacy Role Badge Colors */
+  --badge-worker-bg: #eff6ff;
+  --badge-worker-text: #1d4ed8;
+  --badge-partner-bg: #f0fdf4;
+  --badge-partner-text: #15803d;
+  --badge-site_manager-bg: #fffbeb;
+  --badge-site_manager-text: #b45309;
+  --badge-admin-bg: #fdf4ff;
+  --badge-admin-text: #7e22ce;
+
+  /* Legacy Admin KPI Stats */
+  --stat-orange: #ff8c42;
+  --stat-green: #10b981;
+  --stat-blue: #3b82f6;
+  --stat-purple: #8b5cf6;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Base Styles
+   ───────────────────────────────────────────────────────────────── */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-width: 320px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-base);
+  letter-spacing: var(--letter-spacing-normal);
+  color: var(--color-text-main);
+  background: var(--color-bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+img, svg { display: block; max-width: 100%; }
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+button:disabled, [aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: var(--disabled-opacity);
+}
+
+input, textarea, select { outline: none; }
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.95;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-accent-ring);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Legacy Component Classes (Backward Compatibility)
+   ───────────────────────────────────────────────────────────────── */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.role-badge--worker       { background: var(--badge-worker-bg);       color: var(--badge-worker-text); }
+.role-badge--partner      { background: var(--badge-partner-bg);     color: var(--badge-partner-text); }
+.role-badge--site_manager { background: var(--badge-site_manager-bg); color: var(--badge-site_manager-text); }
+.role-badge--admin       { background: var(--badge-admin-bg);       color: var(--badge-admin-text); }
+
+.stat-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+.stat-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+.stat-card__value {
+  font-family: var(--font-family-number);
+  font-size: 28px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-strong);
+}
+.stat-card__label {
+  font-size: var(--font-size-label);
+  color: var(--color-text-sub);
+  margin-top: 4px;
+}
