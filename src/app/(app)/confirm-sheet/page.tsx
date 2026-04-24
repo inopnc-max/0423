@@ -365,7 +365,7 @@ export default function ConfirmSheetPage() {
   }, [])
 
   return (
-    <PreviewCenter>
+    <PreviewCenter title="작업완료확인서">
       {/* 탭 전환 */}
       <div className="flex gap-2 mb-4">
         <button
