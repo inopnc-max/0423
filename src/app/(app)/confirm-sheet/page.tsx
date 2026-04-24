@@ -371,7 +371,7 @@ export default function ConfirmSheetPage() {
       showBack={true}
       onBack={() => router.back()}
       dockMode="edit"
-      onDownload={isValid ? generatePDF : undefined}
+      onSave={generatePDF}
       onShare={handleShare}
       dockDisabled={generating || !isValid}
     >

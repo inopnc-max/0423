@@ -40,95 +40,83 @@ export function ConfirmSheetPdfTemplate({ draft, showPlaceholder = false }: Conf
   }
 
   return (
-    <div
-      className="bg-white p-8 md:p-12 mx-auto"
-      style={{
-        width: '100%',
-        maxWidth: '210mm',
-        aspectRatio: '210/297',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      }}
-    >
+    <div className="p-4 h-full flex flex-col">
       {/* 제목 */}
-      <h1 className="text-center text-xl md:text-2xl font-bold mb-8 text-black">
+      <h1 className="text-center text-xl font-bold mb-6 text-[var(--color-navy)]">
         작 업 완 료 확 인 서
       </h1>
 
       {/* 수신처 */}
-      <div className="mb-6">
-        <p className="text-sm font-medium">
+      <div className="mb-4">
+        <p className="text-sm font-medium text-[var(--color-text-main)]">
           수신: <span className="font-bold">{val(draft.companyName, '(수신 회사명)')}</span> 귀중
         </p>
       </div>
 
       {/* 기본 정보 테이블 */}
-      <table className="w-full border-collapse border-2 border-black mb-6 text-sm">
+      <table className="w-full border-collapse border border-[var(--color-border)] mb-4 text-xs">
         <tbody>
           {/* 현장명 */}
-          <tr className="border border-black">
-            <td className="w-24 bg-gray-100 p-2 font-bold text-center border-r border-black">현 장 명</td>
-            <td className="p-2 border-r border-black">{val(draft.siteName, '(현장명)')}</td>
-            <td className="w-24 bg-gray-100 p-2 font-bold text-center border-r border-black">업 체</td>
-            <td className="p-2">{val(draft.companyName, '(업체명)')}</td>
+          <tr>
+            <td className="w-20 bg-[var(--color-bg-soft)] p-2 font-bold text-center border border-[var(--color-border)]">현장명</td>
+            <td className="p-2 border border-[var(--color-border)]">{val(draft.siteName, '(현장명)')}</td>
+            <td className="w-16 bg-[var(--color-bg-soft)] p-2 font-bold text-center border border-[var(--color-border)]">업체</td>
+            <td className="p-2 border border-[var(--color-border)]">{val(draft.companyName, '(업체명)')}</td>
           </tr>
           {/* 공사명 */}
-          <tr className="border border-black">
-            <td className="bg-gray-100 p-2 font-bold text-center border-r border-black">공 사 명</td>
-            <td className="p-2 border-r border-black">{val(draft.projectName, '(공사명)')}</td>
-            <td className="bg-gray-100 p-2 font-bold text-center border-r border-black">공사기간</td>
-            <td className="p-2">{formatPeriod()}</td>
+          <tr>
+            <td className="bg-[var(--color-bg-soft)] p-2 font-bold text-center border border-[var(--color-border)]">공사명</td>
+            <td className="p-2 border border-[var(--color-border)]">{val(draft.projectName, '(공사명)')}</td>
+            <td className="bg-[var(--color-bg-soft)] p-2 font-bold text-center border border-[var(--color-border)]">공사기간</td>
+            <td className="p-2 border border-[var(--color-border)]">{formatPeriod()}</td>
           </tr>
         </tbody>
       </table>
 
       {/* 작업내용 */}
-      <div className="mb-6">
-        <h2 className="text-sm font-bold mb-2 bg-gray-100 p-2 border-l-4 border-black">작 업 내 용</h2>
-        <div className="border border-gray-300 p-3 min-h-[80px] whitespace-pre-wrap text-sm">
+      <div className="mb-4">
+        <h2 className="text-xs font-bold mb-1 bg-[var(--color-bg-soft)] p-2">작 업 내 용</h2>
+        <div className="border border-[var(--color-border)] p-3 min-h-[80px] whitespace-pre-wrap text-xs">
           {val(draft.workContent, '(작업내용을 입력하세요)')}
         </div>
       </div>
 
       {/* 특기사항 */}
-      <div className="mb-6">
-        <h2 className="text-sm font-bold mb-2 bg-gray-100 p-2 border-l-4 border-black">특 기 사 항</h2>
-        <div className="border border-gray-300 p-3 min-h-[60px] whitespace-pre-wrap text-sm">
+      <div className="mb-4">
+        <h2 className="text-xs font-bold mb-1 bg-[var(--color-bg-soft)] p-2">특 기 사 항</h2>
+        <div className="border border-[var(--color-border)] p-3 min-h-[48px] whitespace-pre-wrap text-xs">
           {val(draft.specialNotes, '(특기사항 없음)')}
         </div>
       </div>
 
       {/* 고정 확인 문구 */}
-      <div className="mb-8 py-4 border-y-2 border-double border-gray-400">
-        <p className="text-center text-sm font-medium">
+      <div className="mb-4 py-3 text-center border-y border-dashed border-[var(--color-border)]">
+        <p className="text-xs text-[var(--color-text-secondary)]">
           상기 사항과 같이 작업을 완료하였음을 확인합니다.
         </p>
       </div>
 
       {/* 확인자 정보 */}
-      <div className="mb-8">
-        <table className="w-full border-collapse border-2 border-black text-sm">
+      <div className="mb-4">
+        <table className="w-full border-collapse border border-[var(--color-border)] text-xs">
           <tbody>
-            <tr className="border border-black">
-              <td className="w-24 bg-gray-100 p-2 font-bold text-center border-r border-black">작 업 일</td>
-              <td className="p-2" colSpan={3}>{formatDate(draft.workDate)}</td>
+            <tr>
+              <td className="w-20 bg-[var(--color-bg-soft)] p-2 font-bold text-center border border-[var(--color-border)]">작업일</td>
+              <td className="p-2 border border-[var(--color-border)]" colSpan={3}>{formatDate(draft.workDate)}</td>
             </tr>
-            <tr className="border border-black">
-              <td className="bg-gray-100 p-2 font-bold text-center border-r border-black">소 속</td>
-              <td className="p-2 border-r border-black">{val(draft.affiliation, '(소속)')}</td>
-              <td className="w-20 bg-gray-100 p-2 font-bold text-center border-r border-black">성 명</td>
-              <td className="p-2">{val(draft.signerName, '(성명)')}</td>
+            <tr>
+              <td className="bg-[var(--color-bg-soft)] p-2 font-bold text-center border border-[var(--color-border)]">소속</td>
+              <td className="p-2 border border-[var(--color-border)]">{val(draft.affiliation, '(소속)')}</td>
+              <td className="w-16 bg-[var(--color-bg-soft)] p-2 font-bold text-center border border-[var(--color-border)]">성명</td>
+              <td className="p-2 border border-[var(--color-border)]">{val(draft.signerName, '(성명)')}</td>
             </tr>
-            <tr className="border border-black">
-              <td className="bg-gray-100 p-2 font-bold text-center border-r border-black">서 명</td>
-              <td className="p-2" colSpan={3}>
+            <tr>
+              <td className="bg-[var(--color-bg-soft)] p-2 font-bold text-center border border-[var(--color-border)]">서명</td>
+              <td className="p-2 border border-[var(--color-border)]" colSpan={3}>
                 {draft.signatureDataUrl ? (
-                  <img
-                    src={draft.signatureDataUrl}
-                    alt="서명"
-                    className="h-16 object-contain"
-                  />
+                  <img src={draft.signatureDataUrl} alt="서명" className="h-12 object-contain" />
                 ) : (
-                  <span className="text-gray-400 text-xs">(서명 없음)</span>
+                  <span className="text-[var(--color-text-tertiary)] text-xs">(서명 없음)</span>
                 )}
               </td>
             </tr>
@@ -137,7 +125,7 @@ export function ConfirmSheetPdfTemplate({ draft, showPlaceholder = false }: Conf
       </div>
 
       {/* 발행일 */}
-      <div className="text-right text-sm">
+      <div className="mt-auto text-right text-xs text-[var(--color-text-tertiary)]">
         <p>발행일: {format(new Date(), 'yyyy년 M월 d일', { locale: ko })}</p>
       </div>
     </div>
