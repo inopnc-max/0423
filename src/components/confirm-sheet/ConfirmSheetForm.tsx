@@ -113,14 +113,14 @@ export function ConfirmSheetForm({ draft, sites, onDraftChange, onSiteSelect }: 
               type="date"
               value={draft.periodStart}
               onChange={e => onDraftChange({ periodStart: e.target.value })}
-              className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg bg-white text-sm"
+              className="flex-1 px-3 py-2.5 pr-10 border border-[var(--color-border)] rounded-lg bg-white text-sm"
             />
-            <span className="text-sm text-[var(--color-text-secondary)] px-1">~</span>
+            <span className="text-sm text-[var(--color-text-secondary)] px-1 flex-shrink-0">~</span>
             <input
               type="date"
               value={draft.periodEnd}
               onChange={e => onDraftChange({ periodEnd: e.target.value })}
-              className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg bg-white text-sm"
+              className="flex-1 px-3 py-2.5 pr-10 border border-[var(--color-border)] rounded-lg bg-white text-sm"
             />
           </div>
         </div>
