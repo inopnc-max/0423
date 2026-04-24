@@ -162,31 +162,36 @@ export default function LoginPage() {
               )}
             </div>
 
-            {/* Remember Me Checkbox */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked={rememberMe}
-                onClick={() => setRememberMe(!rememberMe)}
-                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                  rememberMe
-                    ? 'bg-[var(--color-primary-strong)] border-[var(--color-primary-strong)]'
-                    : 'bg-transparent border-[var(--form-border)] hover:border-[var(--color-primary-strong)]'
-                }`}
-              >
-                {rememberMe && (
-                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </button>
-              <label
-                onClick={() => setRememberMe(!rememberMe)}
-                className="text-sm text-[var(--color-text-secondary)] cursor-pointer select-none"
-              >
-                자동로그인
-              </label>
+            {/* Remember Me & Register Link */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={rememberMe}
+                  onClick={() => setRememberMe(!rememberMe)}
+                  className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                    rememberMe
+                      ? 'bg-[var(--color-primary-strong)] border-[var(--color-primary-strong)]'
+                      : 'bg-transparent border-[var(--form-border)] hover:border-[var(--color-primary-strong)]'
+                  }`}
+                >
+                  {rememberMe && (
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+                <label
+                  onClick={() => setRememberMe(!rememberMe)}
+                  className="text-sm text-[var(--color-text-secondary)] cursor-pointer select-none"
+                >
+                  자동로그인
+                </label>
+              </div>
+              <Link href="/register" className="text-sm text-[var(--color-primary-strong)] font-semibold hover:underline">
+                회원가입
+              </Link>
             </div>
 
             {/* Submit Error */}
@@ -201,14 +206,6 @@ export default function LoginPage() {
               {loading ? '로그인 중...' : '로그인'}
             </button>
           </form>
-
-          {/* Register Link */}
-          <div className="mt-4 text-center">
-            <span className="text-[var(--color-text-secondary)] text-sm">아직 계정이 없으신가요? </span>
-            <Link href="/register" className="text-[var(--color-primary-strong)] text-sm font-semibold hover:underline">
-              회원가입
-            </Link>
-          </div>
         </div>
 
         {/* Support Contact */}
