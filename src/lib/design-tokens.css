@@ -216,7 +216,6 @@
 
   /* Legacy Semantic Status mapped to v5.1 */
   --color-success: var(--color-success);
-  --color-danger: var(--color-danger);
   --color-warning: var(--color-warning);
   --color-info: var(--color-info);
 
