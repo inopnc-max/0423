@@ -108,19 +108,19 @@ export function ConfirmSheetForm({ draft, sites, onDraftChange, onSiteSelect }: 
               공사기간
             </span>
           </label>
-          <div className="flex items-center gap-1">
+          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
             <input
               type="date"
               value={draft.periodStart}
               onChange={e => onDraftChange({ periodStart: e.target.value })}
-              className="w-full min-w-0 px-2.5 py-2.5 border border-[var(--color-border)] rounded-lg bg-white text-sm"
+              className="w-full px-2.5 py-2.5 border border-[var(--color-border)] rounded-lg bg-white text-sm"
             />
             <span className="text-sm text-[var(--color-text-secondary)] px-1 flex-shrink-0">~</span>
             <input
               type="date"
               value={draft.periodEnd}
               onChange={e => onDraftChange({ periodEnd: e.target.value })}
-              className="w-full min-w-0 px-2.5 py-2.5 border border-[var(--color-border)] rounded-lg bg-white text-sm"
+              className="w-full px-2.5 py-2.5 border border-[var(--color-border)] rounded-lg bg-white text-sm"
             />
           </div>
         </div>
