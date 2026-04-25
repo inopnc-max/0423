@@ -43,9 +43,7 @@ export default function DocumentsPage() {
   /* ─── Preview handlers ─── */
 
   function handleDocClick(doc: DocumentRow) {
-    if (doc.file_url) {
-      setPreviewDoc(doc)
-    }
+    setPreviewDoc(doc)
   }
 
   function handleDownload() {
