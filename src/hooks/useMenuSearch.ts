@@ -71,6 +71,68 @@ interface DocumentRow {
   created_at: string
 }
 
+/* ─── Worklog row from Supabase ─── */
+
+export interface WorklogRow {
+  id: string
+  site_id: string
+  work_date: string
+  status: string
+  worker_array: { name: string; count: number }[]
+  task_tags: string[]
+  material_items: { name: string; quantity: number }[]
+  site_info: Record<string, string>
+  approved_at: string | null
+  rejected_at: string | null
+  rejection_reason: string | null
+}
+
+/* ─── Output row from Supabase ─── */
+
+export interface OutputRow {
+  id: string
+  site_id: string
+  work_date: string
+  status: string
+  worker_array: { name: string; count: number }[]
+  task_tags: string[]
+  site_info: { name?: string; [key: string]: string | undefined }
+}
+
+/* ─── Client-side filter helpers ─── */
+
+function safeStringify(val: unknown): string {
+  if (val === null || val === undefined) return ''
+  if (typeof val === 'string') return val
+  try {
+    return JSON.stringify(val)
+  } catch {
+    return String(val)
+  }
+}
+
+function matchWorklogRow(row: WorklogRow, q: string): boolean {
+  const lower = q.toLowerCase()
+  return (
+    row.work_date.includes(q) ||
+    row.status.toLowerCase().includes(lower) ||
+    row.task_tags.some(t => t.toLowerCase().includes(lower)) ||
+    row.worker_array.some(w => w.name.toLowerCase().includes(lower)) ||
+    row.material_items.some(m => m.name.toLowerCase().includes(lower)) ||
+    safeStringify(row.site_info).toLowerCase().includes(lower)
+  )
+}
+
+function matchOutputRow(row: OutputRow, q: string): boolean {
+  const lower = q.toLowerCase()
+  return (
+    row.work_date.includes(q) ||
+    row.status.toLowerCase().includes(lower) ||
+    (row.site_info?.name ?? '').toLowerCase().includes(lower) ||
+    row.task_tags.some(t => t.toLowerCase().includes(lower))
+  )
+}
+
 /* ─── Hook Return ─── */
 
 export interface UseMenuSearchReturn {
@@ -83,6 +145,10 @@ export interface UseMenuSearchReturn {
   filteredResults: MenuSearchResult[]
   /** DocumentRow[] for documents page (documents scope) */
   filteredDocuments: DocumentRow[]
+  /** WorklogRow[] for worklog page (worklog scope) */
+  filteredWorklogs: WorklogRow[]
+  /** OutputRow[] for output page (output scope) */
+  filteredOutputLogs: OutputRow[]
   loading: boolean
   error: string | null
   clear: () => void
@@ -98,6 +164,8 @@ export function useMenuSearch(options: MenuSearchOptions): UseMenuSearchReturn {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [documentResults, setDocumentResults] = useState<DocumentRow[]>([])
+  const [worklogResults, setWorklogResults] = useState<WorklogRow[]>([])
+  const [outputResults, setOutputResults] = useState<OutputRow[]>([])
 
   const supabase = useMemo(() => createClient(), [])
   const queryRef = useRef(query)
@@ -110,6 +178,8 @@ export function useMenuSearch(options: MenuSearchOptions): UseMenuSearchReturn {
   const clear = useCallback(() => {
     setQueryState('')
     setDocumentResults([])
+    setWorklogResults([])
+    setOutputResults([])
     setError(null)
   }, [])
 
@@ -177,6 +247,112 @@ export function useMenuSearch(options: MenuSearchOptions): UseMenuSearchReturn {
     }
   }, [scope, selectedSiteId, query, options.minQueryLength, supabase])
 
+  /* ─── Worklog search — async Supabase query ─── */
+
+  useEffect(() => {
+    if (scope !== 'worklog') return
+    if (!selectedSiteId) {
+      setWorklogResults([])
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+
+    async function search() {
+      try {
+        const { data, error: dbError } = await supabase
+          .from('daily_logs')
+          .select(
+            'id, site_id, work_date, status, worker_array, task_tags, material_items, site_info, approved_at, rejected_at, rejection_reason'
+          )
+          .eq('site_id', selectedSiteId)
+          .order('work_date', { ascending: false })
+          .limit(50)
+
+        if (cancelled) return
+
+        if (dbError) {
+          setError('작업일지를 불러오지 못했습니다.')
+          setWorklogResults([])
+        } else {
+          const rows = (data as WorklogRow[]) ?? []
+          const q = query.trim()
+          const filtered = q.length >= (options.minQueryLength ?? 2)
+            ? rows.filter(row => matchWorklogRow(row, q))
+            : rows
+          setWorklogResults(filtered)
+        }
+      } catch {
+        if (!cancelled) {
+          setError('작업일지를 불러오지 못했습니다.')
+          setWorklogResults([])
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    void search()
+    return () => {
+      cancelled = true
+    }
+  }, [scope, selectedSiteId, query, options.minQueryLength, supabase])
+
+  /* ─── Output search — async Supabase query ─── */
+
+  useEffect(() => {
+    if (scope !== 'output') return
+
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+
+    async function search() {
+      try {
+        let dbQuery = supabase
+          .from('daily_logs')
+          .select('id, site_id, work_date, status, worker_array, task_tags, site_info')
+          .order('work_date', { ascending: false })
+          .limit(50)
+
+        if (selectedSiteId) {
+          dbQuery = dbQuery.eq('site_id', selectedSiteId)
+        }
+
+        const { data, error: dbError } = await dbQuery
+
+        if (cancelled) return
+
+        if (dbError) {
+          setError('출역 데이터를 불러오지 못했습니다.')
+          setOutputResults([])
+        } else {
+          const rows = (data as OutputRow[]) ?? []
+          const q = query.trim()
+          const filtered = q.length >= (options.minQueryLength ?? 2)
+            ? rows.filter(row => matchOutputRow(row, q))
+            : rows
+          setOutputResults(filtered)
+        }
+      } catch {
+        if (!cancelled) {
+          setError('출역 데이터를 불러오지 못했습니다.')
+          setOutputResults([])
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    void search()
+    return () => {
+      cancelled = true
+    }
+  }, [scope, selectedSiteId, query, options.minQueryLength, supabase])
+
   /* ─── Client-side site filter ─── */
 
   const filteredSites = useMemo<SiteSummary[]>(() => {
@@ -203,6 +379,8 @@ export function useMenuSearch(options: MenuSearchOptions): UseMenuSearchReturn {
     filteredSites,
     filteredResults,
     filteredDocuments: documentResults,
+    filteredWorklogs: worklogResults,
+    filteredOutputLogs: outputResults,
     loading,
     error,
     clear,

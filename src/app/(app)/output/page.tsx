@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
+import { Search, X } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { createClient } from '@/lib/supabase/client'
 import { hideSalary } from '@/lib/roles'
+import { useMenuSearch } from '@/hooks'
 
 interface DailyLog {
   id: string
@@ -54,6 +56,14 @@ export default function OutputPage() {
 
   const isPartnerUser = user ? hideSalary(user.role) : false
 
+  const {
+    query,
+    setQuery,
+    filteredOutputLogs,
+    loading: searchLoading,
+    clear,
+  } = useMenuSearch({ scope: 'output' })
+
   useEffect(() => {
     if (!user) return
     const currentUser = user
@@ -97,7 +107,12 @@ export default function OutputPage() {
     void fetchData()
   }, [isPartnerUser, selectedMonth, selectedYear, supabase, user])
 
-  const totalMan = logs.reduce((sum, log) => {
+  const isSearching = query.trim().length >= 2
+  const displayLogs: DailyLog[] = isSearching
+    ? (filteredOutputLogs as unknown as DailyLog[])
+    : logs
+
+  const totalMan = displayLogs.reduce((sum, log) => {
     const logTotal = log.worker_array?.reduce((acc, worker) => acc + (worker.count || 0), 0) || 0
     return sum + logTotal
   }, 0)
@@ -177,7 +192,7 @@ export default function OutputPage() {
         <h2 className="font-semibold text-[var(--color-navy)]">출역 요약</h2>
         <div className="mt-4 grid grid-cols-3 gap-3">
           <div className="text-center">
-            <div className="text-2xl font-bold text-[var(--color-navy)]">{logs.length}</div>
+            <div className="text-2xl font-bold text-[var(--color-navy)]">{displayLogs.length}</div>
             <div className="text-xs text-[var(--color-text-secondary)]">작업일</div>
           </div>
           <div className="text-center">
@@ -186,22 +201,49 @@ export default function OutputPage() {
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">
-              {logs.filter(log => log.status === 'approved').length}
+              {displayLogs.filter(log => log.status === 'approved').length}
             </div>
             <div className="text-xs text-[var(--color-text-secondary)]">승인완료</div>
           </div>
         </div>
       </section>
 
+      {/* Search Input */}
+      <div className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-white px-3 py-2">
+        <Search className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
+        <input
+          type="text"
+          placeholder="현장명, 날짜, 작업 항목, 상태 검색..."
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text)] placeholder-[var(--color-text-tertiary)] outline-none"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={clear}
+            className="rounded-full p-0.5 text-[var(--color-text-tertiary)] hover:bg-[var(--color-border)]"
+          >
+            <X className="h-4 w-4" strokeWidth={1.9} />
+          </button>
+        )}
+      </div>
+
       <section>
-        <h2 className="mb-3 font-semibold text-[var(--color-navy)]">최근 출역 기록</h2>
-        {logs.length === 0 ? (
-          <div className="rounded-2xl bg-white p-6 text-center text-[var(--color-text-secondary)] shadow-sm">
-            출역 기록이 없습니다.
+        <h2 className="mb-3 font-semibold text-[var(--color-navy)]">
+          {isSearching ? '검색 결과' : '최근 출역 기록'}
+        </h2>
+        {(loading || searchLoading) ? (
+          <div className="rounded-2xl bg-white p-6 text-center text-sm text-[var(--color-text-secondary)] shadow-sm">
+            로딩 중...
+          </div>
+        ) : displayLogs.length === 0 ? (
+          <div className="rounded-2xl bg-white p-6 text-center text-sm text-[var(--color-text-secondary)] shadow-sm">
+            {isSearching ? '검색 결과가 없습니다.' : '출역 기록이 없습니다.'}
           </div>
         ) : (
           <div className="space-y-3">
-            {logs.map(log => (
+            {displayLogs.map(log => (
               <article key={log.id} className="rounded-2xl bg-white p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div>

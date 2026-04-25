@@ -11,6 +11,8 @@ import {
   HardHat,
   ImageIcon,
   Package,
+  Search,
+  X,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { createClient } from '@/lib/supabase/client'
@@ -25,6 +27,7 @@ import {
   setSelectedDate,
   setWorklogSection,
 } from '@/lib/ui-state'
+import { useMenuSearch } from '@/hooks'
 
 interface Site {
   id: string
@@ -66,6 +69,14 @@ function WorklogListView({
   const [logs, setLogs] = useState<WorkLogRecord[]>([])
   const [loadingLogs, setLoadingLogs] = useState(false)
 
+  const {
+    query,
+    setQuery,
+    filteredWorklogs,
+    loading,
+    clear,
+  } = useMenuSearch({ scope: 'worklog' })
+
   useEffect(() => {
     if (!selectedSiteId) {
       setLogs([])
@@ -89,8 +100,35 @@ function WorklogListView({
       })
   }, [selectedSiteId, supabase])
 
+  const displayLogs: WorkLogRecord[] = query.trim().length >= 2
+    ? (filteredWorklogs as unknown as WorkLogRecord[])
+    : logs
+
   return (
     <div className="space-y-4">
+      {/* Search Input */}
+      {selectedSiteId && (
+        <div className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-white px-3 py-2">
+          <Search className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
+          <input
+            type="text"
+            placeholder="날짜, 상태, 작업 항목, 작업자 검색..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text)] placeholder-[var(--color-text-tertiary)] outline-none"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={clear}
+              className="rounded-full p-0.5 text-[var(--color-text-tertiary)] hover:bg-[var(--color-border)]"
+            >
+              <X className="h-4 w-4" strokeWidth={1.9} />
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="rounded-2xl bg-white p-4 shadow-sm">
         <label className="block">
           <span className="mb-1 flex items-center gap-2 text-sm font-medium text-[var(--color-text-secondary)]">
@@ -111,7 +149,7 @@ function WorklogListView({
         </label>
       </div>
 
-      {loadingLogs ? (
+      {loadingLogs || loading ? (
         <div className="flex h-32 items-center justify-center">
           <span className="text-sm text-[var(--color-text-secondary)]">로딩 중...</span>
         </div>
@@ -119,16 +157,16 @@ function WorklogListView({
         <div className="rounded-2xl bg-white p-8 text-center text-sm text-[var(--color-text-secondary)] shadow-sm">
           현장을 선택하면 해당 현장의 작업일지를 조회할 수 있습니다.
         </div>
-      ) : logs.length === 0 ? (
+      ) : displayLogs.length === 0 ? (
         <div className="rounded-2xl bg-white p-8 text-center text-sm text-[var(--color-text-secondary)] shadow-sm">
-          해당 현장에 작성된 작업일지가 없습니다.
+          {query.trim().length >= 2 ? '검색 결과가 없습니다.' : '해당 현장에 작성된 작업일지가 없습니다.'}
         </div>
       ) : (
         <div className="space-y-2">
           <div className="px-1 text-xs font-medium text-[var(--color-text-tertiary)]">
-            {logs.length}건의 일지
+            {displayLogs.length}건의 일지
           </div>
-          {logs.map(log => (
+          {displayLogs.map(log => (
             <button
               key={log.id}
               type="button"
