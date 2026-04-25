@@ -1450,6 +1450,10 @@ select option {
   color: var(--color-primary-strong);
 }
 
+.ui-bottom-nav__item:not(.is-disabled):hover {
+  color: #484F7F;
+}
+
 .ui-bottom-nav__item.is-active .ui-nav-icon {
   transform: translateY(-1px);
 }
