@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════
    Route Access Control
-   vFinal 기준 — production_manager는 worklog/confirmSheet/hqRequests 접근 불가
+   vFinal 기준 — production_manager는 output/worklog/confirmSheet/hqRequests 접근 불가
    ═══════════════════════════════════════════════════════════════════ */
 
 import { ROUTES } from './routes.constants'
@@ -11,8 +11,8 @@ export const ROUTE_ROLE_ACCESS: Record<string, readonly Role[]> = {
   [ROUTES.login]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
   [ROUTES.register]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
   [ROUTES.home]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
-  // worker, site_manager, admin, production_manager (NOT partner)
-  [ROUTES.output]: ['worker', 'site_manager', 'production_manager', 'admin'],
+  // worker, site_manager, admin only (NOT production_manager, NOT partner)
+  [ROUTES.output]: ['worker', 'site_manager', 'admin'],
   // worker, site_manager, admin only (NOT production_manager, NOT partner)
   [ROUTES.worklog]: ['worker', 'site_manager', 'admin'],
   // All roles except production_manager
