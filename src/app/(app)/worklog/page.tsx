@@ -20,13 +20,14 @@ import { isPartner } from '@/lib/roles'
 import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
 import { loadWorklogDraft, saveWorklogDraft, clearWorklogDraft, type WorklogDraftRecord } from '@/lib/offline/worklog-draft'
 import {
-  getSelectedSiteId,
+  getSelectedSiteId as getLocalSelectedSiteId,
   getSelectedDate,
   getWorklogSection,
-  setSelectedSiteId,
+  setSelectedSiteId as setLocalSelectedSiteId,
   setSelectedDate,
   setWorklogSection,
 } from '@/lib/ui-state'
+import { useSelectedSite } from '@/contexts/selected-site-context'
 import { useMenuSearch } from '@/hooks'
 
 interface Site {
@@ -369,8 +370,14 @@ export default function WorklogPage() {
   const { user } = useAuth()
   const supabase = useMemo(() => createClient(), [])
 
+  const {
+    selectedSiteId: globalSelectedSiteId,
+    setSelectedSiteId: setGlobalSelectedSiteId,
+    accessibleSites: globalAccessibleSites,
+  } = useSelectedSite()
+
   const [sites, setSites] = useState<Site[]>([])
-  const [selectedSiteId, setSelectedSiteId] = useState('')
+  const [worklogSelectedSiteId, setWorklogSelectedSiteId] = useState('')
   const [selectedLog, setSelectedLog] = useState<WorkLogRecord | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -399,9 +406,24 @@ export default function WorklogPage() {
         if (data) {
           setSites(data)
 
-          const lastSiteId = searchParams.get('site')
-          if (lastSiteId && data.some((s: Site) => s.id === lastSiteId)) {
-            setSelectedSiteId(lastSiteId)
+          const querySite = searchParams.get('site')
+          const localSite = getLocalSelectedSiteId()
+
+          let resolvedSiteId = ''
+          if (querySite && data.some((s: Site) => s.id === querySite)) {
+            resolvedSiteId = querySite
+          } else if (globalSelectedSiteId && data.some((s: Site) => s.id === globalSelectedSiteId)) {
+            resolvedSiteId = globalSelectedSiteId
+          } else if (localSite && data.some((s: Site) => s.id === localSite)) {
+            resolvedSiteId = localSite
+          }
+
+          if (resolvedSiteId) {
+            setWorklogSelectedSiteId(resolvedSiteId)
+            setLocalSelectedSiteId(resolvedSiteId)
+            void setGlobalSelectedSiteId(resolvedSiteId).catch((err: unknown) => {
+              console.warn('[worklog] failed to sync global site:', err)
+            })
           }
         }
       } catch (error) {
@@ -410,7 +432,7 @@ export default function WorklogPage() {
     }
 
     void fetchSites()
-  }, [supabase, user, isPartnerUser, searchParams])
+  }, [supabase, user, isPartnerUser, searchParams, globalSelectedSiteId])
 
   useEffect(() => {
     if (!user) return
@@ -430,6 +452,14 @@ export default function WorklogPage() {
   const handleBack = useCallback(() => {
     setSelectedLog(null)
   }, [])
+
+  const handleWorklogSiteSelect = useCallback((siteId: string) => {
+    setWorklogSelectedSiteId(siteId)
+    setLocalSelectedSiteId(siteId || null)
+    void setGlobalSelectedSiteId(siteId || null).catch((err: unknown) => {
+      console.warn('[worklog] failed to sync global site:', err)
+    })
+  }, [setGlobalSelectedSiteId])
 
   if (loading) {
     return (
@@ -472,8 +502,8 @@ export default function WorklogPage() {
         </div>
         <WorklogListView
           sites={sites}
-          selectedSiteId={selectedSiteId}
-          onSiteSelect={setSelectedSiteId}
+          selectedSiteId={worklogSelectedSiteId}
+          onSiteSelect={handleWorklogSiteSelect}
           onLogSelect={handleLogSelect}
           userId={user?.userId ?? ''}
           supabase={supabase}
@@ -482,17 +512,19 @@ export default function WorklogPage() {
     )
   }
 
-  return <WorklogEditorView user={user} sites={sites} supabase={supabase} />
+  return <WorklogEditorView user={user} sites={sites} supabase={supabase} onSiteSelectSync={handleWorklogSiteSelect} />
 }
 
 function WorklogEditorView({
   user,
   sites,
   supabase,
+  onSiteSelectSync,
 }: {
   user: NonNullable<ReturnType<typeof useAuth>['user']>
   sites: Site[]
   supabase: ReturnType<typeof createClient>
+  onSiteSelectSync?: (siteId: string) => void
 }) {
   const searchParams = useSearchParams()
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), [])
@@ -528,7 +560,7 @@ function WorklogEditorView({
 
   // localStorage 저장 (现场/날짜 변경 시)
   useEffect(() => {
-    if (selectedSite) setSelectedSiteId(selectedSite)
+    if (selectedSite) setLocalSelectedSiteId(selectedSite)
   }, [selectedSite])
 
   useEffect(() => {
@@ -566,7 +598,7 @@ function WorklogEditorView({
     const queryDate = searchParams.get('date')
 
     // URL 파라미터 우선, 없으면 localStorage
-    const resolvedSite = querySite || getSelectedSiteId() || ''
+    const resolvedSite = querySite || getLocalSelectedSiteId() || ''
     const resolvedDate = queryDate || getSelectedDate() || today
 
     setSelectedSite(resolvedSite)
@@ -576,7 +608,7 @@ function WorklogEditorView({
     setEditorLoading(false)
 
     // localStorage 저장 (URL 파라미터 없이 재접속 시 복원용)
-    if (!querySite) setSelectedSiteId(resolvedSite || null)
+    if (!querySite) setLocalSelectedSiteId(resolvedSite || null)
   }, [searchParams, today])
 
   // Worklog 상태 로드: Server → IndexedDB Draft 순서
@@ -824,7 +856,12 @@ function WorklogEditorView({
             </span>
             <select
               value={selectedSite}
-              onChange={e => { setSelectedSite(e.target.value); setActiveSection('workers') }}
+              onChange={e => {
+                const nextSiteId = e.target.value
+                setSelectedSite(nextSiteId)
+                onSiteSelectSync?.(nextSiteId)
+                setActiveSection('workers')
+              }}
               className="w-full rounded-xl border border-[var(--color-border)] px-3 py-3 text-sm outline-none focus:border-[var(--color-accent)]"
             >
               <option value="">현장을 선택하세요</option>
