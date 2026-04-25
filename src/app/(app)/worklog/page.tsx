@@ -678,22 +678,30 @@ function WorklogEditorView({
     setWorkerArray(prev => {
       const existing = prev.find(w => w.name === trimmedName)
       if (existing) {
-        return prev.map(w => w.name === trimmedName ? { ...w, count: w.count + 1 } : w)
+        return prev.map(w =>
+          w.name === trimmedName
+            ? { ...w, count: Math.min(3.5, w.count + 0.5) }
+            : w
+        )
       }
       return [...prev, { name: trimmedName, count: 1 }]
     })
     setNewWorkerName('')
   }
 
+  function adjustWorkerCount(name: string, delta: number) {
+    setWorkerArray(prev =>
+      prev.map(w =>
+        w.name === name
+          ? { ...w, count: Math.max(0, Math.min(3.5, w.count + delta)) }
+          : w
+      )
+    )
+  }
+
   function removeWorker(name: string) {
     setActiveSection('workers')
-    setWorkerArray(prev => {
-      const current = prev.find(w => w.name === name)
-      if (current && current.count > 1) {
-        return prev.map(w => w.name === name ? { ...w, count: w.count - 1 } : w)
-      }
-      return prev.filter(w => w.name !== name)
-    })
+    setWorkerArray(prev => prev.filter(w => w.name !== name))
   }
 
   function toggleTask(tag: string) {
@@ -813,6 +821,11 @@ function WorklogEditorView({
   }
 
   const totalWorkers = workerArray.reduce((sum, w) => sum + w.count, 0)
+
+  function formatManDay(value: number): string {
+    if (Number.isInteger(value)) return `${value}`
+    return value.toFixed(1)
+  }
 
   const TASK_OPTIONS = [
     '철거', '설치', '배관', '전기', '보수', '용접',
@@ -968,7 +981,7 @@ function WorklogEditorView({
                 {activeSection === 'media' && '4. 현장 사진 및 도면'}
               </h2>
               <span className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
-                {activeSection === 'workers' && `${totalWorkers}명`}
+                {activeSection === 'workers' && `${formatManDay(totalWorkers)}명`}
                 {activeSection === 'tasks' && `${taskTags.length}개`}
                 {activeSection === 'materials' && `${materialItems.length}건`}
                 {activeSection === 'media' && '준비 중'}
@@ -995,22 +1008,75 @@ function WorklogEditorView({
                     추가
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {workerArray.length === 0 && (
-                    <span className="text-sm text-[var(--color-text-tertiary)]">추가된 작업자가 없습니다.</span>
-                  )}
-                  {workerArray.map(worker => (
-                    <button
-                      key={worker.name}
-                      type="button"
-                      onClick={() => removeWorker(worker.name)}
-                      className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-2 text-sm text-blue-700"
-                    >
-                      <span>{worker.name} ({worker.count})</span>
-                      <span className="text-blue-400">삭제</span>
-                    </button>
-                  ))}
-                </div>
+                {workerArray.length === 0 ? (
+                  <p className="text-sm text-[var(--color-text-tertiary)]">추가된 작업자가 없습니다.</p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {workerArray.map(worker => (
+                      <div
+                        key={worker.name}
+                        className={`flex items-center justify-between rounded-2xl border-2 px-4 py-3 transition ${
+                          worker.count === 0
+                            ? 'border-slate-200 bg-slate-50'
+                            : 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
+                        }`}
+                      >
+                        {/* 이름 */}
+                        <div className="flex flex-col">
+                          <span className={`text-sm font-semibold ${
+                            worker.count === 0 ? 'text-slate-400' : 'text-[var(--color-navy)]'
+                          }`}>
+                            {worker.name}
+                          </span>
+                          <span className="text-xs text-[var(--color-text-tertiary)]">공수</span>
+                        </div>
+
+                        {/* 카운터 */}
+                        <div className="flex items-center gap-3">
+                          {/* - 버튼 */}
+                          <button
+                            type="button"
+                            onClick={() => adjustWorkerCount(worker.name, -0.5)}
+                            disabled={worker.count <= 0}
+                            className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[var(--color-border)] bg-white text-lg font-bold text-[var(--color-navy)] transition hover:border-[var(--color-navy)] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300"
+                          >
+                            −
+                          </button>
+
+                          {/* 현재 공수 */}
+                          <div className="min-w-[52px] text-center">
+                            <span className={`text-xl font-bold ${worker.count === 0 ? 'text-slate-400' : 'text-[var(--color-navy)]'}`}>
+                              {formatManDay(worker.count)}
+                            </span>
+                            <span className="ml-0.5 text-xs text-[var(--color-text-tertiary)]">공수</span>
+                          </div>
+
+                          {/* + 버튼 */}
+                          <button
+                            type="button"
+                            onClick={() => adjustWorkerCount(worker.name, 0.5)}
+                            disabled={worker.count >= 3.5}
+                            className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[var(--color-navy)] bg-[var(--color-navy)] text-lg font-bold text-white transition hover:bg-[var(--color-navy-hover)] disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-200"
+                          >
+                            +
+                          </button>
+
+                          {/* 삭제 버튼 */}
+                          <button
+                            type="button"
+                            onClick={() => removeWorker(worker.name)}
+                            className="ml-2 rounded-full p-2 text-red-400 transition hover:bg-red-50 hover:text-red-500"
+                            aria-label={`${worker.name} 삭제`}
+                          >
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </>
             )}
 
