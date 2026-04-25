@@ -3,136 +3,212 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { getLoginRedirectPath } from '@/lib/routes'
+import { AlertBox } from '@/components/ui'
+import {
+  useFormValidation,
+  emailValidation,
+  passwordValidation,
+  type FormField,
+} from '@/hooks'
 
+/* ── Form Field Config ── */
+const LOGIN_FIELDS: FormField[] = [
+  {
+    name: 'email',
+    label: '이메일',
+    type: 'email',
+    placeholder: 'email@example.com',
+    autoComplete: 'username',
+    rules: [emailValidation],
+    errorMessages: {},
+  },
+  {
+    name: 'password',
+    label: '비밀번호',
+    type: 'password',
+    placeholder: '비밀번호',
+    autoComplete: 'current-password',
+    rules: [passwordValidation],
+    errorMessages: {},
+  },
+]
+
+/* ── Validation Messages ── */
+const EMPTY_FIELD_MESSAGE = '이메일과 비밀번호를 입력해주세요.'
+
+/* ── Component ── */
 export default function LoginPage() {
   const router = useRouter()
   const { signIn, loading } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
+  const [submitError, setSubmitError] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+  const { values, errors, handleChange, handleBlur, validateAll } =
+    useFormValidation(LOGIN_FIELDS)
 
-    if (!email || !password) {
-      setError('이메일과 비밀번호를 입력해주세요.')
-      return
-    }
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      setSubmitError('')
 
-    const result = await signIn(email, password)
-    if (!result.success) {
-      setError(result.error || '로그인에 실패했습니다.')
-      return
-    }
+      /* Validate all fields */
+      const validationErrors = validateAll()
+      if (Object.keys(validationErrors).length > 0) {
+        const hasEmptyField = !values.email || !values.password
+        if (hasEmptyField) {
+          setSubmitError(EMPTY_FIELD_MESSAGE)
+        }
+        return
+      }
 
-    const redirectPath = getLoginRedirectPath(result.success ? 'home' : '')
-    router.push(redirectPath)
-  }, [email, password, signIn, router])
+      /* Sign in */
+      const result = await signIn(values.email.trim().toLowerCase(), values.password)
+      if (!result.success) {
+        setSubmitError(result.error || '로그인에 실패했습니다.')
+        return
+      }
+
+      router.push(getLoginRedirectPath(result.success ? 'home' : ''))
+    },
+    [values, signIn, router, validateAll]
+  )
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[var(--color-bg-page)] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[var(--color-navy)]">INOPNC</h1>
-          <p className="text-[var(--color-text-secondary)] mt-2">통합앱에 로그인하세요</p>
+          <img src="/logo_w.png" alt="INOPNC" className="h-12 w-auto mx-auto" />
+          <p className="text-[var(--color-text-secondary)] mt-3">계정으로 로그인하세요.</p>
         </div>
 
         {/* Login Form */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email */}
+        <div className="bg-[var(--color-bg-surface)] rounded-2xl shadow-lg p-6">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            {/* Email Field */}
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text)] mb-1">
+              <label
+                htmlFor="email"
+                className="block text-sm font-semibold text-[var(--color-text-sub)] mb-2"
+              >
                 이메일
               </label>
               <input
+                id="email"
                 type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg
-                           focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                autoComplete="username"
+                value={values.email}
+                onChange={handleChange('email')}
+                onBlur={handleBlur('email')}
+                className={`w-full h-12 pl-4 pr-4 rounded-xl border bg-[var(--color-bg-surface)] text-[var(--color-text-main)] text-base font-medium focus:outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent-ring)] ${
+                  errors.email ? 'border-[var(--color-danger)] ring-2 ring-[var(--color-danger-ring)]' : 'border-[var(--form-border)]'
+                }`}
                 placeholder="email@example.com"
                 disabled={loading}
               />
+              {errors.email && (
+                <p className="mt-1.5 text-xs font-medium text-[var(--color-danger)]">{errors.email}</p>
+              )}
             </div>
 
-            {/* Password */}
+            {/* Password Field */}
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text)] mb-1">
+              <label
+                htmlFor="password"
+                className="block text-sm font-semibold text-[var(--color-text-sub)] mb-2"
+              >
                 비밀번호
               </label>
               <div className="relative">
                 <input
+                  id="password"
                   type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg
-                             focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent"
+                  autoComplete={showPassword ? 'off' : 'current-password'}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  value={values.password}
+                  onChange={handleChange('password')}
+                  onBlur={handleBlur('password')}
+                  className={`w-full h-12 pl-4 pr-14 rounded-xl border bg-[var(--color-bg-surface)] text-[var(--color-text-main)] text-base font-medium focus:outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent-ring)] ${
+                    errors.password ? 'border-[var(--color-danger)] ring-2 ring-[var(--color-danger-ring)]' : 'border-[var(--form-border)]'
+                  }`}
                   placeholder="비밀번호"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg flex items-center justify-center text-[var(--form-icon)] hover:text-[var(--form-icon-strong)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-ring)]"
+                  aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 표시'}
                 >
-                  {showPassword ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="mt-1.5 text-xs font-medium text-[var(--color-danger)]">{errors.password}</p>
+              )}
+            </div>
+
+            {/* Remember Me & Register Link */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={rememberMe}
+                  onClick={() => setRememberMe(!rememberMe)}
+                  className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                    rememberMe
+                      ? 'bg-[var(--color-primary-strong)] border-[var(--color-primary-strong)]'
+                      : 'bg-transparent border-[var(--form-border)] hover:border-[var(--color-primary-strong)]'
+                  }`}
+                >
+                  {rememberMe && (
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   )}
                 </button>
+                <label
+                  onClick={() => setRememberMe(!rememberMe)}
+                  className="text-sm text-[var(--color-text-secondary)] cursor-pointer select-none"
+                >
+                  자동로그인
+                </label>
               </div>
+              <Link href="/register" className="text-sm text-[var(--color-primary-strong)] font-semibold hover:underline">
+                회원가입
+              </Link>
             </div>
 
-            {/* Error Message */}
-            {error && (
-              <div className="text-sm text-[var(--color-danger)] bg-red-50 px-4 py-2 rounded-lg">
-                {error}
-              </div>
-            )}
+            {/* Submit Error */}
+            {submitError && <AlertBox message={submitError} variant="danger" />}
 
-            {/* Submit */}
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-[var(--color-navy)] text-white font-medium rounded-lg
-                         hover:bg-[var(--color-navy-hover)] transition disabled:opacity-50"
+              className="w-full h-12 bg-[var(--color-primary-strong)] text-white font-semibold rounded-xl hover:bg-[var(--color-primary-hover)] transition disabled:opacity-50"
             >
               {loading ? '로그인 중...' : '로그인'}
             </button>
           </form>
-
-          {/* Register Link */}
-          <div className="mt-4 text-center">
-            <span className="text-[var(--color-text-secondary)] text-sm">파트너 등록은 </span>
-            <Link href="/register" className="text-[var(--color-accent)] text-sm font-medium hover:underline">
-              여기서 신청
-            </Link>
-          </div>
         </div>
 
         {/* Support Contact */}
-        <div className="mt-6 p-4 bg-white/50 rounded-xl">
-          <p className="text-xs text-[var(--color-text-secondary)] text-center">
+        <div className="mt-6 p-4 bg-[var(--color-bg-surface)] rounded-xl">
+          <p className="text-xs text-[var(--color-text-sub)] text-center">
             실행오류시{' '}
-            <a
-              href="mailto:khy972@inopnc.com"
-              className="text-[var(--color-accent)] hover:underline font-medium"
-            >
+            <a href="mailto:khy972@inopnc.com" className="text-[var(--color-primary-strong)] hover:underline font-semibold">
               관리자에게 연락하세요
             </a>
           </p>
