@@ -901,152 +901,219 @@ function WorklogEditorView({
         </div>
       ) : (
         <>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {SECTION_ORDER.map(section => {
-              const { label, icon: Icon } = SECTION_META[section]
-              const active = activeSection === section
-              return (
-                <button
-                  key={section}
-                  type="button"
-                  onClick={() => setActiveSection(section)}
-                  className={`rounded-2xl border px-4 py-3 text-left transition ${
-                    active
-                      ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
-                      : 'border-[var(--color-border)] bg-white hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-full bg-white p-2 shadow-sm">
-                      <Icon className="h-[18px] w-[18px] text-[var(--color-accent)]" strokeWidth={1.9} />
+          <div className="overflow-x-auto rounded-2xl bg-white p-4 shadow-sm">
+            <div className="flex min-w-[480px] items-stretch gap-1">
+              {SECTION_ORDER.map((section, index) => {
+                const { label, icon: Icon } = SECTION_META[section]
+                const active = activeSection === section
+                const isDone = (() => {
+                  if (section === 'workers') return workerArray.length > 0
+                  if (section === 'tasks') return taskTags.length > 0
+                  if (section === 'materials') return materialItems.length > 0
+                  return false
+                })()
+
+                return (
+                  <button
+                    key={section}
+                    type="button"
+                    aria-current={active ? 'step' : undefined}
+                    aria-pressed={active}
+                    onClick={() => setActiveSection(section)}
+                    className={`flex flex-1 flex-col items-center gap-1 rounded-2xl border-2 px-2 py-3 transition ${
+                      active
+                        ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
+                        : isDone
+                        ? 'border-green-300 bg-green-50'
+                        : 'border-[var(--color-border)] bg-white hover:border-[var(--color-accent)] hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      {isDone && !active && (
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white">
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </span>
+                      )}
+                      {!isDone && (
+                        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
+                          active ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-200 text-slate-500'
+                        }`}>
+                          {index + 1}
+                        </span>
+                      )}
+                      <Icon
+                        className={`h-5 w-5 ${active ? 'text-[var(--color-accent)]' : isDone ? 'text-green-600' : 'text-[var(--color-text-tertiary)]'}`}
+                        strokeWidth={1.9}
+                      />
                     </div>
-                    <div>
-                      <div className="text-sm font-semibold text-[var(--color-text)]">{label}</div>
-                      <div className="text-xs text-[var(--color-text-secondary)]">
-                        {section === 'workers' && `${totalWorkers}명 입력`}
-                        {section === 'tasks' && `${taskTags.length}개 작업 태그`}
-                        {section === 'materials' && `${materialItems.length}개 자재`}
-                        {section === 'media' && '사진/도면 연결'}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
+                    <span className={`text-center text-xs font-semibold leading-tight ${
+                      active ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-secondary)]'
+                    }`}>
+                      {label.replace(' 및 공수', '').replace(' 및 체크리스트', '').replace(' 현황', '').replace(' 사진 및 도면', '사진')}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
-          <section className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-[var(--color-navy)]">1. 출역 인원 및 공수</h2>
+              <h2 className="text-lg font-semibold text-[var(--color-navy)]">
+                {activeSection === 'workers' && '1. 출역 인원 및 공수'}
+                {activeSection === 'tasks' && '2. 상세 작업 및 체크리스트'}
+                {activeSection === 'materials' && '3. 자재 투입 현황'}
+                {activeSection === 'media' && '4. 현장 사진 및 도면'}
+              </h2>
               <span className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
-                {totalWorkers}명
+                {activeSection === 'workers' && `${totalWorkers}명`}
+                {activeSection === 'tasks' && `${taskTags.length}개`}
+                {activeSection === 'materials' && `${materialItems.length}건`}
+                {activeSection === 'media' && '준비 중'}
               </span>
             </div>
-            <div className="mb-4 flex gap-2">
-              <input
-                type="text"
-                value={newWorkerName}
-                onChange={e => setNewWorkerName(e.target.value)}
-                onFocus={() => setActiveSection('workers')}
-                onKeyDown={e => e.key === 'Enter' && addWorker()}
-                placeholder="작업자 이름"
-                className="flex-1 rounded-xl border border-[var(--color-border)] px-3 py-3 text-sm outline-none focus:border-[var(--color-accent)]"
-              />
-              <button
-                type="button"
-                onClick={addWorker}
-                className="rounded-xl bg-[var(--color-navy)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-navy-hover)]"
-              >
-                추가
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {workerArray.length === 0 && (
-                <span className="text-sm text-[var(--color-text-tertiary)]">추가된 작업자가 없습니다.</span>
-              )}
-              {workerArray.map(worker => (
-                <button
-                  key={worker.name}
-                  type="button"
-                  onClick={() => removeWorker(worker.name)}
-                  className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-2 text-sm text-blue-700"
-                >
-                  <span>{worker.name} ({worker.count})</span>
-                  <span className="text-blue-400">삭제</span>
-                </button>
-              ))}
-            </div>
-          </section>
 
-          <section className="rounded-2xl bg-white p-4 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-[var(--color-navy)]">2. 상세 작업 및 체크리스트</h2>
-            <div className="flex flex-wrap gap-2">
-              {TASK_OPTIONS.map(tag => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => toggleTask(tag)}
-                  className={`rounded-full px-3 py-2 text-sm font-medium transition ${
-                    taskTags.includes(tag)
-                      ? 'bg-[var(--color-navy)] text-white'
-                      : 'bg-slate-100 text-[var(--color-text-secondary)] hover:bg-slate-200'
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-2xl bg-white p-4 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-[var(--color-navy)]">3. 자재 투입 현황</h2>
-            <div className="mb-4 flex gap-2">
-              <input
-                type="text"
-                value={newMaterialName}
-                onChange={e => setNewMaterialName(e.target.value)}
-                onFocus={() => setActiveSection('materials')}
-                placeholder="자재명"
-                className="flex-1 rounded-xl border border-[var(--color-border)] px-3 py-3 text-sm outline-none focus:border-[var(--color-accent)]"
-              />
-              <input
-                type="number"
-                value={newMaterialQty}
-                onChange={e => setNewMaterialQty(e.target.value)}
-                onFocus={() => setActiveSection('materials')}
-                placeholder="수량"
-                className="w-24 rounded-xl border border-[var(--color-border)] px-3 py-3 text-sm outline-none focus:border-[var(--color-accent)]"
-              />
-              <button
-                type="button"
-                onClick={addMaterial}
-                className="rounded-xl bg-[var(--color-navy)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-navy-hover)]"
-              >
-                추가
-              </button>
-            </div>
-            <div className="space-y-2">
-              {materialItems.length === 0 && (
-                <div className="text-sm text-[var(--color-text-tertiary)]">추가된 자재가 없습니다.</div>
-              )}
-              {materialItems.map((material, index) => (
-                <div key={`${material.name}-${index}`} className="flex items-center justify-between rounded-xl bg-[var(--color-bg)] px-4 py-3 text-sm">
-                  <span className="font-medium text-[var(--color-text)]">{material.name}</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[var(--color-text-secondary)]">{material.quantity}</span>
-                    <button type="button" onClick={() => removeMaterial(index)} className="text-red-500 transition hover:text-red-600">삭제</button>
-                  </div>
+            {activeSection === 'workers' && (
+              <>
+                <div className="mb-4 flex gap-2">
+                  <input
+                    type="text"
+                    value={newWorkerName}
+                    onChange={e => setNewWorkerName(e.target.value)}
+                    onFocus={() => setActiveSection('workers')}
+                    onKeyDown={e => e.key === 'Enter' && addWorker()}
+                    placeholder="작업자 이름"
+                    className="flex-1 rounded-xl border border-[var(--color-border)] px-3 py-3 text-sm outline-none focus:border-[var(--color-accent)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={addWorker}
+                    className="rounded-xl bg-[var(--color-navy)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-navy-hover)]"
+                  >
+                    추가
+                  </button>
                 </div>
-              ))}
-            </div>
-          </section>
+                <div className="flex flex-wrap gap-2">
+                  {workerArray.length === 0 && (
+                    <span className="text-sm text-[var(--color-text-tertiary)]">추가된 작업자가 없습니다.</span>
+                  )}
+                  {workerArray.map(worker => (
+                    <button
+                      key={worker.name}
+                      type="button"
+                      onClick={() => removeWorker(worker.name)}
+                      className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-2 text-sm text-blue-700"
+                    >
+                      <span>{worker.name} ({worker.count})</span>
+                      <span className="text-blue-400">삭제</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
 
-          <section className="rounded-2xl bg-white p-4 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-[var(--color-navy)]">4. 현장 사진 및 도면</h2>
-            <p className="text-sm text-[var(--color-text-tertiary)]">
-              현장 상세 화면에서 사진 및 도면을 확인하세요.
-            </p>
-          </section>
+            {activeSection === 'tasks' && (
+              <div className="flex flex-wrap gap-2">
+                {TASK_OPTIONS.map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTask(tag)}
+                    className={`rounded-full px-4 py-2.5 text-sm font-medium transition ${
+                      taskTags.includes(tag)
+                        ? 'bg-[var(--color-navy)] text-white'
+                        : 'bg-slate-100 text-[var(--color-text-secondary)] hover:bg-slate-200'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {activeSection === 'materials' && (
+              <>
+                <div className="mb-4 flex gap-2">
+                  <input
+                    type="text"
+                    value={newMaterialName}
+                    onChange={e => setNewMaterialName(e.target.value)}
+                    onFocus={() => setActiveSection('materials')}
+                    placeholder="자재명"
+                    className="flex-1 rounded-xl border border-[var(--color-border)] px-3 py-3 text-sm outline-none focus:border-[var(--color-accent)]"
+                  />
+                  <input
+                    type="number"
+                    value={newMaterialQty}
+                    onChange={e => setNewMaterialQty(e.target.value)}
+                    onFocus={() => setActiveSection('materials')}
+                    placeholder="수량"
+                    className="w-24 rounded-xl border border-[var(--color-border)] px-3 py-3 text-sm outline-none focus:border-[var(--color-accent)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={addMaterial}
+                    className="rounded-xl bg-[var(--color-navy)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-navy-hover)]"
+                  >
+                    추가
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {materialItems.length === 0 && (
+                    <div className="text-sm text-[var(--color-text-tertiary)]">추가된 자재가 없습니다.</div>
+                  )}
+                  {materialItems.map((material, index) => (
+                    <div key={`${material.name}-${index}`} className="flex items-center justify-between rounded-xl bg-[var(--color-bg)] px-4 py-3 text-sm">
+                      <span className="font-medium text-[var(--color-text)]">{material.name}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[var(--color-text-secondary)]">수량: {material.quantity}</span>
+                        <button type="button" onClick={() => removeMaterial(index)} className="text-red-500 transition hover:text-red-600">삭제</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {activeSection === 'media' && (
+              <p className="text-sm text-[var(--color-text-tertiary)]">
+                사진 및 도면 첨부 기능은 다음 PR에서 연결됩니다.
+              </p>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                const idx = SECTION_ORDER.indexOf(activeSection as typeof SECTION_ORDER[number])
+                if (idx > 0) setActiveSection(SECTION_ORDER[idx - 1])
+              }}
+              disabled={activeSection === 'workers'}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              이전
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const idx = SECTION_ORDER.indexOf(activeSection as typeof SECTION_ORDER[number])
+                if (idx < SECTION_ORDER.length - 1) setActiveSection(SECTION_ORDER[idx + 1])
+              }}
+              disabled={activeSection === 'media'}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              다음
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
         </>
       )}
 
