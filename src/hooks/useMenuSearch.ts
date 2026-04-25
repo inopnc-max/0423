@@ -157,9 +157,10 @@ export interface UseMenuSearchReturn {
 /* ─── Hook ─── */
 
 export function useMenuSearch(options: MenuSearchOptions): UseMenuSearchReturn {
-  const { scope } = options
+  const { scope, selectedSiteId: overrideSiteId } = options
 
-  const { accessibleSites, selectedSiteId } = useSelectedSite()
+  const { accessibleSites, selectedSiteId: contextSelectedSiteId } = useSelectedSite()
+  const selectedSiteId = overrideSiteId ?? contextSelectedSiteId
   const [query, setQueryState] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

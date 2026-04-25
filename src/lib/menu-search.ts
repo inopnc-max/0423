@@ -86,4 +86,7 @@ export type MenuSearchResult = {
 export interface MenuSearchOptions {
   scope: MenuSearchScope
   minQueryLength?: number
+  /** Override the selectedSiteId from useSelectedSite context.
+   *  Useful when a parent component manages its own site selection. */
+  selectedSiteId?: string | null
 }

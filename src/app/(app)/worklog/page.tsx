@@ -75,7 +75,7 @@ function WorklogListView({
     filteredWorklogs,
     loading,
     clear,
-  } = useMenuSearch({ scope: 'worklog' })
+  } = useMenuSearch({ scope: 'worklog', selectedSiteId })
 
   useEffect(() => {
     if (!selectedSiteId) {
