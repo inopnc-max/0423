@@ -138,10 +138,11 @@ async function loadWorkerDefaultSiteId(
 
 function buildUiStatePayload(
   current: UserUiStateRecord | null,
+  userId: string,
   siteId: string | null
 ): UserUiStateRecord {
   return {
-    user_id: current?.user_id ?? '',
+    user_id: current?.user_id ?? userId,
     selected_site_id: siteId,
     last_site_id: siteId,
     last_work_date: current?.last_work_date ?? null,
@@ -178,7 +179,14 @@ export function SelectedSiteProvider({
 
   /* ─── Initial load ─── */
   const loadInitial = useCallback(async () => {
-    if (!user) return
+    if (!user) {
+      setUiState(null)
+      setAccessibleSites([])
+      setSelectedSiteIdState(null)
+      setLoading(false)
+      setError(null)
+      return
+    }
 
     setLoading(true)
     setError(null)
@@ -242,7 +250,7 @@ export function SelectedSiteProvider({
 
       setSelectedSiteIdState(siteId)
 
-      const next = buildUiStatePayload(uiState, siteId)
+      const next = buildUiStatePayload(uiState, user.userId, siteId)
       setUiState(next)
 
       try {
