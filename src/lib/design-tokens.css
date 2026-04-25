@@ -42,17 +42,17 @@
   --sidebar-width: 260px;
   --sidebar-collapsed-width: 72px;
 
-  /* ─── Role Badge Colors ─── */
-  --badge-worker-bg: #eff6ff;
-  --badge-worker-text: #1d4ed8;
-  --badge-partner-bg: #f0fdf4;
-  --badge-partner-text: #15803d;
-  --badge-site_manager-bg: #fffbeb;
-  --badge-site_manager-text: #b45309;
-  --badge-production_manager-bg: #f0fdfa;
-  --badge-production_manager-text: #0f766e;
-  --badge-admin-bg: #fdf4ff;
-  --badge-admin-text: #7e22ce;
+/* ─── Role Badge Colors (vFinal 기준) ─── */
+  --badge-worker-bg: #eef1f8;
+  --badge-worker-text: #46558C;
+  --badge-partner-bg: #EBF5FF;
+  --badge-partner-text: #0060DF;
+  --badge-site_manager-bg: #D1F2EB;
+  --badge-site_manager-text: #0B7261;
+  --badge-production_manager-bg: #f1effc;
+  --badge-production_manager-text: #6D5BD0;
+  --badge-admin-bg: #eceff8;
+  --badge-admin-text: #394679;
 
   /* ─── Typography Scale ─── */
   --text-display: 24px;
@@ -109,13 +109,34 @@ html, body {
 .role-badge--production_manager { background: var(--badge-production_manager-bg); color: var(--badge-production_manager-text); }
 .role-badge--admin       { background: var(--badge-admin-bg);       color: var(--badge-admin-text); }
 
-/* ─── Role Theme Variants ─── */
-.theme-worker       { --theme-primary: var(--color-navy);           --theme-accent: #4A8CFF; }
-.theme-partner      { --theme-primary: #15803d;                     --theme-accent: #4ADE80; }
-.theme-site_manager { --theme-primary: #b45309;                     --theme-accent: #F59E0B; }
-.theme-production_manager { --theme-primary: #0f766e;                --theme-accent: #14B8A6; }
-.theme-admin        { --theme-primary: var(--color-navy);           --theme-accent: #A855F7; }
-.theme-default      { --theme-primary: var(--color-navy);           --theme-accent: var(--color-accent); }
+/* ─── Role Theme Variants (vFinal 기준) ─── */
+:root {
+  /* 1. 현장관리자 (그린 계열) */
+  --role-site-manager-primary: #0B7261;
+  --role-site-manager-primary-soft: #D1F2EB;
+
+  /* 2. 파트너 (블루 계열) */
+  --role-partner-primary: #0060DF;
+  --role-partner-primary-soft: #EBF5FF;
+
+  /* 3. 작업자 */
+  --role-worker-primary: #46558C;
+  --role-worker-primary-soft: #eef1f8;
+
+  /* 4. 본사관리자 (딥 네이비) */
+  --role-admin-primary: #394679;
+  --role-admin-primary-soft: #eceff8;
+
+  /* 5. 생산관리자 (퍼플) */
+  --role-production-manager-primary: #6D5BD0;
+  --role-production-manager-primary-soft: #f1effc;
+}
+
+.ui-role-worker       { --color-role-primary: var(--role-worker-primary);           --color-role-primary-soft: var(--role-worker-primary-soft); }
+.ui-role-site-manager { --color-role-primary: var(--role-site-manager-primary);   --color-role-primary-soft: var(--role-site-manager-primary-soft); }
+.ui-role-partner      { --color-role-primary: var(--role-partner-primary);        --color-role-primary-soft: var(--role-partner-primary-soft); }
+.ui-role-admin        { --color-role-primary: var(--role-admin-primary);           --color-role-primary-soft: var(--role-admin-primary-soft); }
+.ui-role-production-manager { --color-role-primary: var(--role-production-manager-primary); --color-role-primary-soft: var(--role-production-manager-primary-soft); }
 
 .stat-card {
   background: var(--color-surface);

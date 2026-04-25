@@ -190,7 +190,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const headerTitle = hideTitleRoutes.includes(pathname) ? '' : getRouteLabel(pathname)
 
   return (
-    <div className={`min-h-screen bg-[var(--color-bg)] ${roleThemeClass}`}>
+    <div className={`ui-app-shell min-h-screen bg-[var(--color-bg)] ${roleThemeClass}`}>
       <AppHeader
         title={headerTitle}
         leading={leading}

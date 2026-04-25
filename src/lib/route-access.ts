@@ -1,25 +1,42 @@
 /* ═══════════════════════════════════════════════════════════════════
    Route Access Control
+   vFinal 기준 — production_manager는 worklog/confirmSheet/hqRequests 접근 불가
    ═══════════════════════════════════════════════════════════════════ */
 
 import { ROUTES } from './routes.constants'
 import type { Role } from './roles'
 
 export const ROUTE_ROLE_ACCESS: Record<string, readonly Role[]> = {
+  // All roles
   [ROUTES.login]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
   [ROUTES.register]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
   [ROUTES.home]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
-  [ROUTES.output]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
-  [ROUTES.worklog]: ['worker', 'site_manager', 'production_manager', 'admin'],
-  [ROUTES.site]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
-  [ROUTES.documents]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
-  [ROUTES.materials]: ['worker', 'site_manager', 'production_manager', 'admin'],
-  [ROUTES.confirmSheet]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
+  // worker, site_manager, admin, production_manager (NOT partner)
+  [ROUTES.output]: ['worker', 'site_manager', 'production_manager', 'admin'],
+  // worker, site_manager, admin only (NOT production_manager, NOT partner)
+  [ROUTES.worklog]: ['worker', 'site_manager', 'admin'],
+  // All roles except production_manager
+  [ROUTES.site]: ['worker', 'partner', 'site_manager', 'admin'],
+  [ROUTES.documents]: ['worker', 'partner', 'site_manager', 'admin'],
+  // worker, site_manager, admin only (NOT production_manager)
+  [ROUTES.materials]: ['worker', 'site_manager', 'admin'],
+  // worker, partner, site_manager, admin only (NOT production_manager)
+  [ROUTES.confirmSheet]: ['worker', 'partner', 'site_manager', 'admin'],
+  // All roles
   [ROUTES.search]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
+  // All roles
   [ROUTES.settings]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
+  // All roles
   [ROUTES.notifications]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
-  [ROUTES.hqRequests]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
+  // worker, partner, site_manager, admin only (NOT production_manager)
+  [ROUTES.hqRequests]: ['worker', 'partner', 'site_manager', 'admin'],
+  // Admin only
   [ROUTES.admin]: ['admin'],
+  // Production manager sub-routes — TODO: 실제 구현 시 라우트 정의 필요
+  '/production': ['production_manager'],
+  '/production/input': ['production_manager'],
+  '/production/logs': ['production_manager'],
+  '/production/summary': ['production_manager'],
 }
 
 function findParentRoute(route: string): string | null {
@@ -50,9 +67,15 @@ export function getLoginRedirectPath(_role: string): string {
 }
 
 export function getRoleThemeClass(role: string): string {
-  const VALID_ROLES = ['worker', 'partner', 'site_manager', 'production_manager', 'admin']
+  const themeMap: Record<string, string> = {
+    worker: 'ui-role-worker',
+    partner: 'ui-role-partner',
+    site_manager: 'ui-role-site-manager',
+    production_manager: 'ui-role-production-manager',
+    admin: 'ui-role-admin',
+  }
   const normalized = role.toLowerCase().trim()
-  return VALID_ROLES.includes(normalized) ? `theme-${normalized}` : 'theme-default'
+  return themeMap[normalized] ?? 'ui-role-worker'
 }
 
 export function getRouteLabel(pathname: string): string {

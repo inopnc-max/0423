@@ -9,6 +9,7 @@ export type Role = 'worker' | 'partner' | 'site_manager' | 'production_manager' 
 export const ROLE_ALIAS_MAP: Record<string, Role> = {
   // Legacy aliases
   customer_manager: 'partner',
+  customer: 'partner',
   supervisor: 'site_manager',
   manager: 'admin',
   // Standard roles
@@ -17,6 +18,7 @@ export const ROLE_ALIAS_MAP: Record<string, Role> = {
   partner: 'partner',
   site_manager: 'site_manager',
   production_manager: 'production_manager',
+  prod_manager: 'production_manager',
   // Common typos / case variations
   admin_: 'admin',
   worker_: 'worker',
@@ -42,7 +44,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   partner: '파트너',
   site_manager: '현장관리자',
   production_manager: '생산관리자',
-  admin: '관리자',
+  admin: '본사관리자',
 } as const
 
 export function isAdmin(role: string | Role): boolean {
@@ -75,8 +77,4 @@ export function hideManDay(role: string | Role): boolean {
 
 export function hideWorkerArray(role: string | Role): boolean {
   return role === 'partner'
-}
-
-export function canViewWorklog(role: string | Role): boolean {
-  return role === 'worker' || role === 'site_manager' || role === 'production_manager' || role === 'admin'
 }
