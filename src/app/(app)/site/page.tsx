@@ -1,51 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { Building2, ChevronRight, MapPinned } from 'lucide-react'
-import { useAuth } from '@/contexts/auth-context'
-import { createClient } from '@/lib/supabase/client'
+import { useSelectedSite } from '@/contexts/selected-site-context'
 import { ROUTES } from '@/lib/routes'
 import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
 
-interface Site {
-  id: string
-  name: string
-  company: string
-  affiliation: string
-  address: string
-  manager: string
-  status: string
-}
-
 export default function SitePage() {
-  const { user } = useAuth()
-  const supabase = createClient()
+  const {
+    selectedSiteId,
+    selectedSite,
+    accessibleSites,
+    loading,
+    error,
+    setSelectedSiteId,
+  } = useSelectedSite()
 
-  const [sites, setSites] = useState<Site[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!user) return
-
-    async function fetchSites() {
-      try {
-        const { data } = await supabase
-          .from('sites')
-          .select('id, name, company, affiliation, address, manager, status')
-          .order('name')
-          .limit(100)
-
-        if (data) setSites(data)
-      } catch (error) {
-        console.error('Failed to load sites:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    void fetchSites()
-  }, [supabase, user])
+  const sortedSites = useMemo(
+    () =>
+      [...accessibleSites].sort((a, b) => {
+        if (a.id === selectedSiteId) return -1
+        if (b.id === selectedSiteId) return 1
+        return a.name.localeCompare(b.name, 'ko')
+      }),
+    [accessibleSites, selectedSiteId]
+  )
 
   if (loading) {
     return (
@@ -60,54 +40,120 @@ export default function SitePage() {
       <div>
         <h1 className="text-xl font-bold text-[var(--color-navy)]">현장</h1>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          접근 가능한 현장을 확인하고 상세 화면으로 이동할 수 있습니다.
+          선택 현장 기준으로 기본정보와 접근 가능한 현장을 확인합니다.
         </p>
       </div>
 
-      {sites.length === 0 ? (
+      {error && (
+        <div className="rounded-2xl border-2 border-red-200 bg-red-50 p-4 text-sm text-red-600">
+          {error}
+        </div>
+      )}
+
+      {selectedSite ? (
+        <section className="rounded-2xl bg-gradient-to-r from-[var(--color-accent-light)] to-white p-5 shadow-sm">
+          <div className="mb-2 text-sm font-semibold text-[var(--color-accent)]">현재 선택 현장</div>
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent)] text-white">
+              <Building2 className="h-[22px] w-[22px]" strokeWidth={1.9} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-[var(--color-navy)]">{selectedSite.name}</span>
+                <SiteStatusBadge status={selectedSite.status} />
+              </div>
+              {selectedSite.company && (
+                <div className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                  원청사: {selectedSite.company}
+                </div>
+              )}
+              {selectedSite.affiliation && (
+                <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                  소속: {selectedSite.affiliation}
+                </div>
+              )}
+              {selectedSite.address && (
+                <div className="mt-1 flex items-start gap-1 text-sm text-[var(--color-text-secondary)]">
+                  <MapPinned className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-accent)]" strokeWidth={1.9} />
+                  <span className="line-clamp-2">{selectedSite.address}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="rounded-2xl border-2 border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-text-secondary)]">
+          현장 목록에서 현장을 선택해주세요.
+        </section>
+      )}
+
+      {accessibleSites.length === 0 ? (
         <div className="rounded-2xl bg-white p-6 text-center text-[var(--color-text-secondary)] shadow-sm">
           접근 가능한 현장이 없습니다.
         </div>
       ) : (
-        <div className="space-y-3">
-          {sites.map(site => (
-            <Link
-              key={site.id}
-              href={`${ROUTES.site}/${site.id}`}
-              className="flex items-start justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[var(--color-accent)]">
-                    <Building2 className="h-[18px] w-[18px]" strokeWidth={1.9} />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-semibold text-[var(--color-text)]">{site.name}</div>
-                    <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                      {site.company}
-                      {site.affiliation ? ` · ${site.affiliation}` : ''}
+        <section>
+          <div className="mb-3 text-sm font-semibold text-[var(--color-navy)]">
+            현장 목록 ({accessibleSites.length}개)
+          </div>
+          <div className="space-y-3">
+            {sortedSites.map(site => (
+              <button
+                key={site.id}
+                type="button"
+                onClick={() => {
+                  void setSelectedSiteId(site.id)
+                }}
+                className={`flex w-full items-start justify-between gap-3 rounded-2xl bg-white p-4 text-left shadow-sm transition hover:shadow-md ${
+                  site.id === selectedSiteId
+                    ? 'ring-2 ring-[var(--color-accent)]'
+                    : ''
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-[var(--color-accent)]">
+                      <Building2 className="h-[18px] w-[18px]" strokeWidth={1.9} />
                     </div>
-                    {site.address && (
-                      <div className="mt-2 flex items-start gap-2 text-sm text-[var(--color-text-secondary)]">
-                        <MapPinned className="mt-0.5 h-4 w-4 text-[var(--color-accent)]" strokeWidth={1.9} />
-                        <span className="line-clamp-2">{site.address}</span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-semibold text-[var(--color-text)]">{site.name}</span>
+                        {site.id === selectedSiteId && (
+                          <span className="shrink-0 rounded-full bg-[var(--color-accent)] px-2 py-0.5 text-xs font-semibold text-white">
+                            선택됨
+                          </span>
+                        )}
                       </div>
-                    )}
-                    {site.manager && (
-                      <div className="mt-2 text-xs text-[var(--color-text-tertiary)]">현장 소장: {site.manager}</div>
-                    )}
+                      <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                        {site.company}
+                        {site.affiliation ? ` · ${site.affiliation}` : ''}
+                      </div>
+                      {site.address && (
+                        <div className="mt-2 flex items-start gap-2 text-sm text-[var(--color-text-secondary)]">
+                          <MapPinned className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-accent)]" strokeWidth={1.9} />
+                          <span className="line-clamp-2">{site.address}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-3">
-                <SiteStatusBadge status={site.status} />
-                <ChevronRight className="h-4 w-4 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
-              </div>
-            </Link>
-          ))}
-        </div>
+                <div className="flex items-center gap-3">
+                  <SiteStatusBadge status={site.status} />
+                  <Link
+                    href={`${ROUTES.site}/${site.id}`}
+                    onClick={e => e.stopPropagation()}
+                    className="rounded-full px-3 py-1 text-xs font-semibold text-[var(--color-accent)] hover:bg-[var(--color-accent-light)]"
+                  >
+                    상세
+                  </Link>
+                  <ChevronRight className="h-4 w-4 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
     </div>
   )

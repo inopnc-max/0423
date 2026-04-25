@@ -9,29 +9,19 @@ import {
   ClipboardList,
   Cloud,
   CloudOff,
-  RotateCcw,
+  MapPin,
   RefreshCw,
+  RotateCcw,
+  Search,
+  X,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { useSync } from '@/contexts/sync-context'
-import { createClient } from '@/lib/supabase/client'
+import { useSelectedSite } from '@/contexts/selected-site-context'
 import { isPartner } from '@/lib/roles'
 import { ROUTES } from '@/lib/routes'
-import { loadUserUiState } from '@/lib/user-ui-state'
 import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
-
-interface Site {
-  id: string
-  name: string
-  company: string
-  status: string
-}
-
-interface RecentWorkContext {
-  siteId: string
-  siteName: string
-  workDate: string | null
-}
+import type { SiteSummary } from '@/contexts/selected-site-context'
 
 const QUICK_ACTIONS = [
   {
@@ -54,51 +44,170 @@ const QUICK_ACTIONS = [
   },
 ]
 
+function SiteCombobox({
+  sites,
+  selectedId,
+  onSelect,
+}: {
+  sites: SiteSummary[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+
+  const selected = sites.find(s => s.id === selectedId)
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return sites
+    const q = query.toLowerCase()
+    return sites.filter(
+      s =>
+        s.name.toLowerCase().includes(q) ||
+        s.company.toLowerCase().includes(q) ||
+        s.affiliation.toLowerCase().includes(q) ||
+        (s.address ?? '').toLowerCase().includes(q)
+    )
+  }, [query, sites])
+
+  useEffect(() => {
+    if (!open) setQuery('')
+  }, [open])
+
+  if (sites.length === 0) {
+    return (
+      <div className="rounded-2xl bg-[var(--color-accent-light)] p-4 text-center text-sm text-[var(--color-text-secondary)]">
+        접근 가능한 현장이 없습니다.
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex w-full items-center gap-3 rounded-2xl border-2 border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+      >
+        <Search className="h-5 w-5 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
+        {selected ? (
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-semibold text-[var(--color-text)]">{selected.name}</span>
+            <span className="block truncate text-sm text-[var(--color-text-secondary)]">
+              {selected.company}
+              {selected.affiliation ? ` · ${selected.affiliation}` : ''}
+            </span>
+          </span>
+        ) : (
+          <span className="flex-1 text-[var(--color-text-tertiary)]">현장 검색...</span>
+        )}
+        <ChevronRight
+          className={`h-5 w-5 shrink-0 text-[var(--color-text-tertiary)] transition-transform ${open ? 'rotate-90' : ''}`}
+          strokeWidth={1.9}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-64 overflow-hidden rounded-2xl border-2 border-[var(--color-border)] bg-white shadow-lg">
+          <div className="sticky top-0 bg-white p-2">
+            <div className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2">
+              <Search className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
+              <input
+                autoFocus
+                type="text"
+                placeholder="현장명, 원청사, 소속, 주소 검색..."
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text)] placeholder-[var(--color-text-tertiary)] outline-none"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  className="rounded-full p-0.5 text-[var(--color-text-tertiary)] hover:bg-[var(--color-border)]"
+                >
+                  <X className="h-4 w-4" strokeWidth={1.9} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="max-h-48 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="p-4 text-center text-sm text-[var(--color-text-secondary)]">
+                검색 결과가 없습니다.
+              </div>
+            ) : (
+              filtered.map(site => (
+                <button
+                  key={site.id}
+                  type="button"
+                  onClick={() => {
+                    onSelect(site.id)
+                    setOpen(false)
+                    setQuery('')
+                  }}
+                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-[var(--color-accent-light)]"
+                >
+                  <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate font-semibold text-[var(--color-text)]">{site.name}</span>
+                      <SiteStatusBadge status={site.status} />
+                    </div>
+                    <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                      {site.company}
+                      {site.affiliation ? ` · ${site.affiliation}` : ''}
+                    </div>
+                    {site.address && (
+                      <div className="mt-1 flex items-start gap-1 text-xs text-[var(--color-text-tertiary)]">
+                        <MapPin className="mt-0.5 h-3 w-3 shrink-0" strokeWidth={1.9} />
+                        <span className="line-clamp-1">{site.address}</span>
+                      </div>
+                    )}
+                  </div>
+                  {site.id === selectedId && (
+                    <span className="shrink-0 rounded-full bg-[var(--color-accent)] px-2 py-0.5 text-xs font-semibold text-white">
+                      선택됨
+                    </span>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {open && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => {
+            setOpen(false)
+            setQuery('')
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth()
   const { isOnline, queueCount, syncing, lastSyncedAt } = useSync()
-  const supabase = useMemo(() => createClient(), [])
+  const {
+    selectedSiteId,
+    selectedSite,
+    accessibleSites,
+    loading: siteLoading,
+    error,
+    setSelectedSiteId,
+    refreshSelectedSite,
+  } = useSelectedSite()
 
-  const [sites, setSites] = useState<Site[]>([])
-  const [recentWork, setRecentWork] = useState<RecentWorkContext | null>(null)
-  const [loading, setLoading] = useState(true)
+  const isPartnerUser = isPartner(user?.role ?? '')
+  const loading = authLoading || siteLoading
 
-  useEffect(() => {
-    async function fetchHomeData() {
-      if (!user) return
-
-      try {
-        const [sitesResponse, uiState] = await Promise.all([
-          supabase.from('sites').select('id, name, company, status').order('name'),
-          loadUserUiState(supabase, user.userId),
-        ])
-
-        const nextSites = sitesResponse.data || []
-        setSites(nextSites)
-
-        if (uiState?.last_site_id) {
-          const matchedSite = nextSites.find(site => site.id === uiState.last_site_id)
-          setRecentWork({
-            siteId: uiState.last_site_id,
-            siteName: matchedSite?.name || '최근 작업 현장',
-            workDate: uiState.last_work_date,
-          })
-        } else {
-          setRecentWork(null)
-        }
-      } catch (error) {
-        console.error('Failed to fetch home data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (!authLoading) {
-      void fetchHomeData()
-    }
-  }, [authLoading, supabase, user])
-
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="text-[var(--color-text-secondary)]">로딩 중...</div>
@@ -106,7 +215,6 @@ export default function HomePage() {
     )
   }
 
-  const isPartnerUser = isPartner(user?.role || '')
   const SyncIcon = !isOnline ? CloudOff : syncing ? RefreshCw : Cloud
   const syncLabel = !isOnline
     ? '오프라인 상태'
@@ -127,44 +235,77 @@ export default function HomePage() {
         : '현재 작업 데이터가 서버와 연결된 상태입니다.'
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-5 p-4">
       <section className="rounded-2xl bg-white p-5 shadow-sm">
         <div className="text-sm text-[var(--color-text-secondary)]">오늘의 작업 시작</div>
         <h1 className="mt-1 text-xl font-bold text-[var(--color-navy)]">
           {user?.profile?.name || '사용자'}님, 반갑습니다.
         </h1>
         <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-          마지막 현장 상태와 바로 가기 메뉴를 한 번에 확인할 수 있습니다.
+          현장 선택 후 일지 작성, 출역 확인, 현장 정보를 한눈에 확인하세요.
         </p>
       </section>
 
-      {!isPartnerUser && recentWork && (
+      {error && (
+        <div className="rounded-2xl border-2 border-red-200 bg-red-50 p-4 text-sm text-red-600">
+          {error}
+        </div>
+      )}
+
+      <section className="space-y-3">
+        <div className="text-sm font-semibold text-[var(--color-navy)]">현장 선택</div>
+        <SiteCombobox
+          sites={accessibleSites}
+          selectedId={selectedSiteId}
+          onSelect={id => {
+            void setSelectedSiteId(id)
+          }}
+        />
+      </section>
+
+      {selectedSite && (
         <section className="rounded-2xl bg-gradient-to-r from-[var(--color-accent-light)] to-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="inline-flex items-center gap-2 text-sm font-medium text-[var(--color-accent)]">
-                <RotateCcw className="h-4 w-4" strokeWidth={1.9} />
-                <span>최근 작업 복원</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 shrink-0 text-[var(--color-accent)]" strokeWidth={1.9} />
+                <span className="font-bold text-[var(--color-navy)]">{selectedSite.name}</span>
+                <SiteStatusBadge status={selectedSite.status} />
               </div>
-              <div className="mt-2 text-lg font-semibold text-[var(--color-navy)]">
-                {recentWork.siteName}
-              </div>
-              <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                {recentWork.workDate
-                  ? `${recentWork.workDate} 작업일지로 이어서 이동`
-                  : '최근 작업 현장으로 이어서 이동'}
-              </div>
+              {selectedSite.company && (
+                <div className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                  원청사: {selectedSite.company}
+                </div>
+              )}
+              {selectedSite.affiliation && (
+                <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                  소속: {selectedSite.affiliation}
+                </div>
+              )}
+              {selectedSite.address && (
+                <div className="mt-1 flex items-start gap-1 text-sm text-[var(--color-text-secondary)]">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.9} />
+                  <span className="line-clamp-1">{selectedSite.address}</span>
+                </div>
+              )}
             </div>
+          </div>
 
+          <div className="mt-4 flex gap-2">
             <Link
-              href={`${ROUTES.worklog}?site=${recentWork.siteId}${
-                recentWork.workDate ? `&date=${recentWork.workDate}` : ''
-              }`}
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--color-navy)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-navy-hover)]"
+              href={ROUTES.site}
+              className="flex-1 rounded-full border-2 border-[var(--color-accent)] px-4 py-2.5 text-center text-sm font-semibold text-[var(--color-accent)] transition hover:bg-[var(--color-accent-light)]"
             >
-              <span>이어쓰기</span>
-              <ChevronRight className="h-4 w-4" strokeWidth={1.9} />
+              현장 보기
             </Link>
+            {!isPartnerUser && selectedSiteId && (
+              <Link
+                href={`${ROUTES.worklog}?site=${selectedSiteId}`}
+                className="flex-1 rounded-full bg-[var(--color-navy)] px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-[var(--color-navy-hover)]"
+              >
+                일지 작성
+              </Link>
+            )}
           </div>
         </section>
       )}
@@ -173,19 +314,12 @@ export default function HomePage() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-sm text-[var(--color-text-secondary)]">동기화 상태</div>
-            <div className="mt-1 text-lg font-semibold text-[var(--color-navy)]">
-              {syncLabel}
-            </div>
-            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              {syncDescription}
-            </p>
+            <div className="mt-1 text-lg font-semibold text-[var(--color-navy)]">{syncLabel}</div>
+            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{syncDescription}</p>
           </div>
 
           <div className="rounded-full bg-[var(--color-accent-light)] p-3 text-[var(--color-accent)]">
-            <SyncIcon
-              className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`}
-              strokeWidth={1.9}
-            />
+            <SyncIcon className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} strokeWidth={1.9} />
           </div>
         </div>
       </section>
@@ -217,20 +351,32 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {sites.length === 0 ? (
+        {accessibleSites.length === 0 ? (
           <div className="rounded-2xl bg-white p-6 text-center text-[var(--color-text-secondary)] shadow-sm">
             접근 가능한 현장이 없습니다.
           </div>
         ) : (
           <div className="space-y-3">
-            {sites.slice(0, 5).map(site => (
-              <Link
+            {accessibleSites.slice(0, 5).map(site => (
+              <button
                 key={site.id}
-                href={`${ROUTES.site}/${site.id}`}
-                className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm transition hover:shadow-md"
+                type="button"
+                onClick={() => {
+                  void setSelectedSiteId(site.id)
+                }}
+                className={`flex w-full items-center justify-between rounded-2xl bg-white p-4 shadow-sm transition hover:shadow-md ${
+                  site.id === selectedSiteId ? 'ring-2 ring-[var(--color-accent)]' : ''
+                }`}
               >
-                <div className="min-w-0">
-                  <div className="truncate font-semibold text-[var(--color-text)]">{site.name}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-semibold text-[var(--color-text)]">{site.name}</span>
+                    {site.id === selectedSiteId && (
+                      <span className="shrink-0 rounded-full bg-[var(--color-accent)] px-2 py-0.5 text-xs font-semibold text-white">
+                        선택됨
+                      </span>
+                    )}
+                  </div>
                   <div className="mt-1 text-sm text-[var(--color-text-secondary)]">{site.company}</div>
                 </div>
 
@@ -238,7 +384,7 @@ export default function HomePage() {
                   <SiteStatusBadge status={site.status} />
                   <ChevronRight className="h-4 w-4 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
                 </div>
-              </Link>
+              </button>
             ))}
           </div>
         )}
