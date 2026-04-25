@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════
    Route Access Control
    vFinal 기준 — production_manager는 output/worklog/confirmSheet/hqRequests 접근 불가
+   site_manager는 /admin/worklogs, /admin/users에만 접근 가능
    ═══════════════════════════════════════════════════════════════════ */
 
 import { ROUTES } from './routes.constants'
@@ -32,6 +33,9 @@ export const ROUTE_ROLE_ACCESS: Record<string, readonly Role[]> = {
   [ROUTES.hqRequests]: ['worker', 'partner', 'site_manager', 'admin'],
   // Admin only
   [ROUTES.admin]: ['admin'],
+  // Admin sub-routes — site_manager can access worklogs and users only
+  '/admin/worklogs': ['site_manager', 'admin'],
+  '/admin/users': ['site_manager', 'admin'],
   // Production manager sub-routes — TODO: 실제 구현 시 라우트 정의 필요
   '/production': ['production_manager'],
   '/production/input': ['production_manager'],
