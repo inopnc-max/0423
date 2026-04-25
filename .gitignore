@@ -56,7 +56,7 @@ tmp/
 temp/
 
 # Logs
-logs
+**/logs/
 *.log
 
 # Coverage
