@@ -215,11 +215,20 @@ function HeaderLeadingSlot({ leading }: { leading?: AppHeaderLeading }) {
   }
 
   if (leading.kind === 'logo') {
+    const [imgError, setImgError] = useState(false)
+
+    if (imgError || !leading.src) {
+      return (
+        <span className="ui-header__brand">INOPNC</span>
+      )
+    }
+
     const content = (
       <img
         src={leading.src}
-        alt={leading.alt ?? '로고'}
+        alt={leading.alt ?? 'INOPNC'}
         className="ui-header__logo"
+        onError={() => setImgError(true)}
       />
     )
 
