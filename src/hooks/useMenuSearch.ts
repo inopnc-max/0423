@@ -126,6 +126,9 @@ export function useMenuSearch(options: MenuSearchOptions): UseMenuSearchReturn {
     const q = query.trim()
     const minLen = options.minQueryLength ?? 2
     if (q.length > 0 && q.length < minLen) {
+      setDocumentResults([])
+      setLoading(false)
+      setError(null)
       return
     }
 
