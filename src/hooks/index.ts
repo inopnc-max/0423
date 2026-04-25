@@ -2,4 +2,4 @@ export { useFormValidation, emailValidation, passwordValidation } from './useFor
 export type { FormField, ValidationRule } from './useFormValidation'
 export { useMenuSearch } from './useMenuSearch'
 export type { UseMenuSearchReturn } from './useMenuSearch'
-export type { MenuSearchResult, MenuSearchScope, MenuSearchOptions, MenuSearchResultType } from '@/lib/menu-search'
+export type { MenuSearchResult, MenuSearchScope, MenuSearchOptions, MenuSearchResultType, MenuSearchPreviewPayload } from '@/lib/menu-search'
