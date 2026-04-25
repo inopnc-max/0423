@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { format } from 'date-fns'
 import {
@@ -16,6 +16,15 @@ import { useAuth } from '@/contexts/auth-context'
 import { createClient } from '@/lib/supabase/client'
 import { isPartner } from '@/lib/roles'
 import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
+import { loadWorklogDraft, saveWorklogDraft, clearWorklogDraft, type WorklogDraftRecord } from '@/lib/offline/worklog-draft'
+import {
+  getSelectedSiteId,
+  getSelectedDate,
+  getWorklogSection,
+  setSelectedSiteId,
+  setSelectedDate,
+  setWorklogSection,
+} from '@/lib/ui-state'
 
 interface Site {
   id: string
@@ -449,6 +458,7 @@ function WorklogEditorView({
 }) {
   const searchParams = useSearchParams()
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), [])
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [selectedSite, setSelectedSite] = useState('')
   const [selectedDate, setSelectedDate] = useState(today)
@@ -467,6 +477,7 @@ function WorklogEditorView({
   const [saving, setSaving] = useState(false)
   const [readyForPersistence, setReadyForPersistence] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [hasDraft, setHasDraft] = useState(false)
 
   const applyWorklogState = useCallback(
     (record: Pick<WorkLogRecord, 'worker_array' | 'task_tags' | 'material_items'>) => {
@@ -476,6 +487,19 @@ function WorklogEditorView({
     },
     []
   )
+
+  // localStorage 저장 (现场/날짜 변경 시)
+  useEffect(() => {
+    if (selectedSite) setSelectedSiteId(selectedSite)
+  }, [selectedSite])
+
+  useEffect(() => {
+    if (selectedDate) setSelectedDate(selectedDate)
+  }, [selectedDate])
+
+  useEffect(() => {
+    setWorklogSection(activeSection)
+  }, [activeSection])
 
   const buildWorklogPayload = useCallback(
     (status: 'draft' | 'pending') => {
@@ -498,21 +522,32 @@ function WorklogEditorView({
     [existingLog?.id, materialItems, selectedDate, selectedSite, sites, taskTags, user, workerArray]
   )
 
+  // localStorage에서 마지막 상태 복원 + IndexedDB Draft 로드
   useEffect(() => {
     const querySite = searchParams.get('site')
     const queryDate = searchParams.get('date')
 
-    setSelectedSite(querySite || '')
-    setSelectedDate(queryDate || today)
+    // URL 파라미터 우선, 없으면 localStorage
+    const resolvedSite = querySite || getSelectedSiteId() || ''
+    const resolvedDate = queryDate || getSelectedDate() || today
+
+    setSelectedSite(resolvedSite)
+    setSelectedDate(resolvedDate)
+    setActiveSection(getWorklogSection())
     setReadyForPersistence(true)
     setEditorLoading(false)
+
+    // localStorage 저장 (URL 파라미터 없이 재접속 시 복원용)
+    if (!querySite) setSelectedSiteId(resolvedSite || null)
   }, [searchParams, today])
 
+  // Worklog 상태 로드: Server → IndexedDB Draft 순서
   useEffect(() => {
     if (!user || !selectedSite || !selectedDate || !readyForPersistence) return
 
     async function loadWorklogState() {
       try {
+        // 1. Server 데이터 로드
         const { data: serverData } = await supabase
           .from('daily_logs')
           .select('id, site_id, work_date, worker_array, task_tags, material_items, status')
@@ -524,12 +559,42 @@ function WorklogEditorView({
           setExistingLog(serverData as WorkLogRecord)
           applyWorklogState(serverData as WorkLogRecord)
         } else {
+          // 2. Server에 없으면 IndexedDB Draft 로드
+          const draft = await loadWorklogDraft(user.userId, selectedSite, selectedDate)
+          if (draft) {
+            setHasDraft(true)
+            applyWorklogState({
+              worker_array: draft.workerArray.map(w => ({ name: w.name, count: w.count })),
+              task_tags: draft.taskTags,
+              material_items: draft.materialItems.map(m => ({ name: m.name, quantity: m.quantity })),
+            })
+            // Draft 섹션으로 복원
+            setActiveSection(draft.activeSection)
+          } else {
+            setExistingLog(null)
+            applyWorklogState({ worker_array: [], task_tags: [], material_items: [] })
+          }
+        }
+      } catch {
+        // 네트워크 오류 시 Draft fallback
+        try {
+          const draft = await loadWorklogDraft(user.userId, selectedSite, selectedDate)
+          if (draft) {
+            setHasDraft(true)
+            applyWorklogState({
+              worker_array: draft.workerArray.map(w => ({ name: w.name, count: w.count })),
+              task_tags: draft.taskTags,
+              material_items: draft.materialItems.map(m => ({ name: m.name, quantity: m.quantity })),
+            })
+            setActiveSection(draft.activeSection)
+          } else {
+            setExistingLog(null)
+            applyWorklogState({ worker_array: [], task_tags: [], material_items: [] })
+          }
+        } catch {
           setExistingLog(null)
           applyWorklogState({ worker_array: [], task_tags: [], material_items: [] })
         }
-      } catch {
-        setExistingLog(null)
-        applyWorklogState({ worker_array: [], task_tags: [], material_items: [] })
       }
     }
 
@@ -581,6 +646,41 @@ function WorklogEditorView({
     setMaterialItems(prev => prev.filter((_, i) => i !== index))
   }
 
+  // IndexedDB Draft 자동 저장 (3초 debounce)
+  const scheduleDraftSave = useCallback(() => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+    }
+
+    if (!user || !selectedSite || !selectedDate) return
+
+    autoSaveTimerRef.current = setTimeout(async () => {
+      // 수정 중인 내용만 Draft로 저장 (server에 없는 경우만)
+      if (!existingLog?.id && (workerArray.length > 0 || taskTags.length > 0 || materialItems.length > 0)) {
+        await saveWorklogDraft({
+          userId: user.userId,
+          siteId: selectedSite,
+          workDate: selectedDate,
+          activeSection,
+          workerArray: workerArray.map(w => ({ name: w.name, count: w.count })),
+          taskTags,
+          materialItems: materialItems.map(m => ({ name: m.name, quantity: m.quantity })),
+        })
+        setHasDraft(true)
+      }
+    }, 3000)
+  }, [user, selectedSite, selectedDate, activeSection, workerArray, taskTags, materialItems, existingLog])
+
+  // 상태 변경 시 Draft 자동 저장 스케줄
+  useEffect(() => {
+    scheduleDraftSave()
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+      }
+    }
+  }, [scheduleDraftSave])
+
   async function handleSave(status: 'draft' | 'pending') {
     if (!selectedSite || !selectedDate || !user) return
     setSaving(true)
@@ -622,6 +722,10 @@ function WorklogEditorView({
         rejected_at: null,
         rejection_reason: null,
       })
+
+      // 성공 시 Draft 삭제
+      await clearWorklogDraft(user.userId, selectedSite, selectedDate)
+      setHasDraft(false)
 
       setMessage({
         type: 'success',
@@ -702,6 +806,12 @@ function WorklogEditorView({
             />
           </label>
         </div>
+
+        {hasDraft && !existingLog?.id && (
+          <div className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            📝 임시저장된 내용이 있습니다. 이어서 작성할 수 있습니다.
+          </div>
+        )}
 
         {existingLog?.status && (
           <div className="mt-3 rounded-xl bg-[var(--color-accent-light)] px-4 py-3 text-sm text-[var(--color-navy-light)]">

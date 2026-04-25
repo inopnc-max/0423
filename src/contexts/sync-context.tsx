@@ -18,6 +18,16 @@ import {
   readOfflineRecord,
   writeOfflineRecord,
 } from '@/lib/offline/storage'
+import {
+  getSelectedSiteId,
+  getSelectedDate,
+  getWorklogSection,
+  setSelectedSiteId,
+  setSelectedDate,
+  setWorklogSection,
+  type WorklogSection,
+  type UiStateSnapshot,
+} from '@/lib/ui-state'
 import type { DraftMaterialItem, DraftWorkerItem } from '@/lib/offline/worklog-draft'
 
 /* ─── Types ─── */
@@ -59,6 +69,14 @@ interface SyncContextValue {
   getQueuedDailyLogSave: (siteId: string, workDate: string) => Promise<DailyLogSyncPayload | null>
   clearQueuedDailyLogSave: (siteId: string, workDate: string) => Promise<void>
   flushQueue: () => Promise<void>
+  // localStorage UI State
+  getLocalSelectedSiteId: () => string | null
+  getLocalSelectedDate: () => string | null
+  getLocalWorklogSection: () => WorklogSection
+  setLocalSelectedSiteId: (siteId: string | null) => void
+  setLocalSelectedDate: (date: string | null) => void
+  setLocalWorklogSection: (section: WorklogSection) => void
+  getUiStateSnapshot: () => UiStateSnapshot
 }
 
 /* ─── Queue Key Helpers ─── */
@@ -299,6 +317,20 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       getQueuedDailyLogSave,
       clearQueuedDailyLogSave,
       flushQueue,
+      // localStorage UI State
+      getLocalSelectedSiteId: getSelectedSiteId,
+      getLocalSelectedDate: getSelectedDate,
+      getLocalWorklogSection: getWorklogSection,
+      setLocalSelectedSiteId: setSelectedSiteId,
+      setLocalSelectedDate: setSelectedDate,
+      setLocalWorklogSection: setWorklogSection,
+      getUiStateSnapshot: () => ({
+        selectedSiteId: getSelectedSiteId(),
+        selectedDate: getSelectedDate(),
+        worklogSection: getWorklogSection(),
+        previewMode: 'worklog',
+        dateSwiperPosition: 0,
+      }),
     }),
     [
       clearQueuedDailyLogSave,
