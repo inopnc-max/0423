@@ -29,6 +29,7 @@ import {
 } from '@/lib/ui-state'
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { useMenuSearch } from '@/hooks'
+import { type WorklogMediaAttachment, createWorklogMediaAttachment } from '@/lib/worklog-media'
 
 interface Site {
   id: string
@@ -549,12 +550,8 @@ function WorklogEditorView({
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [hasDraft, setHasDraft] = useState(false)
 
-  type LocalMediaAttachment = {
-    id: string
+  type LocalMediaAttachment = WorklogMediaAttachment & {
     file: File
-    name: string
-    type: 'photo' | 'drawing' | 'other'
-    previewUrl: string
   }
   const [mediaAttachments, setMediaAttachments] = useState<LocalMediaAttachment[]>([])
 
@@ -736,14 +733,8 @@ function WorklogEditorView({
   function handleMediaFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
     const newAttachments: LocalMediaAttachment[] = files.map(file => ({
-      id: crypto.randomUUID(),
+      ...createWorklogMediaAttachment(file),
       file,
-      name: file.name,
-      type: file.type.startsWith('image/')
-        ? 'photo'
-        : file.type === 'application/pdf'
-        ? 'drawing'
-        : 'other',
       previewUrl: URL.createObjectURL(file),
     }))
     setMediaAttachments(prev => [...prev, ...newAttachments])
@@ -753,14 +744,14 @@ function WorklogEditorView({
   function removeMediaAttachment(id: string) {
     setMediaAttachments(prev => {
       const target = prev.find(a => a.id === id)
-      if (target) URL.revokeObjectURL(target.previewUrl)
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl)
       return prev.filter(a => a.id !== id)
     })
   }
 
   useEffect(() => {
     return () => {
-      mediaAttachments.forEach(a => URL.revokeObjectURL(a.previewUrl))
+      mediaAttachments.forEach(a => { if (a.previewUrl) URL.revokeObjectURL(a.previewUrl) })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1222,7 +1213,7 @@ function WorklogEditorView({
                       >
                         {/* 썸네일 / 아이콘 */}
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
-                          {attachment.type === 'photo' ? (
+                          {attachment.kind === 'photo' ? (
                             <img
                               src={attachment.previewUrl}
                               alt={attachment.name}
@@ -1239,13 +1230,13 @@ function WorklogEditorView({
                         <div className="flex min-w-0 flex-1 flex-col">
                           <span className="truncate text-sm font-medium text-[var(--color-text)]">{attachment.name}</span>
                           <span className={`mt-0.5 inline-block w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${
-                            attachment.type === 'photo'
+                            attachment.kind === 'photo'
                               ? 'bg-blue-100 text-blue-700'
-                              : attachment.type === 'drawing'
+                              : attachment.kind === 'drawing'
                               ? 'bg-red-100 text-red-700'
                               : 'bg-slate-100 text-slate-600'
                           }`}>
-                            {attachment.type === 'photo' ? '사진' : attachment.type === 'drawing' ? '도면' : '기타'}
+                            {attachment.kind === 'photo' ? '사진' : attachment.kind === 'drawing' ? '도면' : '기타'}
                           </span>
                         </div>
 
