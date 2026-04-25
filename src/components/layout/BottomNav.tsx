@@ -18,49 +18,31 @@ export default function BottomNav({ items, pathname }: BottomNavProps) {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-border)] bg-[var(--color-surface)]"
+      className="ui-bottom-nav"
+      aria-label="주요 탐색"
       style={{
-        paddingBottom: 'var(--safe-bottom, 0px)',
-        maxWidth: '960px',
-        margin: '0 auto',
+        gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))`,
       }}
     >
-      <div
-        className="flex h-[var(--bottom-nav-height,64px)] items-center"
-        style={{ height: 'var(--bottom-nav-height, 64px)' }}
-      >
-        {navItems.map(item => {
-          const isActive = isNavigationRouteActive(currentPathname, item.href)
-          const Icon = item.icon
+      {navItems.map(({ href, label, icon: Icon }) => {
+        const active = isNavigationRouteActive(currentPathname, href)
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-label={item.label}
-              className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 transition-colors"
-            >
-              <Icon
-                className={`h-[22px] w-[22px] transition-colors ${
-                  isActive
-                    ? 'text-[var(--color-navy)]'
-                    : 'text-[var(--color-text-tertiary)]'
-                }`}
-                strokeWidth={isActive ? 2.2 : 1.8}
-              />
-              <span
-                className={`text-[10px] font-medium transition-colors ${
-                  isActive
-                    ? 'text-[var(--color-navy)]'
-                    : 'text-[var(--color-text-tertiary)]'
-                }`}
-              >
-                {item.label}
-              </span>
-            </Link>
-          )
-        })}
-      </div>
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-current={active ? 'page' : undefined}
+            aria-label={label}
+            title={label}
+            className={`ui-bottom-nav__item${active ? ' is-active' : ''}`}
+          >
+            <span className="ui-nav-icon">
+              <Icon />
+            </span>
+            <span className="ui-bottom-nav__item-label">{label}</span>
+          </Link>
+        )
+      })}
     </nav>
   )
 }

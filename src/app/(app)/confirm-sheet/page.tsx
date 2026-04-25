@@ -1,10 +1,18 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
-import { ko } from 'date-fns/locale'
+import { PreviewCenter } from '@/components/preview'
+import {
+  ConfirmSheetForm,
+  ConfirmSheetSignaturePad,
+  ConfirmSheetPdfTemplate,
+  type ConfirmSheetDraft,
+} from '@/components/confirm-sheet'
+import { Eye, FileText, CheckCircle, ArrowLeft, RotateCcw, Save } from 'lucide-react'
 
 interface Site {
   id: string
@@ -21,20 +29,48 @@ interface DailyLog {
   task_tags: string[]
 }
 
+// 초안 초기값 생성
+function createInitialDraft(): ConfirmSheetDraft {
+  const today = format(new Date(), 'yyyy-MM-dd')
+  return {
+    siteId: '',
+    siteName: '',
+    siteAddress: '',
+    siteManager: '',
+    companyName: '',
+    projectName: '',
+    periodStart: today,
+    periodEnd: today,
+    workDate: today,
+    workContent: '',
+    specialNotes: '',
+    affiliation: '',
+    signerName: '',
+    signatureDataUrl: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
+}
+
 export default function ConfirmSheetPage() {
   const { user } = useAuth()
-  const [sites, setSites] = useState<Site[]>([])
-  const [selectedSite, setSelectedSite] = useState<string>('')
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [log, setLog] = useState<DailyLog | null>(null)
-  const [signature, setSignature] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [generating, setGenerating] = useState(false)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const drawing = useRef(false)
-  const lastPos = useRef({ x: 0, y: 0 })
+  const router = useRouter()
   const supabase = createClient()
 
+  // 데이터 fetch 상태
+  const [sites, setSites] = useState<Site[]>([])
+  const [selectedSiteId, setSelectedSiteId] = useState<string>('')
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [log, setLog] = useState<DailyLog | null>(null)
+  const [generating, setGenerating] = useState(false)
+
+  // Draft 상태 (작업완료확인서 입력값)
+  const [draft, setDraft] = useState<ConfirmSheetDraft>(createInitialDraft)
+  const [showPreview, setShowPreview] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [savedDocId, setSavedDocId] = useState<string | null>(null)
+
+  // Sites fetch
   useEffect(() => {
     if (!user) return
     async function fetchSites() {
@@ -48,249 +84,406 @@ export default function ConfirmSheetPage() {
     fetchSites()
   }, [user, supabase])
 
+  // DailyLog fetch + 자동 채움
   useEffect(() => {
-    if (!selectedSite || !selectedDate) return
+    if (!selectedSiteId || !selectedDate) {
+      setLog(null)
+      return
+    }
     async function fetchLog() {
       try {
         const { data } = await supabase
           .from('daily_logs')
           .select('id, work_date, worker_array, task_tags')
-          .eq('site_id', selectedSite)
+          .eq('site_id', selectedSiteId)
           .eq('work_date', selectedDate)
           .single()
-        if (data) setLog(data)
-        else setLog(null)
+        if (data) {
+          setLog(data)
+          const workerCount = (data.worker_array || []).reduce((sum: number, w: { count: number }) => sum + w.count, 0)
+          const workSummary = data.task_tags?.join(', ') || ''
+          const autoContent = workSummary
+            ? `${workSummary} 작업을 완료하였습니다. (작업인원: ${workerCount}명)`
+            : ''
+          setDraft(prev => ({
+            ...prev,
+            workDate: data.work_date,
+            workContent: prev.workContent || autoContent,
+          }))
+        } else {
+          setLog(null)
+        }
       } catch {}
     }
     fetchLog()
-  }, [selectedSite, selectedDate, supabase])
+  }, [selectedSiteId, selectedDate, supabase])
 
-  const getCanvasPos = (e: React.MouseEvent | React.TouchEvent) => {
-    const canvas = canvasRef.current
-    if (!canvas) return { x: 0, y: 0 }
-    const rect = canvas.getBoundingClientRect()
-    const scaleX = canvas.width / rect.width
-    const scaleY = canvas.height / rect.height
-    if ('touches' in e) {
-      return {
-        x: (e.touches[0].clientX - rect.left) * scaleX,
-        y: (e.touches[0].clientY - rect.top) * scaleY,
-      }
+  // 현장 선택 시 draft 자동 채움
+  const handleSiteSelect = useCallback((siteId: string) => {
+    setSelectedSiteId(siteId)
+    const site = sites.find(s => s.id === siteId)
+    if (site) {
+      setDraft(prev => ({
+        ...prev,
+        siteId: site.id,
+        siteName: site.name,
+        siteAddress: site.address,
+        siteManager: site.manager,
+        companyName: site.company,
+      }))
     }
-    return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
-    }
-  }
+  }, [sites])
 
-  const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    drawing.current = true
-    const pos = getCanvasPos(e)
-    lastPos.current = pos
-    const ctx = canvas.getContext('2d')
-    if (ctx) {
-      ctx.beginPath()
-      ctx.moveTo(pos.x, pos.y)
-    }
-  }
+  // Draft 업데이트
+  const handleDraftChange = useCallback((updates: Partial<ConfirmSheetDraft>) => {
+    setDraft(prev => ({ ...prev, ...updates, updatedAt: new Date().toISOString() }))
+  }, [])
 
-  const draw = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!drawing.current) return
-    const canvas = canvasRef.current
-    const ctx = canvas?.getContext('2d')
-    if (!ctx) return
-    const pos = getCanvasPos(e)
-    ctx.strokeStyle = '#1B233D'
-    ctx.lineWidth = 2
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-    ctx.lineTo(pos.x, pos.y)
-    ctx.stroke()
-    lastPos.current = pos
-  }
+  // 서명 업데이트
+  const handleSignatureChange = useCallback((dataUrl: string | null) => {
+    handleDraftChange({ signatureDataUrl: dataUrl })
+  }, [handleDraftChange])
 
-  const endDraw = () => {
-    if (drawing.current) {
-      drawing.current = false
-      const canvas = canvasRef.current
-      if (canvas) {
-        setSignature(canvas.toDataURL())
-      }
-    }
-  }
+  // 유효성 검사
+  const isValid = useMemo(() => {
+    return !!(
+      draft.siteId &&
+      draft.projectName &&
+      draft.workContent &&
+      draft.signatureDataUrl &&
+      draft.signerName
+    )
+  }, [draft])
 
-  const clearSignature = () => {
-    const canvas = canvasRef.current
-    const ctx = canvas?.getContext('2d')
-    if (ctx && canvas) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      setSignature(null)
-    }
-  }
-
+  // PDF 생성
   const generatePDF = useCallback(async () => {
-    const site = sites.find(s => s.id === selectedSite)
-    if (!site || !log || !signature) return
+    if (!isValid) return
 
     setGenerating(true)
     try {
       const { jsPDF } = await import('jspdf')
-      const doc = new jsPDF()
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' })
 
-      doc.setFont('Pretendard')
-      doc.setFontSize(20)
-      doc.text('현장 확인서', 105, 20, { align: 'center' })
+      doc.setFont('helvetica')
+      let y = 20
+      const left = 20
+      const right = 190
+      const lineHeight = 8
+
+      doc.setFontSize(18)
+      doc.setFont('helvetica', 'bold')
+      doc.text('WORK COMPLETION CERTIFICATE', 105, y, { align: 'center' })
+      y += 12
+
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`To: ${draft.companyName || 'N/A'}`, left, y)
+      y += lineHeight * 1.5
 
       doc.setFontSize(10)
-      doc.setTextColor(100)
-      doc.text(`발급일: ${format(new Date(), 'yyyy년 M월 d일', { locale: ko })}`, 105, 28, { align: 'center' })
+      const col1 = left
+      const col2 = 60
+      const col3 = 130
+      const col4 = 160
 
-      doc.setDrawColor(200)
-      doc.line(20, 35, 190, 35)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Site:', col1, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(draft.siteName || 'N/A', col2, y)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Company:', col3, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(draft.companyName || 'N/A', col4, y)
+      y += lineHeight
 
-      doc.setFontSize(12)
-      doc.setTextColor(0)
-      doc.text(`현장명: ${site.name}`, 20, 45)
-      doc.text(`회사: ${site.company}`, 20, 53)
-      doc.text(`주소: ${site.address}`, 20, 61)
-      doc.text(`현장소장: ${site.manager}`, 20, 69)
-      doc.text(`작업일: ${format(new Date(log.work_date), 'yyyy년 M월 d일 (EEEE)', { locale: ko })}`, 20, 77)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Project:', col1, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(draft.projectName || 'N/A', col2, y)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Period:', col3, y)
+      doc.setFont('helvetica', 'normal')
+      const period = `${draft.periodStart} ~ ${draft.periodEnd}`
+      doc.text(period, col4, y)
+      y += lineHeight * 2
 
-      doc.line(20, 82, 190, 82)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Work Content:', left, y)
+      y += lineHeight
+      doc.setFont('helvetica', 'normal')
+      const contentLines = doc.splitTextToSize(draft.workContent || 'N/A', right - left)
+      doc.text(contentLines, left, y)
+      y += contentLines.length * lineHeight + 4
 
-      doc.text('작업 인원', 20, 90)
-      const workers = log.worker_array || []
-      let y = 97
-      workers.forEach(w => {
-        doc.text(`- ${w.name}: ${w.count}명`, 25, y)
-        y += 7
-      })
-
-      doc.text('작업 항목', 20, y + 5)
-      y += 12
-      const tags = log.task_tags || []
-      doc.text(tags.join(', '), 25, y)
-
-      doc.line(20, y + 10, 190, y + 10)
-
-      doc.text('서명', 20, y + 18)
-      if (signature) {
-        doc.addImage(signature, 'PNG', 20, y + 22, 60, 30)
+      if (draft.specialNotes) {
+        doc.setFont('helvetica', 'bold')
+        doc.text('Special Notes:', left, y)
+        y += lineHeight
+        doc.setFont('helvetica', 'normal')
+        const noteLines = doc.splitTextToSize(draft.specialNotes, right - left)
+        doc.text(noteLines, left, y)
+        y += noteLines.length * lineHeight + 4
       }
-      doc.text(`${user?.profile?.name || '작업자'} (인)`, 90, y + 50)
 
-      doc.save(`확인서_${site.name}_${log.work_date}.pdf`)
+      y += 8
+      doc.setFont('helvetica', 'italic')
+      doc.setFontSize(10)
+      doc.text('We hereby confirm that the above work has been completed as stated.', 105, y, { align: 'center' })
+      doc.setFont('helvetica', 'normal')
+      y += lineHeight * 2
+
+      doc.setFont('helvetica', 'bold')
+      doc.text('Work Date:', left, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(draft.workDate || 'N/A', col2, y)
+      y += lineHeight
+
+      doc.setFont('helvetica', 'bold')
+      doc.text('Affiliation:', left, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(draft.affiliation || 'N/A', col2, y)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Name:', col3, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(draft.signerName || 'N/A', col4, y)
+      y += lineHeight * 2
+
+      if (draft.signatureDataUrl) {
+        doc.setFont('helvetica', 'bold')
+        doc.text('Signature:', left, y)
+        try {
+          doc.addImage(draft.signatureDataUrl, 'PNG', left + 30, y - 5, 50, 20)
+        } catch (e) {
+          console.error('Signature image error:', e)
+        }
+      }
+
+      y += 30
+      doc.setFontSize(9)
+      doc.text(`Issued: ${format(new Date(), 'yyyy-MM-dd')}`, right, y, { align: 'right' })
+
+      const pdfBlob = doc.output('blob')
+      const fileName = `ConfirmSheet_${draft.siteName}_${draft.workDate}_${Date.now()}.pdf`
+
+      const { data: uploadData, error: uploadError } = await supabase
+        .storage
+        .from('documents')
+        .upload(`confirm-sheets/${fileName}`, pdfBlob, {
+          contentType: 'application/pdf',
+          upsert: false,
+        })
+
+      if (uploadError) {
+        throw new Error(`Storage upload failed: ${uploadError.message}`)
+      }
+
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('documents')
+        .getPublicUrl(uploadData.path)
+
+      const { data: docData, error: docError } = await supabase
+        .from('site_documents')
+        .insert({
+          site_id: draft.siteId,
+          doc_type: 'confirmation',
+          title: `${draft.siteName} 작업완료확인서 (${draft.workDate})`,
+          file_path: uploadData.path,
+          file_url: publicUrl,
+          file_size: pdfBlob.size,
+          file_ext: 'pdf',
+          work_date: draft.workDate,
+          worklog_id: log?.id || null,
+          uploaded_by: user?.userId,
+          badge: '완료',
+        })
+        .select('id')
+        .single()
+
+      if (docError) {
+        throw new Error(`Database insert failed: ${docError.message}`)
+      }
+
+      doc.save(fileName)
+      setSavedDocId(docData.id)
+      setShowSuccess(true)
+
     } catch (err) {
-      console.error('PDF 생성 실패:', err)
-      alert('PDF 생성에 실패했습니다.')
+      console.error('PDF 생성/저장 실패:', err)
+      alert(err instanceof Error ? err.message : 'PDF 생성에 실패했습니다.')
     } finally {
       setGenerating(false)
     }
-  }, [sites, selectedSite, log, signature, user])
+  }, [draft, isValid, supabase, user?.userId, log?.id])
 
+  // 탭 변경
+  const handleShowPreview = () => setShowPreview(true)
+  const handleShowForm = () => setShowPreview(false)
+
+  // 미리보기 모드
+  if (showPreview) {
+    return (
+      <PreviewCenter
+        title="미리보기"
+        subtitle={draft.siteName || '작업완료확인서'}
+        showBack={true}
+        onBack={handleShowForm}
+        dockMode="readonly"
+        onDownload={generatePDF}
+        dockDisabled={generating || !isValid}
+      >
+        <div className="ui-card p-4 overflow-x-auto">
+          <ConfirmSheetPdfTemplate draft={draft} showPlaceholder={!isValid} />
+        </div>
+      </PreviewCenter>
+    )
+  }
+
+  // 입력 모드
   return (
-    <div className="p-4 pb-24">
-      <h1 className="text-xl font-bold text-[var(--color-navy)] mb-4">확인서</h1>
+    <div className="space-y-4">
+      {/* 탭 전환 */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={handleShowForm}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition ${
+            !showPreview
+              ? 'bg-[var(--color-primary-strong)] text-white'
+              : 'bg-[var(--color-bg-soft)] text-[var(--color-text-sub)]'
+          }`}
+        >
+          <FileText className="h-4 w-4" />
+          입력
+        </button>
+        <button
+          onClick={handleShowPreview}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition ${
+            showPreview
+              ? 'bg-[var(--color-primary-strong)] text-white'
+              : 'bg-[var(--color-bg-soft)] text-[var(--color-text-sub)]'
+          }`}
+        >
+          <Eye className="h-4 w-4" />
+          미리보기
+        </button>
+      </div>
 
-      {/* Selector */}
-      <div className="bg-white rounded-xl p-4 shadow-sm mb-4 space-y-3">
+      {/* 현장/날짜 선택 */}
+      <div className="ui-card p-4 space-y-3">
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">현장</label>
+          <label className="block text-sm font-medium text-[var(--color-text-sub)] mb-1.5">현장</label>
           <select
-            value={selectedSite}
-            onChange={e => setSelectedSite(e.target.value)}
-            className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg"
+            value={selectedSiteId}
+            onChange={e => handleSiteSelect(e.target.value)}
+            className="w-full px-3 py-2.5 border rounded-lg bg-[var(--color-bg-surface)] text-sm"
+            style={{ borderColor: 'rgba(219, 227, 236, 1)' }}
           >
             <option value="">현장 선택</option>
             {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">작업일</label>
+          <label className="block text-sm font-medium text-[var(--color-text-sub)] mb-1.5">작업일</label>
           <input
             type="date"
             value={selectedDate}
             onChange={e => setSelectedDate(e.target.value)}
-            className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg"
+            className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg bg-[var(--color-bg-surface)] text-sm"
           />
-        </div>
-      </div>
-
-      {/* Preview */}
-      {selectedSite && (
-        <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
-          <h2 className="font-semibold text-[var(--color-navy)] mb-3">확인서 미리보기</h2>
-
-          {log ? (
-            <div className="text-sm space-y-2">
-              <div className="flex justify-between">
-                <span className="text-[var(--color-text-secondary)]">현장</span>
-                <span className="font-medium">{sites.find(s => s.id === selectedSite)?.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[var(--color-text-secondary)]">작업일</span>
-                <span className="font-medium">{format(new Date(log.work_date), 'yyyy년 M월 d일', { locale: ko })}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[var(--color-text-secondary)]">인원</span>
-                <span className="font-medium">
-                  {(log.worker_array || []).reduce((s, w) => s + w.count, 0)}명
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[var(--color-text-secondary)]">작업항목</span>
-                <span className="font-medium text-right max-w-[60%]">{(log.task_tags || []).join(', ')}</span>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-              해당 날짜의 작업 기록이 없습니다.
+          {log && (
+            <p className="text-xs text-emerald-600 mt-1.5">
+              ✓ {format(new Date(log.work_date), 'yyyy년 M월 d일')} 작업 기록 자동 로드됨
             </p>
           )}
         </div>
-      )}
+      </div>
 
-      {/* Signature */}
-      {log && (
-        <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-[var(--color-navy)]">서명</h2>
-            <button onClick={clearSignature} className="text-xs text-red-500 hover:underline">
-              지우기
-            </button>
-          </div>
-          <div className="border-2 border-dashed border-[var(--color-border)] rounded-lg overflow-hidden">
-            <canvas
-              ref={canvasRef}
-              width={600}
-              height={200}
-              className="w-full touch-none"
-              onMouseDown={startDraw}
-              onMouseMove={draw}
-              onMouseUp={endDraw}
-              onMouseLeave={endDraw}
-              onTouchStart={startDraw}
-              onTouchMove={draw}
-              onTouchEnd={endDraw}
-            />
-          </div>
-          <p className="text-xs text-[var(--color-text-tertiary)] mt-2 text-center">
-            위 영역에 서명을 해주세요
-          </p>
+      {/* 확인서 입력 폼 */}
+      <ConfirmSheetForm
+        draft={draft}
+        sites={sites}
+        onDraftChange={handleDraftChange}
+        onSiteSelect={handleSiteSelect}
+      />
+
+      {/* 서명 패드 */}
+      <div className="ui-card p-4">
+        <ConfirmSheetSignaturePad
+          signatureDataUrl={draft.signatureDataUrl}
+          onSignatureChange={handleSignatureChange}
+        />
+      </div>
+
+      {/* 유효성 체크 */}
+      {!isValid && (
+        <div className="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg">
+          <p className="font-medium">필수 입력 항목:</p>
+          <ul className="list-disc list-inside mt-1 space-y-0.5">
+            {!draft.siteId && <li>현장 선택</li>}
+            {!draft.projectName && <li>공사명</li>}
+            {!draft.workContent && <li>작업내용</li>}
+            {!draft.signatureDataUrl && <li>서명</li>}
+            {!draft.signerName && <li>성명</li>}
+          </ul>
         </div>
       )}
 
-      {/* Generate Button */}
-      {log && (
-        <button
-          onClick={generatePDF}
-          disabled={generating || !signature}
-          className="w-full py-4 bg-[var(--color-navy)] text-white rounded-xl font-medium hover:bg-[var(--color-navy-hover)] transition disabled:opacity-50"
-        >
-          {generating ? 'PDF 생성 중...' : 'PDF 다운로드'}
-        </button>
+      {/* 저장 버튼 */}
+      <button
+        onClick={generatePDF}
+        disabled={generating || !isValid}
+        className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-medium transition ${
+          isValid && !generating
+            ? 'bg-[var(--color-primary-strong)] text-white hover:opacity-90'
+            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+        }`}
+      >
+        <Save className="h-4 w-4" />
+        {generating ? '저장 중...' : '저장 및 PDF 다운로드'}
+      </button>
+
+      {/* 저장 완료 성공 모달 */}
+      {showSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center space-y-4">
+            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle className="h-8 w-8 text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-[var(--color-navy)]">저장 완료</h3>
+              <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+                작업완료확인서가 성공적으로 저장되었습니다.
+              </p>
+              {savedDocId && (
+                <p className="text-xs text-[var(--color-text-tertiary)] mt-2">
+                  문서 ID: {savedDocId}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => {
+                  setShowSuccess(false)
+                  setDraft(createInitialDraft())
+                  setSelectedSiteId('')
+                  setLog(null)
+                  setShowPreview(false)
+                }}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] rounded-lg text-sm font-medium hover:bg-[var(--color-bg-highlight)] transition"
+              >
+                <RotateCcw className="h-4 w-4" />
+                새로 작성
+              </button>
+              <button
+                onClick={() => router.back()}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[var(--color-navy)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-navy-hover)] transition"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                돌아가기
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -1,273 +1,395 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
+import { ChevronLeft, Menu, MoreHorizontal } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { ChevronLeft } from 'lucide-react'
-import type { Role } from '@/lib/roles'
-import { ROUTES } from '@/lib/routes'
 
-/* ─── Types ─── */
-
-export interface AppHeaderLeadingBack {
-  kind: 'back'
-  label: string
-  title: string
-  onClick: () => void
-}
-
-export interface AppHeaderLeadingLogo {
-  kind: 'logo'
-  src: string
-  alt: string
-  href: string
-}
-
-export type AppHeaderLeading = AppHeaderLeadingBack | AppHeaderLeadingLogo
+/* ─── Types (compatible with AppShell's getHeaderActionItems output) ─── */
 
 export interface AppHeaderAction {
   id: string
   label: string
-  title: string
+  title?: string
   icon: LucideIcon
-  kind: 'action' | 'link'
+  kind: 'link' | 'action'
   href?: string
   onSelect?: () => void
   active?: boolean
-  badgeContent?: React.ReactNode
-  mobilePriority?: boolean
+  badgeContent?: number | string | null
+  mobilePriority?: number | boolean
 }
 
-export type HeaderActionId = string
-
-/* ─── Header Behavior Logic ─── */
-
-export type HeaderBehaviorKind = 'default' | 'back' | 'hidden'
-
-export interface HeaderBehavior {
-  kind: HeaderBehaviorKind
-  leading: 'logo' | 'back'
-}
-
-const BACK_LEADING_ROUTES = [
-  ROUTES.site,
-  ROUTES.settings,
-  ROUTES.notifications,
-  ROUTES.hqRequests,
-  ROUTES.confirmSheet,
-  ROUTES.documents,
-  ROUTES.materials,
-  ROUTES.search,
-]
-
-export function getHeaderBehavior(pathname: string): HeaderBehavior {
-  if (!pathname || pathname === '/') {
-    return { kind: 'hidden', leading: 'logo' }
-  }
-
-  if (
-    pathname === ROUTES.home ||
-    pathname === ROUTES.output ||
-    pathname === ROUTES.worklog ||
-    pathname === ROUTES.admin
-  ) {
-    return { kind: 'default', leading: 'logo' }
-  }
-
-  for (const route of BACK_LEADING_ROUTES) {
-    if (pathname === route || pathname.startsWith(`${route}/`)) {
-      return { kind: 'back', leading: 'back' }
-    }
-  }
-
-  return { kind: 'default', leading: 'logo' }
-}
-
-/* ─── Navigation Active State ─── */
-
-export function isNavigationRouteActive(pathname: string, href: string): boolean {
-  if (href === ROUTES.home) {
-    return pathname === ROUTES.home
-  }
-  return pathname === href || pathname.startsWith(`${href}/`)
-}
-
-/* ─── Default Header Action Items ─── */
-
-interface GetHeaderActionItemsOptions {
-  pathname: string
-  role: Role | string
-}
-
-export function getHeaderActionItems(_options: GetHeaderActionItemsOptions): HeaderActionItemDescriptor[] {
-  return [
-    {
-      id: 'search',
-      label: '검색',
-      title: '통합검색',
-      iconName: 'Search',
-      kind: 'link',
-      href: ROUTES.search,
-      mobilePriority: true,
-    },
-    {
-      id: 'confirm-sheet',
-      label: '확인서',
-      title: '확인서',
-      iconName: 'FileSignature',
-      kind: 'link',
-      href: ROUTES.confirmSheet,
-      mobilePriority: true,
-    },
-    {
-      id: 'hq-requests',
-      label: '본사요청',
-      title: '본사요청',
-      iconName: 'MessageSquareMore',
-      kind: 'link',
-      href: ROUTES.hqRequests,
-      mobilePriority: false,
-    },
-    {
-      id: 'notifications',
-      label: '알림',
-      title: '알림',
-      iconName: 'Bell',
-      kind: 'link',
-      href: ROUTES.notifications,
-      badge: 'notifications',
-      mobilePriority: true,
-    },
-  ]
-}
-
-export interface HeaderActionItemDescriptor {
-  id: string
+export interface AppHeaderStatus {
   label: string
-  title: string
-  iconName: string
-  kind: 'action' | 'link'
-  href?: string
-  onSelect?: () => void
-  badge?: 'notifications'
-  mobilePriority?: boolean
+  title?: string
+  icon: LucideIcon
+  tone?: 'neutral' | 'success' | 'warning' | 'danger'
+  spinning?: boolean
+  onClick?: () => void
 }
 
-/* ─── Component ─── */
+export type AppHeaderLeading =
+  | { kind: 'brand'; label?: string }
+  | { kind: 'logo'; src: string; alt?: string; href?: string }
+  | { kind: 'menu'; label: string; title?: string; onClick?: () => void }
+  | { kind: 'back'; label: string; title?: string; onClick: () => void }
+  | { kind: 'empty' }
+
+/* ─── Props ─── */
 
 interface AppHeaderProps {
-  title?: string
+  title: string
+  subtitle?: string
   leading?: AppHeaderLeading
-  actions?: AppHeaderAction[]
+  actions: AppHeaderAction[]
+  shareAction?: AppHeaderAction
   utilityActions?: AppHeaderAction[]
+  status?: AppHeaderStatus
 }
+
+/* ─── Helpers ─── */
+
+function getActionA11yLabel(action: AppHeaderAction) {
+  if (action.badgeContent === null || action.badgeContent === undefined) {
+    return action.label
+  }
+  return `${action.label}, ${action.badgeContent}`
+}
+
+function splitPrimaryActions(
+  actions: AppHeaderAction[],
+  maxInlineActions: number
+): {
+  inlineActions: AppHeaderAction[]
+  overflowActions: AppHeaderAction[]
+} {
+  if (actions.length <= maxInlineActions) {
+    return { inlineActions: actions, overflowActions: [] }
+  }
+
+  const overflowIds = new Set(
+    [...actions]
+      .sort((left, right) => (Number(left.mobilePriority) ?? 0) - (Number(right.mobilePriority) ?? 0))
+      .slice(0, actions.length - maxInlineActions)
+      .map(action => action.id)
+  )
+
+  return {
+    inlineActions: actions.filter(action => !overflowIds.has(action.id)),
+    overflowActions: actions.filter(action => overflowIds.has(action.id)),
+  }
+}
+
+/* ─── Sub-components ─── */
+
+function HeaderIconAction({
+  action,
+  onNavigate,
+}: {
+  action: AppHeaderAction
+  onNavigate?: () => void
+}) {
+  const Icon = action.icon
+  const className = `ui-header-icon${action.active ? ' is-active' : ''}`
+  const commonProps = {
+    'aria-label': getActionA11yLabel(action),
+    className,
+  }
+
+  if (action.kind === 'link' && action.href) {
+    return (
+      <Link
+        {...commonProps}
+        href={action.href}
+        aria-current={action.active ? 'page' : undefined}
+        onClick={onNavigate}
+      >
+        <Icon />
+        {action.badgeContent != null ? (
+          <span className="ui-noti-badge">{action.badgeContent}</span>
+        ) : null}
+      </Link>
+    )
+  }
+
+  return (
+    <button
+      {...commonProps}
+      type="button"
+      onClick={action.onSelect}
+      disabled={!action.onSelect}
+      aria-pressed={action.active || undefined}
+    >
+      <Icon />
+      {action.badgeContent != null ? (
+        <span className="ui-noti-badge">{action.badgeContent}</span>
+      ) : null}
+    </button>
+  )
+}
+
+function HeaderMenuItem({
+  action,
+  onNavigate,
+}: {
+  action: AppHeaderAction
+  onNavigate: () => void
+}) {
+  const Icon = action.icon
+  const className = `ui-header-overflow__item${action.active ? ' is-active' : ''}`
+
+  if (action.kind === 'link' && action.href) {
+    return (
+      <Link
+        href={action.href}
+        className={className}
+        role="menuitem"
+        aria-current={action.active ? 'page' : undefined}
+        onClick={onNavigate}
+      >
+        <span className="ui-header-overflow__icon">
+          <Icon />
+        </span>
+        <span className="ui-header-overflow__label">{action.label}</span>
+        {action.badgeContent != null ? (
+          <span className="ui-header-overflow__badge">{action.badgeContent}</span>
+        ) : null}
+      </Link>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      className={className}
+      role="menuitem"
+      onClick={() => {
+        action.onSelect?.()
+        onNavigate()
+      }}
+      disabled={!action.onSelect}
+    >
+      <span className="ui-header-overflow__icon">
+        <Icon />
+      </span>
+      <span className="ui-header-overflow__label">{action.label}</span>
+      {action.badgeContent != null ? (
+        <span className="ui-header-overflow__badge">{action.badgeContent}</span>
+      ) : null}
+    </button>
+  )
+}
+
+function HeaderLeadingSlot({ leading }: { leading?: AppHeaderLeading }) {
+  if (!leading) {
+    return <span className="ui-header__brand-spacer" aria-hidden="true" />
+  }
+
+  if (leading.kind === 'back') {
+    return (
+      <button
+        type="button"
+        className="ui-header-icon ui-header-icon--back"
+        aria-label={leading.label}
+        title={leading.title ?? leading.label}
+        onClick={leading.onClick}
+      >
+        <ChevronLeft />
+      </button>
+    )
+  }
+
+  if (leading.kind === 'menu' && leading.onClick) {
+    return (
+      <button
+        type="button"
+        className="ui-header-icon"
+        aria-label={leading.label}
+        title={leading.title ?? leading.label}
+        onClick={leading.onClick}
+      >
+        <Menu />
+      </button>
+    )
+  }
+
+  if (leading.kind === 'logo') {
+    const [imgError, setImgError] = useState(false)
+
+    if (imgError || !leading.src) {
+      return (
+        <span className="ui-header__brand">INOPNC</span>
+      )
+    }
+
+    const content = (
+      <img
+        src={leading.src}
+        alt={leading.alt ?? 'INOPNC'}
+        className="ui-header__logo"
+        onError={() => setImgError(true)}
+      />
+    )
+
+    if (leading.href) {
+      return (
+        <Link href={leading.href} className="ui-header-logo-link" aria-label="홈으로 이동">
+          {content}
+        </Link>
+      )
+    }
+
+    return content
+  }
+
+  if (leading.kind === 'brand') {
+    return <span className="ui-header__brand">{leading.label || 'INOPNC'}</span>
+  }
+
+  return <span className="ui-header__brand-spacer" aria-hidden="true" />
+}
+
+function HeaderStatusChip({ status }: { status: AppHeaderStatus }) {
+  const Icon = status.icon
+  const className = `ui-sync-chip is-${status.tone ?? 'neutral'}`
+
+  if (status.onClick) {
+    return (
+      <button
+        type="button"
+        className={className}
+        title={status.title ?? status.label}
+        aria-label={status.title ?? status.label}
+        onClick={status.onClick}
+      >
+        <span className="ui-sync-chip__icon">
+          <Icon className={status.spinning ? 'animate-spin' : undefined} />
+        </span>
+        <span className="ui-sync-chip__label">{status.label}</span>
+      </button>
+    )
+  }
+
+  return (
+    <div
+      className={className}
+      title={status.title ?? status.label}
+      aria-label={status.title ?? status.label}
+    >
+      <span className="ui-sync-chip__icon">
+        <Icon className={status.spinning ? 'animate-spin' : undefined} />
+      </span>
+      <span className="ui-sync-chip__label">{status.label}</span>
+    </div>
+  )
+}
+
+/* ─── Main Component ─── */
 
 export default function AppHeader({
   title,
+  subtitle,
   leading,
-  actions = [],
+  actions,
+  shareAction,
   utilityActions = [],
+  status,
 }: AppHeaderProps) {
-  const allActions = [...actions, ...utilityActions]
+  const [overflowOpen, setOverflowOpen] = useState(false)
+  const overflowRef = useRef<HTMLDivElement | null>(null)
+  const primaryActions = shareAction ? [...actions, shareAction] : actions
+  const { inlineActions, overflowActions } = splitPrimaryActions(primaryActions, 4)
+  const hasOverflowMenu = overflowActions.length > 0 || utilityActions.length > 0
+
+  useEffect(() => {
+    if (!overflowOpen) return
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!overflowRef.current?.contains(event.target as Node)) {
+        setOverflowOpen(false)
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setOverflowOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [overflowOpen])
 
   return (
-    <header
-      className="sticky top-0 z-50 flex h-[var(--header-height,56px)] items-center border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4"
-      style={{ maxWidth: '960px', margin: '0 auto' }}
-    >
-      {/* Leading Section */}
-      <div className="flex min-w-0 flex-shrink-0 items-center">
-        {leading?.kind === 'back' && (
-          <button
-            type="button"
-            onClick={leading.onClick}
-            title={leading.title}
-            aria-label={leading.label}
-            className="flex items-center gap-1 rounded-lg px-1 py-1 text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-text)]"
-          >
-            <ChevronLeft className="h-5 w-5" strokeWidth={1.9} />
-          </button>
-        )}
-
-        {leading?.kind === 'logo' && (
-          <Link
-            href={leading.href}
-            title={leading.alt}
-            className="flex items-center"
-          >
-            <Image
-              src={leading.src}
-              alt={leading.alt}
-              width={96}
-              height={28}
-              className="h-7 w-auto object-contain"
-              priority={false}
-            />
-          </Link>
-        )}
+    <header className="ui-header">
+      <div className="ui-header__left">
+        <HeaderLeadingSlot leading={leading} />
       </div>
 
-      {/* Title */}
-      {title ? (
-        <h1 className="ml-3 truncate text-base font-semibold text-[var(--color-text)]">
+      <div className="ui-header__title-group">
+        <div className="ui-header__title" title={title}>
           {title}
-        </h1>
-      ) : null}
-
-      {/* Spacer */}
-      <div className="flex-1" />
-
-      {/* Actions */}
-      {allActions.length > 0 && (
-        <div className="flex items-center gap-1">
-          {allActions.map(action => {
-            const Icon = action.icon
-
-            const buttonContent = (
-              <>
-                <Icon
-                  className="h-[18px] w-[18px]"
-                  strokeWidth={1.9}
-                />
-                {action.badgeContent != null && (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--color-danger)] px-1 text-[10px] font-bold leading-none text-white">
-                    {action.badgeContent}
-                  </span>
-                )}
-              </>
-            )
-
-            const buttonClass = 'relative flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-text)]'
-
-            if (action.kind === 'link' && action.href) {
-              return (
-                <Link
-                  key={action.id}
-                  href={action.href}
-                  title={action.title}
-                  aria-label={action.label}
-                  className={buttonClass}
-                >
-                  {buttonContent}
-                </Link>
-              )
-            }
-
-            return (
-              <button
-                key={action.id}
-                type="button"
-                title={action.title}
-                aria-label={action.label}
-                onClick={action.onSelect}
-                className={buttonClass}
-              >
-                {buttonContent}
-              </button>
-            )
-          })}
         </div>
-      )}
+        {subtitle ? (
+          <div className="ui-header__sub" title={subtitle}>
+            {subtitle}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="ui-header__right">
+        {status ? <HeaderStatusChip status={status} /> : null}
+
+        {inlineActions.map(action => (
+          <HeaderIconAction key={action.id} action={action} />
+        ))}
+
+        {hasOverflowMenu ? (
+          <div className="ui-header-overflow" ref={overflowRef}>
+            <button
+              type="button"
+              className={`ui-header-icon${overflowOpen ? ' is-active' : ''}`}
+              aria-label="추가 메뉴"
+              aria-haspopup="menu"
+              aria-expanded={overflowOpen}
+              title="추가 메뉴"
+              onClick={() => setOverflowOpen(previous => !previous)}
+            >
+              <MoreHorizontal />
+            </button>
+
+            {overflowOpen ? (
+              <div className="ui-header-overflow__panel" role="menu">
+                {overflowActions.map(action => (
+                  <HeaderMenuItem
+                    key={action.id}
+                    action={action}
+                    onNavigate={() => setOverflowOpen(false)}
+                  />
+                ))}
+
+                {overflowActions.length > 0 && utilityActions.length > 0 ? (
+                  <div className="ui-header-overflow__divider" aria-hidden="true" />
+                ) : null}
+
+                {utilityActions.map(action => (
+                  <HeaderMenuItem
+                    key={action.id}
+                    action={action}
+                    onNavigate={() => setOverflowOpen(false)}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
     </header>
   )
 }
