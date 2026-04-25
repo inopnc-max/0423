@@ -1,49 +1,51 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useAuth } from '@/contexts/auth-context'
-import { createClient } from '@/lib/supabase/client'
-
-interface Document {
-  id: string
-  category: string
-  title: string
-  file_url: string | null
-  created_at: string
-}
+import { useState } from 'react'
+import { useSelectedSite } from '@/contexts/selected-site-context'
+import { useMenuSearch } from '@/hooks/useMenuSearch'
+import { Search, X } from 'lucide-react'
 
 const CATEGORIES = ['전체', '일지보고서', '사진대지', '도면마킹', '안전서류', '견적서', '시공계획서', '장비계획서', '기타서류', '확인서']
 
+interface DocumentRow {
+  id: string
+  site_id: string
+  category: string
+  title: string
+  file_url: string | null
+  file_type: string | null
+  created_at: string
+}
+
 export default function DocumentsPage() {
-  const { user } = useAuth()
-  const [documents, setDocuments] = useState<Document[]>([])
-  const [loading, setLoading] = useState(true)
+  const { selectedSiteId } = useSelectedSite()
   const [category, setCategory] = useState('전체')
-  const supabase = createClient()
 
-  useEffect(() => {
-    if (!user) return
-    async function fetchDocs() {
-      try {
-        let query = supabase.from('documents').select('*').order('created_at', { ascending: false }).limit(100)
-        if (category !== '전체') {
-          query = query.eq('category', category)
-        }
-        const { data } = await query
-        if (data) setDocuments(data)
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchDocs()
-  }, [user, supabase, category])
+  const {
+    query,
+    setQuery,
+    filteredDocuments,
+    loading,
+    error,
+    clear,
+  } = useMenuSearch({ scope: 'documents' })
 
-  if (loading) {
+  /* ─── Category + search combined filter ─── */
+
+  const displayed = (() => {
+    const docs = filteredDocuments
+    if (category === '전체') return docs
+    return docs.filter(doc => doc.category === category)
+  })()
+
+  /* ─── Empty states ─── */
+
+  if (!selectedSiteId) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-[var(--color-text-secondary)]">로딩 중...</div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="text-center text-[var(--color-text-secondary)]">
+          먼저 홈에서 현장을 선택해주세요.
+        </div>
       </div>
     )
   }
@@ -51,6 +53,27 @@ export default function DocumentsPage() {
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold text-[var(--color-navy)] mb-4">문서함</h1>
+
+      {/* Search Input */}
+      <div className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-white px-3 py-2 mb-4">
+        <Search className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
+        <input
+          type="text"
+          placeholder="문서명, 카테고리, 파일유형 검색..."
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text)] placeholder-[var(--color-text-tertiary)] outline-none"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={clear}
+            className="rounded-full p-0.5 text-[var(--color-text-tertiary)] hover:bg-[var(--color-border)]"
+          >
+            <X className="h-4 w-4" strokeWidth={1.9} />
+          </button>
+        )}
+      </div>
 
       {/* Category Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide">
@@ -69,14 +92,30 @@ export default function DocumentsPage() {
         ))}
       </div>
 
-      {/* Document List */}
-      {documents.length === 0 ? (
-        <div className="text-center py-12 text-[var(--color-text-secondary)]">
-          문서가 없습니다.
+      {/* Error */}
+      {error && (
+        <div className="mb-4 rounded-xl border-2 border-red-200 bg-red-50 p-4 text-sm text-red-600">
+          {error}
         </div>
-      ) : (
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-[var(--color-text-secondary)]">문서를 불러오는 중...</div>
+        </div>
+      )}
+
+      {/* Document List */}
+      {!loading && displayed.length === 0 && (
+        <div className="text-center py-12 text-[var(--color-text-secondary)]">
+          {query ? '검색 결과가 없습니다.' : '문서가 없습니다.'}
+        </div>
+      )}
+
+      {!loading && displayed.length > 0 && (
         <div className="space-y-3">
-          {documents.map(doc => (
+          {displayed.map((doc: DocumentRow) => (
             <a
               key={doc.id}
               href={doc.file_url || '#'}
@@ -99,6 +138,11 @@ export default function DocumentsPage() {
                     <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
                       {doc.category}
                     </span>
+                    {doc.file_type && (
+                      <span className="px-2 py-0.5 bg-gray-50 text-gray-500 text-xs rounded">
+                        {doc.file_type}
+                      </span>
+                    )}
                     <span className="text-xs text-[var(--color-text-tertiary)]">
                       {new Date(doc.created_at).toLocaleDateString()}
                     </span>
