@@ -549,6 +549,15 @@ function WorklogEditorView({
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [hasDraft, setHasDraft] = useState(false)
 
+  type LocalMediaAttachment = {
+    id: string
+    file: File
+    name: string
+    type: 'photo' | 'drawing' | 'other'
+    previewUrl: string
+  }
+  const [mediaAttachments, setMediaAttachments] = useState<LocalMediaAttachment[]>([])
+
   const applyWorklogState = useCallback(
     (record: Pick<WorkLogRecord, 'worker_array' | 'task_tags' | 'material_items'>) => {
       setWorkerArray(record.worker_array || [])
@@ -723,6 +732,38 @@ function WorklogEditorView({
     setActiveSection('materials')
     setMaterialItems(prev => prev.filter((_, i) => i !== index))
   }
+
+  function handleMediaFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || [])
+    const newAttachments: LocalMediaAttachment[] = files.map(file => ({
+      id: crypto.randomUUID(),
+      file,
+      name: file.name,
+      type: file.type.startsWith('image/')
+        ? 'photo'
+        : file.type === 'application/pdf'
+        ? 'drawing'
+        : 'other',
+      previewUrl: URL.createObjectURL(file),
+    }))
+    setMediaAttachments(prev => [...prev, ...newAttachments])
+    e.target.value = ''
+  }
+
+  function removeMediaAttachment(id: string) {
+    setMediaAttachments(prev => {
+      const target = prev.find(a => a.id === id)
+      if (target) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter(a => a.id !== id)
+    })
+  }
+
+  useEffect(() => {
+    return () => {
+      mediaAttachments.forEach(a => URL.revokeObjectURL(a.previewUrl))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // IndexedDB Draft 자동 저장 (3초 debounce)
   const scheduleDraftSave = useCallback(() => {
@@ -923,7 +964,7 @@ function WorklogEditorView({
                   if (section === 'workers') return workerArray.length > 0
                   if (section === 'tasks') return taskTags.length > 0
                   if (section === 'materials') return materialItems.length > 0
-                  return false
+                  return mediaAttachments.length > 0
                 })()
 
                 return (
@@ -984,7 +1025,7 @@ function WorklogEditorView({
                 {activeSection === 'workers' && `${formatManDay(totalWorkers)}명`}
                 {activeSection === 'tasks' && `${taskTags.length}개`}
                 {activeSection === 'materials' && `${materialItems.length}건`}
-                {activeSection === 'media' && '준비 중'}
+                {activeSection === 'media' && (mediaAttachments.length === 0 ? '준비 중' : `${mediaAttachments.length}개`)}
               </span>
             </div>
 
@@ -1144,9 +1185,86 @@ function WorklogEditorView({
             )}
 
             {activeSection === 'media' && (
-              <p className="text-sm text-[var(--color-text-tertiary)]">
-                사진 및 도면 첨부 기능은 다음 PR에서 연결됩니다.
-              </p>
+              <div className="space-y-4">
+                {/* 안내 문구 */}
+                <div className="rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-3">
+                  <p className="text-sm font-medium text-amber-700">
+                    현재 첨부 파일은 이 화면에서 미리보기만 가능합니다.
+                    실제 저장/업로드는 다음 PR에서 연결됩니다.
+                  </p>
+                </div>
+
+                {/* 파일 선택 */}
+                <label className="flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--color-accent)] bg-[var(--color-accent-light)] py-8 transition hover:bg-amber-50">
+                  <svg className="mb-2 h-10 w-10 text-[var(--color-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                  </svg>
+                  <span className="text-sm font-semibold text-[var(--color-accent)]">사진 / 도면 첨부</span>
+                  <span className="mt-1 text-xs text-[var(--color-text-tertiary)]">이미지 (JPG, PNG 등) 또는 PDF 파일</span>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    multiple
+                    onChange={handleMediaFiles}
+                    className="hidden"
+                  />
+                </label>
+
+                {/* 첨부 목록 */}
+                {mediaAttachments.length === 0 ? (
+                  <p className="text-center text-sm text-[var(--color-text-tertiary)]">첨부된 파일이 없습니다.</p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {mediaAttachments.map(attachment => (
+                      <div
+                        key={attachment.id}
+                        className="flex items-center gap-3 rounded-2xl border-2 border-[var(--color-border)] bg-white px-4 py-3"
+                      >
+                        {/* 썸네일 / 아이콘 */}
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
+                          {attachment.type === 'photo' ? (
+                            <img
+                              src={attachment.previewUrl}
+                              alt={attachment.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <svg className="h-7 w-7 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                            </svg>
+                          )}
+                        </div>
+
+                        {/* 파일 정보 */}
+                        <div className="flex min-w-0 flex-1 flex-col">
+                          <span className="truncate text-sm font-medium text-[var(--color-text)]">{attachment.name}</span>
+                          <span className={`mt-0.5 inline-block w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${
+                            attachment.type === 'photo'
+                              ? 'bg-blue-100 text-blue-700'
+                              : attachment.type === 'drawing'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {attachment.type === 'photo' ? '사진' : attachment.type === 'drawing' ? '도면' : '기타'}
+                          </span>
+                        </div>
+
+                        {/* 삭제 버튼 */}
+                        <button
+                          type="button"
+                          onClick={() => removeMediaAttachment(attachment.id)}
+                          className="shrink-0 rounded-full p-2 text-red-400 transition hover:bg-red-50 hover:text-red-500"
+                          aria-label={`${attachment.name} 삭제`}
+                        >
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -1186,6 +1304,14 @@ function WorklogEditorView({
       {message && (
         <div className={`rounded-xl px-4 py-3 text-sm ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
           {message.text}
+        </div>
+      )}
+
+      {mediaAttachments.length > 0 && (
+        <div className="mx-auto max-w-3xl px-4 pb-2">
+          <div className="rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm font-medium text-amber-700">
+            첨부 파일은 아직 저장되지 않습니다.
+          </div>
         </div>
       )}
 
