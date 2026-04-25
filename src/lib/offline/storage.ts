@@ -1,5 +1,5 @@
 const OFFLINE_DB_NAME = 'inopnc-offline'
-const OFFLINE_DB_VERSION = 2
+const OFFLINE_DB_VERSION = 3
 
 export const OFFLINE_STORE_NAMES = {
   worklogDrafts: 'worklog-drafts',
@@ -31,6 +31,10 @@ function openOfflineDatabase(): Promise<IDBDatabase | null> {
 
       if (!database.objectStoreNames.contains(OFFLINE_STORE_NAMES.userUiState)) {
         database.createObjectStore(OFFLINE_STORE_NAMES.userUiState, { keyPath: 'key' })
+      }
+
+      if (!database.objectStoreNames.contains('blobs')) {
+        database.createObjectStore('blobs', { keyPath: 'id' })
       }
     }
 
