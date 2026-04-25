@@ -2,7 +2,8 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { Building2, ChevronRight, MapPinned } from 'lucide-react'
+import { Building2, ChevronRight, MapPinned, Search, X } from 'lucide-react'
+import { useMenuSearch } from '@/hooks/useMenuSearch'
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { ROUTES } from '@/lib/routes'
 import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
@@ -17,14 +18,16 @@ export default function SitePage() {
     setSelectedSiteId,
   } = useSelectedSite()
 
+  const { query, setQuery, filteredSites } = useMenuSearch({ scope: 'site_select' })
+
   const sortedSites = useMemo(
     () =>
-      [...accessibleSites].sort((a, b) => {
+      [...filteredSites].sort((a, b) => {
         if (a.id === selectedSiteId) return -1
         if (b.id === selectedSiteId) return 1
         return a.name.localeCompare(b.name, 'ko')
       }),
-    [accessibleSites, selectedSiteId]
+    [filteredSites, selectedSiteId]
   )
 
   if (loading) {
@@ -93,8 +96,29 @@ export default function SitePage() {
         </div>
       ) : (
         <section>
+          <div className="mb-3 flex items-center gap-2">
+            <div className="flex flex-1 items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-white px-3 py-2">
+              <Search className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
+              <input
+                type="text"
+                placeholder="현장명, 원청사, 소속 검색..."
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text)] placeholder-[var(--color-text-tertiary)] outline-none"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  className="rounded-full p-0.5 text-[var(--color-text-tertiary)] hover:bg-[var(--color-border)]"
+                >
+                  <X className="h-4 w-4" strokeWidth={1.9} />
+                </button>
+              )}
+            </div>
+          </div>
           <div className="mb-3 text-sm font-semibold text-[var(--color-navy)]">
-            현장 목록 ({accessibleSites.length}개)
+            현장 목록 ({sortedSites.length}개)
           </div>
           <div className="space-y-3">
             {sortedSites.map(site => (

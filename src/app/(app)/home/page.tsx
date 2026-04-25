@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   Building2,
@@ -11,12 +11,12 @@ import {
   CloudOff,
   MapPin,
   RefreshCw,
-  RotateCcw,
   Search,
   X,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { useSync } from '@/contexts/sync-context'
+import { useMenuSearch } from '@/hooks/useMenuSearch'
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { isPartner } from '@/lib/roles'
 import { ROUTES } from '@/lib/routes'
@@ -53,26 +53,14 @@ function SiteCombobox({
   selectedId: string | null
   onSelect: (id: string) => void
 }) {
-  const [query, setQuery] = useState('')
+  const { query, setQuery, filteredSites } = useMenuSearch({ scope: 'site_select' })
   const [open, setOpen] = useState(false)
 
   const selected = sites.find(s => s.id === selectedId)
 
-  const filtered = useMemo(() => {
-    if (!query.trim()) return sites
-    const q = query.toLowerCase()
-    return sites.filter(
-      s =>
-        s.name.toLowerCase().includes(q) ||
-        s.company.toLowerCase().includes(q) ||
-        s.affiliation.toLowerCase().includes(q) ||
-        (s.address ?? '').toLowerCase().includes(q)
-    )
-  }, [query, sites])
-
   useEffect(() => {
     if (!open) setQuery('')
-  }, [open])
+  }, [open, setQuery])
 
   if (sites.length === 0) {
     return (
@@ -133,12 +121,12 @@ function SiteCombobox({
           </div>
 
           <div className="max-h-48 overflow-y-auto">
-            {filtered.length === 0 ? (
+            {filteredSites.length === 0 ? (
               <div className="p-4 text-center text-sm text-[var(--color-text-secondary)]">
                 검색 결과가 없습니다.
               </div>
             ) : (
-              filtered.map(site => (
+              filteredSites.map(site => (
                 <button
                   key={site.id}
                   type="button"
