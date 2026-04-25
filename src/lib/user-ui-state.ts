@@ -8,6 +8,7 @@ import type { WorklogSectionKey } from './offline/worklog-draft'
 
 export interface UserUiStateRecord {
   user_id: string
+  selected_site_id: string | null
   last_site_id: string | null
   last_work_date: string | null
   last_section: WorklogSectionKey | null
@@ -30,6 +31,7 @@ function normalizeUserUiState(
 ): UserUiStateRecord {
   return {
     user_id: userId,
+    selected_site_id: data?.selected_site_id ?? null,
     last_site_id: data?.last_site_id ?? null,
     last_work_date: data?.last_work_date ?? null,
     last_section: data?.last_section ?? null,
@@ -84,7 +86,7 @@ export async function loadUserUiState(
     const { data, error } = await supabase
       .from('user_ui_state')
       .select(
-        'user_id, last_site_id, last_work_date, last_section, recent_worker_template, recent_tag_template, updated_at'
+        'user_id, selected_site_id, last_site_id, last_work_date, last_section, recent_worker_template, recent_tag_template, updated_at'
       )
       .eq('user_id', userId)
       .maybeSingle()

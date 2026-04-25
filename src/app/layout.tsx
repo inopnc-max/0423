@@ -3,6 +3,7 @@ import './globals.css'
 import { AuthProvider } from '@/contexts/auth-context'
 import { NotificationProvider } from '@/contexts/notification-context'
 import { SyncProvider } from '@/contexts/sync-context'
+import { SelectedSiteProvider } from '@/contexts/selected-site-context'
 
 export const metadata: Metadata = {
   title: 'INOPNC',
@@ -18,9 +19,11 @@ export default function RootLayout({
     <html lang="ko">
       <body>
         <AuthProvider>
-          <SyncProvider>
-            <NotificationProvider>{children}</NotificationProvider>
-          </SyncProvider>
+          <SelectedSiteProvider>
+            <SyncProvider>
+              <NotificationProvider>{children}</NotificationProvider>
+            </SyncProvider>
+          </SelectedSiteProvider>
         </AuthProvider>
       </body>
     </html>
