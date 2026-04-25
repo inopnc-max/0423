@@ -47,8 +47,10 @@
   --badge-worker-text: #1d4ed8;
   --badge-partner-bg: #f0fdf4;
   --badge-partner-text: #15803d;
-  --badge-site_manager_bg: #fffbeb;
+  --badge-site_manager-bg: #fffbeb;
   --badge-site_manager-text: #b45309;
+  --badge-production_manager-bg: #f0fdfa;
+  --badge-production_manager-text: #0f766e;
   --badge-admin-bg: #fdf4ff;
   --badge-admin-text: #7e22ce;
 
@@ -104,7 +106,16 @@ html, body {
 .role-badge--worker       { background: var(--badge-worker-bg);       color: var(--badge-worker-text); }
 .role-badge--partner      { background: var(--badge-partner-bg);     color: var(--badge-partner-text); }
 .role-badge--site_manager { background: var(--badge-site_manager-bg); color: var(--badge-site_manager-text); }
+.role-badge--production_manager { background: var(--badge-production_manager-bg); color: var(--badge-production_manager-text); }
 .role-badge--admin       { background: var(--badge-admin-bg);       color: var(--badge-admin-text); }
+
+/* ─── Role Theme Variants ─── */
+.theme-worker       { --theme-primary: var(--color-navy);           --theme-accent: #4A8CFF; }
+.theme-partner      { --theme-primary: #15803d;                     --theme-accent: #4ADE80; }
+.theme-site_manager { --theme-primary: #b45309;                     --theme-accent: #F59E0B; }
+.theme-production_manager { --theme-primary: #0f766e;                --theme-accent: #14B8A6; }
+.theme-admin        { --theme-primary: var(--color-navy);           --theme-accent: #A855F7; }
+.theme-default      { --theme-primary: var(--color-navy);           --theme-accent: var(--color-accent); }
 
 .stat-card {
   background: var(--color-surface);

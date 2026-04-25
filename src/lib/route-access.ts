@@ -6,19 +6,19 @@ import { ROUTES } from './routes.constants'
 import type { Role } from './roles'
 
 export const ROUTE_ROLE_ACCESS: Record<string, readonly Role[]> = {
-  [ROUTES.login]: ['worker', 'partner', 'site_manager', 'admin'],
-  [ROUTES.register]: ['worker', 'partner', 'site_manager', 'admin'],
-  [ROUTES.home]: ['worker', 'partner', 'site_manager', 'admin'],
-  [ROUTES.output]: ['worker', 'partner', 'site_manager', 'admin'],
-  [ROUTES.worklog]: ['worker', 'site_manager', 'admin'],
-  [ROUTES.site]: ['worker', 'partner', 'site_manager', 'admin'],
-  [ROUTES.documents]: ['worker', 'partner', 'site_manager', 'admin'],
-  [ROUTES.materials]: ['worker', 'site_manager', 'admin'],
-  [ROUTES.confirmSheet]: ['worker', 'partner', 'site_manager', 'admin'],
-  [ROUTES.search]: ['worker', 'partner', 'site_manager', 'admin'],
-  [ROUTES.settings]: ['worker', 'partner', 'site_manager', 'admin'],
-  [ROUTES.notifications]: ['worker', 'partner', 'site_manager', 'admin'],
-  [ROUTES.hqRequests]: ['worker', 'partner', 'site_manager', 'admin'],
+  [ROUTES.login]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
+  [ROUTES.register]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
+  [ROUTES.home]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
+  [ROUTES.output]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
+  [ROUTES.worklog]: ['worker', 'site_manager', 'production_manager', 'admin'],
+  [ROUTES.site]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
+  [ROUTES.documents]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
+  [ROUTES.materials]: ['worker', 'site_manager', 'production_manager', 'admin'],
+  [ROUTES.confirmSheet]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
+  [ROUTES.search]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
+  [ROUTES.settings]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
+  [ROUTES.notifications]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
+  [ROUTES.hqRequests]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
   [ROUTES.admin]: ['admin'],
 }
 
@@ -47,6 +47,12 @@ export function canAccessRoute(route: string, role: Role | string): boolean {
 
 export function getLoginRedirectPath(_role: string): string {
   return ROUTES.home
+}
+
+export function getRoleThemeClass(role: string): string {
+  const VALID_ROLES = ['worker', 'partner', 'site_manager', 'production_manager', 'admin']
+  const normalized = role.toLowerCase().trim()
+  return VALID_ROLES.includes(normalized) ? `theme-${normalized}` : 'theme-default'
 }
 
 export function getRouteLabel(pathname: string): string {

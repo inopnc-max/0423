@@ -13,8 +13,23 @@ export {
   SECONDARY_APP_ACTIONS,
   ADMIN_NAV_ITEMS,
   ADMIN_ROUTES,
+  BOTTOM_NAV_BY_ROLE,
+  BOTTOM_NAV_SECONDARY_BY_ROLE,
+  getBottomNavItems,
+  getSecondaryActions,
   type NavigationItem,
 } from './navigation.config'
+
+// Header helpers
+export {
+  getHeaderActionItems,
+  getHeaderBehavior,
+  isNavigationRouteActive,
+  type HeaderBehavior,
+  type HeaderBehaviorKind,
+  type HeaderActionItem,
+  type HeaderActionId,
+} from './routes-utils'
 
 // Route Access Control
 export {
@@ -22,4 +37,5 @@ export {
   canAccessRoute,
   getLoginRedirectPath,
   getRouteLabel,
+  getRoleThemeClass,
 } from './route-access'

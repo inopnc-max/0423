@@ -23,8 +23,11 @@ import {
   Wallet,
   Files,
   History,
+  BarChart3,
+  Truck,
 } from 'lucide-react'
 import { ROUTES, ROUTE_LABELS } from './routes.constants'
+import type { Role } from './roles'
 
 export interface NavigationItem {
   href: string
@@ -51,6 +54,32 @@ export const HEADER_ACTION_ITEMS: NavigationItem[] = [
 export const SECONDARY_APP_ACTIONS: NavigationItem[] = [
   { href: ROUTES.materials, label: ROUTE_LABELS[ROUTES.materials], icon: Package },
 ]
+
+/* ─── Role-specific BottomNav configurations ─── */
+
+export const BOTTOM_NAV_BY_ROLE: Record<Role, NavigationItem[]> = {
+  worker: APP_NAV_ITEMS,
+  partner: APP_NAV_ITEMS.filter(item => item.href !== ROUTES.worklog),
+  site_manager: APP_NAV_ITEMS,
+  production_manager: APP_NAV_ITEMS,
+  admin: APP_NAV_ITEMS,
+}
+
+export const BOTTOM_NAV_SECONDARY_BY_ROLE: Record<Role, NavigationItem[]> = {
+  worker: SECONDARY_APP_ACTIONS,
+  partner: [],
+  site_manager: SECONDARY_APP_ACTIONS,
+  production_manager: SECONDARY_APP_ACTIONS,
+  admin: SECONDARY_APP_ACTIONS,
+}
+
+export function getBottomNavItems(role: Role): NavigationItem[] {
+  return BOTTOM_NAV_BY_ROLE[role] ?? APP_NAV_ITEMS
+}
+
+export function getSecondaryActions(role: Role): NavigationItem[] {
+  return BOTTOM_NAV_SECONDARY_BY_ROLE[role] ?? []
+}
 
 export const ADMIN_ROUTES = {
   dashboard: ROUTES.admin,

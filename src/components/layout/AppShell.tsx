@@ -11,13 +11,14 @@ import AppHeader, {
 import BottomNav from '@/components/layout/BottomNav'
 import { useAuth } from '@/contexts/auth-context'
 import { useNotifications } from '@/contexts/notification-context'
-import { isAdmin, isPartner } from '@/lib/roles'
+import { isAdmin } from '@/lib/roles'
 import {
   ADMIN_ROUTES,
-  APP_NAV_ITEMS,
   ROUTES,
   SECONDARY_APP_ACTIONS,
+  getBottomNavItems,
   getHeaderActionItems,
+  getRoleThemeClass,
   getHeaderBehavior,
   getRouteLabel,
   isNavigationRouteActive,
@@ -91,14 +92,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const shellMaxWidth = 'max-w-[960px]'
   const shellPadding = 'px-4 sm:px-6'
-  const isPartnerUser = isPartner(user.role)
   const isAdminUser = isAdmin(user.role)
   const headerBehavior = getHeaderBehavior(pathname)
+  const roleThemeClass = getRoleThemeClass(user.role)
 
-  const bottomNavItems = isPartnerUser
-    ? APP_NAV_ITEMS.filter(item => item.href !== ROUTES.worklog)
-    : APP_NAV_ITEMS
-  const bottomNavHeight = 'calc(var(--bottom-nav-height) + var(--safe-bottom))'
+  const bottomNavItems = getBottomNavItems(user.role)
+  const secondaryActions = SECONDARY_APP_ACTIONS.filter(item =>
+    user.role === 'worker' || user.role === 'site_manager' || user.role === 'production_manager' || user.role === 'admin'
+  )
 
   const handleBack = () => {
     const parent = getParentRoute(pathname)
@@ -189,7 +190,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const headerTitle = hideTitleRoutes.includes(pathname) ? '' : getRouteLabel(pathname)
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)]">
+    <div className={`min-h-screen bg-[var(--color-bg)] ${roleThemeClass}`}>
       <AppHeader
         title={headerTitle}
         leading={leading}
@@ -208,8 +209,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
-      {!isPartnerUser &&
-        SECONDARY_APP_ACTIONS.map(({ href, label, icon: Icon }) => (
+      {secondaryActions.length > 0 &&
+        secondaryActions.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
@@ -222,9 +223,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         ))}
 
-      {!isPartnerUser && (
-        <BottomNav items={bottomNavItems} pathname={pathname} />
-      )}
+      <BottomNav items={bottomNavItems} pathname={pathname} />
     </div>
   )
 }
