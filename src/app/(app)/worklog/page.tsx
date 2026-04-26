@@ -31,6 +31,7 @@ import { useSelectedSite } from '@/contexts/selected-site-context'
 import { useMenuSearch } from '@/hooks'
 import { type WorklogMediaAttachment, createWorklogMediaAttachment } from '@/lib/worklog-media'
 import { deleteLocalBlob, getLocalBlob, saveLocalBlob } from '@/lib/offline/blob-store'
+import { buildWorklogMediaStorageTarget, uploadToStorage } from '@/lib/storage/storage-helper'
 
 interface Site {
   id: string
@@ -549,6 +550,7 @@ function WorklogEditorView({
   const [saving, setSaving] = useState(false)
   const [readyForPersistence, setReadyForPersistence] = useState(false)
   const [mediaSaving, setMediaSaving] = useState(false)
+  const [mediaUploading, setMediaUploading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [hasDraft, setHasDraft] = useState(false)
 
@@ -647,8 +649,11 @@ function WorklogEditorView({
             try {
               const blob = await getLocalBlob(meta.localBlobId)
               if (blob) {
+                // storageBucket이 없으면 kind 기준으로 보정
+                const storageBucket = meta.storageBucket ?? (meta.kind === 'photo' ? 'photos' : meta.kind === 'drawing' ? 'drawings' : 'documents')
                 restoredAttachments.push({
                   ...meta,
+                  storageBucket,
                   previewUrl: URL.createObjectURL(blob),
                   // file은 복원 시 없음 (blob store에서 Blob만 복원)
                 })
@@ -806,6 +811,68 @@ function WorklogEditorView({
     })
   }
 
+  async function uploadMediaAttachments(
+    attachments: LocalMediaAttachment[]
+  ): Promise<LocalMediaAttachment[]> {
+    const toUpload = attachments.filter(a => !a.storagePath)
+    if (toUpload.length === 0) return attachments
+
+    const uploaded: LocalMediaAttachment[] = []
+
+    for (const attachment of toUpload) {
+      let blob: Blob | null = null
+
+      if (attachment.localBlobId) {
+        try {
+          blob = await getLocalBlob(attachment.localBlobId)
+        } catch (err) {
+          console.warn('[worklog] failed to get local blob:', attachment.localBlobId, err)
+        }
+      }
+
+      if (!blob && attachment.file) {
+        blob = attachment.file
+      }
+
+      if (!blob) {
+        throw new Error(`첨부 파일 "${attachment.name}"을(를) 찾을 수 없어 업로드할 수 없습니다.`)
+      }
+
+      const target = buildWorklogMediaStorageTarget({
+        siteId: selectedSite,
+        workDate: selectedDate,
+        mediaId: attachment.id,
+        kind: attachment.kind,
+        fileName: attachment.name,
+        mimeType: attachment.mimeType,
+      })
+
+      try {
+        await uploadToStorage({
+          supabase,
+          bucket: target.bucket,
+          path: target.path,
+          blob,
+          contentType: attachment.mimeType,
+        })
+
+        uploaded.push({
+          ...attachment,
+          storageBucket: target.bucket,
+          storagePath: target.path,
+        })
+      } catch (err) {
+        console.error('[worklog] failed to upload attachment:', attachment.name, err)
+        throw new Error(`첨부 파일 "${attachment.name}" 업로드에 실패했습니다.`)
+      }
+    }
+
+    return attachments.map(a => {
+      const uploadedOne = uploaded.find(u => u.id === a.id)
+      return uploadedOne ?? a
+    })
+  }
+
   useEffect(() => {
     return () => {
       mediaAttachments.forEach(a => { if (a.previewUrl) URL.revokeObjectURL(a.previewUrl) })
@@ -858,6 +925,25 @@ function WorklogEditorView({
     setMessage(null)
 
     try {
+      // Upload media attachments to Supabase Storage first
+      if (mediaAttachments.length > 0) {
+        setMediaUploading(true)
+        try {
+          const uploadedAttachments = await uploadMediaAttachments(mediaAttachments)
+          setMediaAttachments(uploadedAttachments)
+        } catch (uploadError) {
+          setMessage({
+            type: 'error',
+            text: uploadError instanceof Error ? uploadError.message : '첨부 파일 업로드에 실패했습니다.',
+          })
+          setSaving(false)
+          setMediaUploading(false)
+          return
+        } finally {
+          setMediaUploading(false)
+        }
+      }
+
       const payload = buildWorklogPayload(status)
       if (!payload) return
 
@@ -1241,11 +1327,16 @@ function WorklogEditorView({
                 {/* 안내 문구 */}
                 <div className="rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-3">
                   <p className="text-sm font-medium text-amber-700">
-                    첨부 파일은 이 기기에 임시 저장됩니다. 서버 업로드는 다음 PR에서 연결됩니다.
+                    첨부 파일은 저장 시 서버 Storage에 업로드됩니다. 일지 첨부 목록 연결은 다음 PR에서 완료됩니다.
                   </p>
                   {mediaSaving && (
                     <p className="mt-1 text-sm text-amber-600">
                       첨부 파일을 로컬에 저장 중입니다.
+                    </p>
+                  )}
+                  {mediaUploading && (
+                    <p className="mt-1 text-sm text-amber-600">
+                      첨부 파일을 서버에 업로드 중입니다.
                     </p>
                   )}
                 </div>
@@ -1367,7 +1458,7 @@ function WorklogEditorView({
       {mediaAttachments.length > 0 && (
         <div className="mx-auto max-w-3xl px-4 pb-2">
           <div className="rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm font-medium text-amber-700">
-            첨부 파일은 아직 서버에 저장되지 않습니다.
+            첨부 파일은 저장 시 서버 Storage에 업로드됩니다.
           </div>
         </div>
       )}
@@ -1378,7 +1469,7 @@ function WorklogEditorView({
             <button
               type="button"
               onClick={() => handleSave('draft')}
-              disabled={saving}
+              disabled={saving || mediaUploading}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50 disabled:opacity-60"
             >
               임시저장
@@ -1386,10 +1477,10 @@ function WorklogEditorView({
             <button
               type="button"
               onClick={() => handleSave('pending')}
-              disabled={saving}
+              disabled={saving || mediaUploading}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--color-navy)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-navy-hover)] disabled:opacity-60"
             >
-              {saving ? '저장 중...' : '승인 요청'}
+              {saving || mediaUploading ? '저장 중...' : '승인 요청'}
             </button>
           </div>
         </div>

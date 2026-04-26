@@ -15,7 +15,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { WorklogMediaKind } from '../worklog-media'
+import type { WorklogMediaBucket, WorklogMediaKind } from '../worklog-media'
 
 /** MIME type to file extension fallback map */
 const MIME_TO_EXT: Record<string, string> = {
@@ -52,6 +52,8 @@ export interface BuildWorklogMediaStoragePathInput {
   mediaId: string
   kind: WorklogMediaKind
   fileName: string
+  /** MIME type for extension fallback when filename has no extension */
+  mimeType?: string
 }
 
 /**
@@ -73,8 +75,8 @@ export interface BuildWorklogMediaStoragePathInput {
  * // => 'photos/site-123/2024-01-15/preview/abc-def.jpg'
  */
 export function buildWorklogMediaStoragePath(input: BuildWorklogMediaStoragePathInput): string {
-  const { siteId, workDate, mediaId, kind, fileName } = input
-  const ext = extractExtension(fileName, '') // empty mimeType fallback handled by extractExtension
+  const { siteId, workDate, mediaId, kind, fileName, mimeType } = input
+  const ext = extractExtension(fileName, mimeType ?? '')
 
   switch (kind) {
     case 'photo':
@@ -84,6 +86,39 @@ export function buildWorklogMediaStoragePath(input: BuildWorklogMediaStoragePath
     case 'other':
     default:
       return `documents/${siteId}/site/${mediaId}.${ext}`
+  }
+}
+
+export interface BuildWorklogMediaStorageTargetResult {
+  bucket: WorklogMediaBucket
+  path: string
+}
+
+/**
+ * Build storage bucket and path for worklog media attachments.
+ *
+ * @example
+ * const target = buildWorklogMediaStorageTarget({
+ *   siteId: 'site-123',
+ *   workDate: '2024-01-15',
+ *   mediaId: 'abc-def',
+ *   kind: 'photo',
+ *   fileName: 'image.jpg',
+ * })
+ * // => { bucket: 'photos', path: 'site-123/2024-01-15/preview/abc-def.jpg' }
+ */
+export function buildWorklogMediaStorageTarget(input: BuildWorklogMediaStoragePathInput): BuildWorklogMediaStorageTargetResult {
+  const { siteId, workDate, mediaId, kind, fileName, mimeType } = input
+  const ext = extractExtension(fileName, mimeType ?? '')
+
+  switch (kind) {
+    case 'photo':
+      return { bucket: 'photos', path: `${siteId}/${workDate}/preview/${mediaId}.${ext}` }
+    case 'drawing':
+      return { bucket: 'drawings', path: `${siteId}/original/${mediaId}.${ext}` }
+    case 'other':
+    default:
+      return { bucket: 'documents', path: `${siteId}/site/${mediaId}.${ext}` }
   }
 }
 
