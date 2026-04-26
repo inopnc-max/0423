@@ -61,6 +61,7 @@ export default function DocumentsPage() {
     if (!previewDoc) {
       setPreviewUrl(null)
       setPreviewUrlError(null)
+      setPreviewUrlLoading(false)
       return
     }
 
@@ -102,8 +103,13 @@ export default function DocumentsPage() {
         }
       } catch {
         if (!cancelled) {
-          setPreviewUrlError('문서 미리보기를 불러오지 못했습니다.')
-          setPreviewUrl(null)
+          if (doc.file_url) {
+            setPreviewUrl(doc.file_url)
+            setPreviewUrlError(null)
+          } else {
+            setPreviewUrlError('문서 미리보기를 불러오지 못했습니다.')
+            setPreviewUrl(null)
+          }
         }
       } finally {
         if (!cancelled) setPreviewUrlLoading(false)
