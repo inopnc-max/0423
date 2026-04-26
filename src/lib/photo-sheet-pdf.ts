@@ -412,7 +412,7 @@ function escapeHtml(text: string): string {
  *
  * This function:
  * 1. Creates PDF blob using createPhotoSheetPdfBlob()
- * 2. Uploads to 'reports' bucket at path: photo-sheets/{siteId}/{workDate}/{id}.pdf
+ * 2. Uploads to 'reports' bucket at path: {siteId}/{workDate}/photo-sheet/{reportId}.pdf
  * 3. Uses browser client (not service role key)
  *
  * @param input.draft - PhotoSheetDraft data to generate PDF from
@@ -420,7 +420,7 @@ function escapeHtml(text: string): string {
  *
  * @example
  * const result = await savePhotoSheetPdfToStorage({ draft })
- * // => { bucket: 'reports', path: 'photo-sheets/site-123/2024-01-15/xxx.pdf' }
+ * // => { bucket: 'reports', path: 'site-123/2024-01-15/photo-sheet/photo-sheet-site-123-2024-01-15.pdf' }
  */
 export async function savePhotoSheetPdfToStorage(input: {
   draft: PhotoSheetDraft
