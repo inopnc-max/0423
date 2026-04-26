@@ -176,7 +176,11 @@ export async function downloadPhotoSheetPdf(input: {
     iframeDoc.close()
 
     // Wait for fonts to load
-    await iframeDoc.fonts?.ready || new Promise(resolve => setTimeout(resolve, 100))
+    if (iframeDoc.fonts?.ready) {
+      await iframeDoc.fonts.ready
+    } else {
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
 
     // Get the container element
     const container = iframeDoc.querySelector('.container') as HTMLElement
