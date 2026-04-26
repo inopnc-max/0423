@@ -29,7 +29,7 @@ import {
 } from '@/lib/ui-state'
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { useMenuSearch } from '@/hooks'
-import { type WorklogMediaAttachment, createWorklogMediaAttachment, buildWorklogMediaInfo } from '@/lib/worklog-media'
+import { type WorklogMediaAttachment, type WorklogMediaInfo, createWorklogMediaAttachment, buildWorklogMediaInfo } from '@/lib/worklog-media'
 import { deleteLocalBlob, getLocalBlob, saveLocalBlob } from '@/lib/offline/blob-store'
 import { buildWorklogMediaStorageTarget, uploadToStorage } from '@/lib/storage/storage-helper'
 import { buildPhotoSheetDraftFromMediaInfo, type PhotoSheetDraft } from '@/lib/photo-sheet-mapping'
@@ -535,6 +535,24 @@ function WorklogEditorView({
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestPhotoSheetDraftRef = useRef<PhotoSheetDraft | null>(null)
 
+  function preparePhotoSheetDraft(input: {
+    siteId: string
+    workDate: string
+    siteName?: string
+    taskTags: string[]
+    mediaInfo: WorklogMediaInfo
+  }): PhotoSheetDraft | null {
+    const draft = buildPhotoSheetDraftFromMediaInfo({
+      siteId: input.siteId,
+      workDate: input.workDate,
+      siteName: input.siteName,
+      taskTags: input.taskTags,
+      mediaInfo: input.mediaInfo,
+    })
+
+    return draft.items.length > 0 ? draft : null
+  }
+
   const [selectedSite, setSelectedSite] = useState('')
   const [selectedDate, setSelectedDate] = useState(today)
   const [activeSection, setActiveSection] = useState<'workers' | 'tasks' | 'materials' | 'media'>('workers')
@@ -1008,19 +1026,16 @@ function WorklogEditorView({
         }
       }
 
-      // Prepare PhotoSheetDraft for later use (not saved to DB yet)
-      if (selectedSite && selectedDate && payload.media_info.attachments.length > 0) {
-        const photoSheetDraft = buildPhotoSheetDraftFromMediaInfo({
-          siteId: selectedSite,
-          workDate: selectedDate,
-          siteName: sites.find(site => site.id === selectedSite)?.name,
-          taskTags,
-          mediaInfo: payload.media_info,
-        })
+      const preparedPhotoSheetDraft = preparePhotoSheetDraft({
+        siteId: selectedSite,
+        workDate: selectedDate,
+        siteName: sites.find(site => site.id === selectedSite)?.name,
+        taskTags,
+        mediaInfo: payload.media_info,
+      })
 
-        if (photoSheetDraft.items.length > 0) {
-          latestPhotoSheetDraftRef.current = photoSheetDraft
-        }
+      if (preparedPhotoSheetDraft) {
+        latestPhotoSheetDraftRef.current = preparedPhotoSheetDraft
       }
 
       setMessage({
