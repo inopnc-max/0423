@@ -32,6 +32,7 @@ import { useMenuSearch } from '@/hooks'
 import { type WorklogMediaAttachment, createWorklogMediaAttachment, buildWorklogMediaInfo } from '@/lib/worklog-media'
 import { deleteLocalBlob, getLocalBlob, saveLocalBlob } from '@/lib/offline/blob-store'
 import { buildWorklogMediaStorageTarget, uploadToStorage } from '@/lib/storage/storage-helper'
+import { buildPhotoSheetDraftFromMediaInfo, type PhotoSheetDraft } from '@/lib/photo-sheet-mapping'
 
 interface Site {
   id: string
@@ -532,6 +533,7 @@ function WorklogEditorView({
   const searchParams = useSearchParams()
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), [])
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const latestPhotoSheetDraftRef = useRef<PhotoSheetDraft | null>(null)
 
   const [selectedSite, setSelectedSite] = useState('')
   const [selectedDate, setSelectedDate] = useState(today)
@@ -1003,6 +1005,21 @@ function WorklogEditorView({
           deleteLocalBlob(attachment.localBlobId).catch(err => {
             console.warn('[worklog] failed to delete local blob after upload:', attachment.localBlobId, err)
           })
+        }
+      }
+
+      // Prepare PhotoSheetDraft for later use (not saved to DB yet)
+      if (selectedSite && selectedDate && payload.media_info.attachments.length > 0) {
+        const photoSheetDraft = buildPhotoSheetDraftFromMediaInfo({
+          siteId: selectedSite,
+          workDate: selectedDate,
+          siteName: sites.find(site => site.id === selectedSite)?.name,
+          taskTags,
+          mediaInfo: payload.media_info,
+        })
+
+        if (photoSheetDraft.items.length > 0) {
+          latestPhotoSheetDraftRef.current = photoSheetDraft
         }
       }
 
