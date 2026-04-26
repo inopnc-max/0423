@@ -33,6 +33,7 @@ import { type WorklogMediaAttachment, type WorklogMediaInfo, createWorklogMediaA
 import { deleteLocalBlob, getLocalBlob, saveLocalBlob } from '@/lib/offline/blob-store'
 import { buildWorklogMediaStorageTarget, uploadToStorage } from '@/lib/storage/storage-helper'
 import { buildPhotoSheetDraftFromMediaInfo, type PhotoSheetDraft } from '@/lib/photo-sheet-mapping'
+import { downloadPhotoSheetPdf } from '@/lib/photo-sheet-pdf'
 import { PreviewCenter } from '@/components/preview'
 import { PhotoSheetDraftViewer } from '@/components/photo-sheet'
 
@@ -1567,6 +1568,11 @@ function WorklogEditorView({
           subtitle={latestPhotoSheetDraft.workDate}
           dockMode="readonly"
           onClose={() => setIsPhotoSheetPreviewOpen(false)}
+          onDownload={() => {
+            void downloadPhotoSheetPdf({
+              draft: latestPhotoSheetDraft,
+            })
+          }}
         >
           <PhotoSheetDraftViewer draft={latestPhotoSheetDraft} />
         </PreviewCenter>
