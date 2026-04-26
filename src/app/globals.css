@@ -1617,3 +1617,704 @@ select option {
 .ui-subnav__item.is-active {
   color: var(--color-primary-strong);
 }
+
+/* ==========================================================================
+   INOPNC UI Patch Layer
+   역할색 override + 출역 보기 토글 + 출역 달력 + 칩 + 공수 컨트롤 + 바텀시트 + 툴팁
+   ========================================================================== */
+
+/* 역할별 컬러 변수는 AppShell의 ui-role-* 클래스를 통해 상속 */
+.ui-app-shell.ui-role-worker,
+.ui-app-shell.ui-role-site-manager,
+.ui-app-shell.ui-role-partner,
+.ui-app-shell.ui-role-admin,
+.ui-app-shell.ui-role-production-manager {
+  --active-role-color: var(--color-role-primary, var(--color-primary-strong));
+  --active-role-color-soft: var(--color-role-primary-soft, var(--color-primary-soft));
+  --active-role-color-border: color-mix(in srgb, var(--active-role-color) 24%, transparent);
+}
+
+/* 역할별 컬러가 기존 기본색에 덮이지 않도록 최종 override */
+.ui-app-shell .ui-header__title,
+.ui-app-shell .ui-bottom-nav__item.is-active,
+.ui-app-shell .ui-tab.is-active,
+.ui-app-shell .ui-toggle__item.is-active,
+.ui-app-shell .ui-month-mover__title,
+.ui-app-shell .ui-section-header__title {
+  color: var(--active-role-color);
+}
+
+.ui-app-shell .ui-btn--primary,
+.ui-app-shell .ui-toolbar-button--primary {
+  background: var(--active-role-color);
+  border-color: var(--active-role-color);
+  color: var(--color-text-white);
+}
+
+.ui-app-shell .ui-btn--primary:hover,
+.ui-app-shell .ui-toolbar-button--primary:hover {
+  background: var(--active-role-color);
+  border-color: var(--active-role-color);
+  filter: brightness(0.96);
+}
+
+.ui-app-shell .ui-tab.is-active,
+.ui-app-shell .ui-toggle__item.is-active {
+  background: var(--active-role-color-soft);
+  border-color: var(--active-role-color-soft);
+  color: var(--active-role-color);
+}
+
+/* ─── 출역 보기 전환 토글 ─── */
+.ui-output-view-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-output-view-switch__label {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.ui-output-view-switch__title {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.35;
+  color: var(--color-text-title);
+}
+
+.ui-output-view-switch__desc {
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-sub);
+}
+
+.ui-output-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-soft);
+}
+
+.ui-output-view-toggle__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 76px;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-sub);
+  white-space: nowrap;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.ui-output-view-toggle__item.is-active,
+.ui-output-view-toggle__item[aria-pressed='true'] {
+  color: var(--active-role-color, var(--color-primary-strong));
+  background: var(--color-bg-surface);
+  box-shadow: 0 4px 10px rgba(67, 81, 135, 0.12);
+}
+
+/* ─── 폰트 보조 유틸리티 ─── */
+.ui-text-title-strong {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--color-text-title);
+}
+
+.ui-text-body-strong {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-base);
+  color: var(--color-text-strong);
+}
+
+.ui-text-meta {
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.42;
+  color: var(--color-text-muted);
+}
+
+.ui-text-number-strong {
+  font-family: var(--font-family-number);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--active-role-color, var(--color-primary-strong));
+}
+
+/* ─── 알림상자 ─── */
+.ui-notice-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.ui-notice-box__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  background: var(--active-role-color-soft, var(--color-bg-coachmark-icon));
+  color: var(--active-role-color, var(--color-primary-strong));
+}
+
+.ui-notice-box__icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.05;
+}
+
+.ui-notice-box__body {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.ui-notice-box__title {
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.35;
+  color: var(--color-text-title);
+}
+
+.ui-notice-box__desc {
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.45;
+  color: var(--color-text-sub);
+}
+
+.ui-notice-box--info {
+  border-color: var(--color-accent-soft-3);
+  background: var(--color-accent-soft);
+}
+
+.ui-notice-box--warning {
+  border-color: #f0ddbb;
+  background: #fff7ea;
+}
+
+.ui-notice-box--danger {
+  border-color: #f0c3c3;
+  background: #fff0f0;
+}
+
+.ui-notice-box--success {
+  border-color: #bedfce;
+  background: #eef8f3;
+}
+
+/* ─── 선택칩 / 필터칩 ─── */
+.ui-choice-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 13px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.ui-choice-chip:hover {
+  background: var(--color-bg-highlight);
+  border-color: var(--color-border-strong);
+}
+
+.ui-choice-chip.is-active,
+.ui-choice-chip[aria-pressed='true'],
+.ui-choice-chip[aria-selected='true'] {
+  background: var(--active-role-color-soft, var(--color-primary-soft));
+  border-color: var(--active-role-color-soft, var(--color-primary-soft-3));
+  color: var(--active-role-color, var(--color-primary-strong));
+  box-shadow: inset 0 0 0 1px var(--active-role-color-border, rgba(67, 81, 135, 0.16));
+}
+
+.ui-choice-chip__count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-muted);
+  color: var(--color-text-sub);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+}
+
+.ui-choice-chip.is-active .ui-choice-chip__count {
+  background: var(--active-role-color, var(--color-primary-strong));
+  color: var(--color-text-white);
+}
+
+/* ─── 출역 달력 공통 UI ─── */
+.ui-attendance-calendar {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ui-attendance-calendar__toolbar {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ui-calendar-card {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-calendar-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-calendar-title {
+  text-align: center;
+  font-family: var(--font-family-number);
+  font-size: var(--calendar-month-size);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  color: var(--active-role-color, var(--color-primary-strong));
+}
+
+.ui-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--calendar-gap);
+}
+
+.ui-calendar-weekday {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--calendar-weekday-size);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+}
+
+.ui-calendar-weekday.is-sun { color: var(--color-danger); }
+.ui-calendar-weekday.is-sat { color: var(--color-info); }
+
+.ui-date-cell {
+  min-width: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.ui-date-cell--approved,
+.ui-date-cell.is-approved { background: #eaf8f5; }
+
+.ui-date-cell--pending,
+.ui-date-cell.is-pending { background: #fff7ea; }
+
+.ui-date-cell--rejected,
+.ui-date-cell.is-rejected { background: #fff0f0; }
+
+.ui-date-cell--draft,
+.ui-date-cell.is-draft,
+.ui-date-cell.is-selected { background: var(--active-role-color-soft, var(--color-primary-soft)); }
+
+.ui-date-cell--missing,
+.ui-date-cell.is-missing { background: #f3f5f7; }
+
+.ui-date-cell--off,
+.ui-date-cell.is-disabled {
+  background: var(--color-bg-surface);
+  opacity: var(--readonly-opacity);
+}
+
+.ui-date-cell__button {
+  width: 100%;
+  min-height: var(--calendar-cell-height);
+  padding: 6px 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  align-content: start;
+  justify-items: center;
+  gap: 2px;
+  color: var(--color-text-main);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.ui-date-cell__button:hover {
+  border-color: var(--active-role-color-border, var(--color-primary-ring));
+  box-shadow: inset 0 0 0 1px var(--active-role-color-border, rgba(67, 81, 135, 0.16));
+}
+
+.ui-date-cell__button:active { transform: translateY(1px); }
+
+.ui-date-cell__day {
+  font-family: var(--font-family-number);
+  font-size: var(--calendar-day-size);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.1;
+  color: var(--color-text-strong);
+}
+
+.ui-date-cell__site {
+  max-width: 100%;
+  font-size: var(--calendar-meta-size);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.25;
+  color: var(--active-role-color, var(--color-primary-strong));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ui-date-cell__meta,
+.ui-date-cell__man-day {
+  max-width: 100%;
+  font-family: var(--font-family-number);
+  font-size: var(--calendar-meta-size);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.25;
+  color: var(--color-text-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ui-date-cell__dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.ui-date-cell__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--active-role-color, var(--color-primary-strong));
+}
+
+.ui-date-cell__dot.is-navy,
+.ui-date-cell__dot--approved {
+  background: var(--active-role-color, var(--color-primary-strong));
+}
+
+.ui-date-cell__dot.is-success { background: var(--color-success); }
+.ui-date-cell__dot.is-warning { background: var(--color-warning); }
+.ui-date-cell__dot.is-danger  { background: var(--color-danger); }
+.ui-date-cell__dot.is-info    { background: var(--color-info); }
+
+.ui-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-divider);
+}
+
+.ui-calendar-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-sub);
+}
+
+/* ─── 공수 추가 / 수정 컨트롤박스 ─── */
+.ui-man-day-control {
+  display: grid;
+  gap: var(--space-2);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.ui-man-day-control__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.ui-man-day-control__label {
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-title);
+}
+
+.ui-man-day-control__value {
+  font-family: var(--font-family-number);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+  color: var(--active-role-color, var(--color-primary-strong));
+}
+
+.ui-man-day-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ui-man-day-option {
+  min-width: 48px;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-sub);
+  font-family: var(--font-family-number);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ui-man-day-option.is-active,
+.ui-man-day-option[aria-pressed='true'] {
+  background: var(--active-role-color, var(--color-primary-strong));
+  border-color: var(--active-role-color, var(--color-primary-strong));
+  color: var(--color-text-white);
+}
+
+/* ─── 바텀시트 통일 ─── */
+.ui-bottom-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: var(--color-bg-overlay);
+}
+
+.ui-bottom-sheet {
+  position: fixed;
+  left: 50%;
+  right: auto;
+  bottom: 0;
+  z-index: 80;
+  width: min(100%, var(--page-max-width));
+  max-height: min(86dvh, 720px);
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-sheet);
+  overflow: hidden;
+}
+
+.ui-bottom-sheet__handle {
+  width: var(--sheet-handle-width);
+  height: var(--sheet-handle-height);
+  border-radius: var(--radius-pill);
+  background: var(--color-border-strong);
+  margin: 10px auto 6px;
+}
+
+.ui-bottom-sheet__header {
+  padding: 8px var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.ui-bottom-sheet__title {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.35;
+  color: var(--color-text-title);
+}
+
+.ui-bottom-sheet__desc {
+  margin-top: 3px;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-sub);
+}
+
+.ui-bottom-sheet__body {
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-4);
+  -webkit-overflow-scrolling: touch;
+}
+
+.ui-bottom-sheet__footer {
+  min-height: var(--sheet-footer-height);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 12px var(--space-4) calc(12px + var(--safe-bottom));
+  border-top: 1px solid var(--color-divider);
+  background: var(--color-bg-surface);
+}
+
+/* ─── 하단 네비 위 말풍선 툴팁 ─── */
+.ui-nav-tooltip {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 12px);
+  z-index: 65;
+  transform: translateX(-50%);
+  width: min(calc(100vw - 32px), 360px);
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-coachmark, #ffffff);
+  box-shadow: var(--shadow-coachmark);
+}
+
+.ui-nav-tooltip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  transform: translateX(-50%) rotate(45deg);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-coachmark, #ffffff);
+}
+
+.ui-nav-tooltip__content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.ui-nav-tooltip__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--active-role-color-soft, var(--color-bg-coachmark-icon));
+  color: var(--active-role-color, var(--color-primary-strong));
+}
+
+.ui-nav-tooltip__icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.05;
+}
+
+.ui-nav-tooltip__body {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.ui-nav-tooltip__title {
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.35;
+  color: var(--color-text-title);
+}
+
+.ui-nav-tooltip__desc {
+  display: block;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.45;
+  color: var(--color-text-sub);
+}
+
+.ui-nav-tooltip__close {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+
+.ui-nav-tooltip__close:hover {
+  background: var(--color-bg-highlight);
+  color: var(--color-text-title);
+}
+
+/* ─── Responsive Patch ─── */
+@media (max-width: 430px) {
+  .ui-output-view-switch {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ui-output-view-toggle {
+    width: 100%;
+  }
+
+  .ui-output-view-toggle__item {
+    flex: 1 1 0;
+  }
+}
+
+@media (max-width: 359px) {
+  .ui-calendar-weekday {
+    font-size: 11px;
+  }
+
+  .ui-date-cell__button {
+    padding: 5px 2px;
+  }
+
+  .ui-date-cell__site,
+  .ui-date-cell__meta,
+  .ui-date-cell__man-day {
+    font-size: 9px;
+  }
+
+  .ui-bottom-sheet__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
