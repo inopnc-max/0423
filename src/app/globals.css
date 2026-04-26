@@ -1408,6 +1408,44 @@ select option {
   line-height: 1.45;
 }
 
+/* ─── Calendar Status Variants (출역 캘린더 상태별 배경) ─── */
+.ui-date-cell--approved { background: #eaf8f5; }
+.ui-date-cell--pending  { background: #fff7ea; }
+.ui-date-cell--rejected { background: #fff0f0; }
+.ui-date-cell--draft    { background: var(--color-primary-soft); }
+.ui-date-cell--missing  { background: #f3f5f7; }
+.ui-date-cell--off      { background: var(--color-bg-surface); }
+
+/* ─── Calendar Inner Elements ─── */
+.ui-date-cell__button {
+  width: 100%;
+  min-height: var(--calendar-cell-height);
+  padding: 6px 4px;
+  border-radius: var(--radius-md);
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  align-content: start;
+  justify-items: center;
+  gap: 2px;
+}
+
+.ui-date-cell__site {
+  max-width: 100%;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ui-date-cell__man-day {
+  font-family: var(--font-family-number);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-sub);
+}
+
 /* ─── Bottom Navigation (하단 네비게이션) ─── */
 .ui-bottom-nav {
   position: fixed;

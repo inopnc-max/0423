@@ -266,7 +266,7 @@
   --role-partner-primary: #0060DF;
   --role-partner-primary-soft: #EBF5FF;
 
-  /*作业자 */
+  /* 작업자 (네이비 계열) */
   --role-worker-primary: #46558C;
   --role-worker-primary-soft: #eef1f8;
 
@@ -274,7 +274,7 @@
   --role-admin-primary: #394679;
   --role-admin-primary-soft: #eceff8;
 
-  /* 생산관리자 (퍼플) */
+  /* 생산관리자 (퍼플 계열) */
   --role-production-manager-primary: #6D5BD0;
   --role-production-manager-primary-soft: #f1effc;
 }
@@ -283,11 +283,37 @@
    Role Theme CSS Custom Property Classes
    PR 1 기준 — 변경 금지
    ───────────────────────────────────────────────────────────────── */
-.ui-role-worker             { --color-role-primary: var(--role-worker-primary);           --color-role-primary-soft: var(--role-worker-primary-soft); }
-.ui-role-site-manager       { --color-role-primary: var(--role-site-manager-primary);   --color-role-primary-soft: var(--role-site-manager-primary-soft); }
-.ui-role-partner            { --color-role-primary: var(--role-partner-primary);        --color-role-primary-soft: var(--role-partner-primary-soft); }
-.ui-role-admin              { --color-role-primary: var(--role-admin-primary);           --color-role-primary-soft: var(--role-admin-primary-soft); }
-.ui-role-production-manager { --color-role-primary: var(--role-production-manager-primary); --color-role-primary-soft: var(--role-production-manager-primary-soft); }
+.ui-role-worker             { --color-role-primary: var(--role-worker-primary);             --color-role-primary-soft: var(--role-worker-primary-soft); }
+.ui-role-site-manager       { --color-role-primary: var(--role-site-manager-primary);     --color-role-primary-soft: var(--role-site-manager-primary-soft); }
+.ui-role-partner            { --color-role-primary: var(--role-partner-primary);          --color-role-primary-soft: var(--role-partner-primary-soft); }
+.ui-role-admin              { --color-role-primary: var(--role-admin-primary);            --color-role-primary-soft: var(--role-admin-primary-soft); }
+.ui-role-production-manager  { --color-role-primary: var(--role-production-manager-primary); --color-role-primary-soft: var(--role-production-manager-primary-soft); }
+
+/* ─────────────────────────────────────────────────────────────────
+   Role Theme Applied to UI Components
+   ───────────────────────────────────────────────────────────────── */
+.ui-role-worker,
+.ui-role-site-manager,
+.ui-role-partner,
+.ui-role-admin,
+.ui-role-production-manager {
+  /* Header title, active nav item, active tab use role color */
+}
+.ui-header__title,
+.ui-bottom-nav__item.is-active,
+.ui-tab.is-active { color: var(--color-role-primary); }
+
+.ui-btn--primary {
+  background: var(--color-role-primary);
+  border-color: var(--color-role-primary);
+  color: var(--color-text-white);
+}
+
+.ui-tab.is-active {
+  background: var(--color-role-primary-soft);
+  border-color: var(--color-role-primary-soft);
+  color: var(--color-role-primary);
+}
 
 /* ─────────────────────────────────────────────────────────────────
    Legacy Component Classes (Backward Compatibility)
