@@ -4,6 +4,7 @@
  */
 
 import type { WorklogMediaInfo, WorklogMediaPhotoStatus } from './worklog-media'
+import { buildPhotoSheetCaptionFromTaskTags } from './worklog-task-summary'
 
 /**
  * Photo status mapping for photo sheet source.
@@ -59,7 +60,7 @@ export type PhotoSheetDraft = {
  * - Only includes attachments where storagePath exists
  * - If photoStatus is missing, defaults to 'after_repair'
  * - If displayStatus is missing, defaults to '보수후'
- * - caption: uses taskSummary if provided, otherwise uses displayStatus
+ * - caption priority: taskSummary > taskTags > statusLabel
  * - title: `${siteName ?? '현장'} 사진대지`
  * - items sorted by createdAt ascending
  *
@@ -71,9 +72,10 @@ export function buildPhotoSheetDraftFromMediaInfo(input: {
   workDate: string
   siteName?: string
   taskSummary?: string
+  taskTags?: string[]
   mediaInfo: WorklogMediaInfo
 }): PhotoSheetDraft {
-  const { siteId, workDate, siteName, taskSummary, mediaInfo } = input
+  const { siteId, workDate, siteName, taskSummary, taskTags, mediaInfo } = input
 
   const items: PhotoSheetDraftItem[] = []
 
@@ -86,6 +88,10 @@ export function buildPhotoSheetDraftFromMediaInfo(input: {
     const photoStatus = attachment.photoStatus ?? 'after_repair'
     const statusLabel = attachment.displayStatus ?? '보수후'
 
+    const caption =
+      taskSummary ??
+      (taskTags && taskTags.length > 0 ? buildPhotoSheetCaptionFromTaskTags(taskTags) : statusLabel)
+
     const item: PhotoSheetDraftItem = {
       id: `photo-sheet-item:${attachment.id}`,
       sourceMediaId: attachment.id,
@@ -95,7 +101,7 @@ export function buildPhotoSheetDraftFromMediaInfo(input: {
       storagePath: attachment.storagePath,
       status: photoStatus,
       statusLabel,
-      caption: taskSummary ?? statusLabel,
+      caption,
       createdAt: attachment.createdAt,
     }
 
