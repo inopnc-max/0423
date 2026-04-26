@@ -87,7 +87,7 @@ export function buildPhotoSheetDraftFromMediaInfo(input: {
     const statusLabel = attachment.displayStatus ?? '보수후'
 
     const item: PhotoSheetDraftItem = {
-      id: crypto.randomUUID(),
+      id: `photo-sheet-item:${attachment.id}`,
       sourceMediaId: attachment.id,
       title: statusLabel,
       fileName: attachment.name,
