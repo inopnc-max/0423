@@ -4,6 +4,7 @@ import {
   readOfflineRecord,
   writeOfflineRecord,
 } from './storage'
+import type { WorklogMediaAttachment } from '../worklog-media'
 
 export type WorklogSectionKey = 'workers' | 'tasks' | 'materials' | 'media'
 
@@ -26,6 +27,8 @@ export interface WorklogDraftRecord {
   workerArray: DraftWorkerItem[]
   taskTags: string[]
   materialItems: DraftMaterialItem[]
+  /** Media attachment metadata (excluding file/blob/previewUrl for serialization safety) */
+  mediaAttachments?: WorklogMediaAttachment[]
   updatedAt: string
 }
 

@@ -30,7 +30,7 @@ import {
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { useMenuSearch } from '@/hooks'
 import { type WorklogMediaAttachment, createWorklogMediaAttachment } from '@/lib/worklog-media'
-import { deleteLocalBlob, saveLocalBlob } from '@/lib/offline/blob-store'
+import { deleteLocalBlob, getLocalBlob, saveLocalBlob } from '@/lib/offline/blob-store'
 
 interface Site {
   id: string
@@ -553,7 +553,8 @@ function WorklogEditorView({
   const [hasDraft, setHasDraft] = useState(false)
 
   type LocalMediaAttachment = WorklogMediaAttachment & {
-    file: File
+    /** File object — optional because restored attachments from draft may not have it */
+    file?: File
   }
   const [mediaAttachments, setMediaAttachments] = useState<LocalMediaAttachment[]>([])
 
@@ -624,6 +625,46 @@ function WorklogEditorView({
     if (!user || !selectedSite || !selectedDate || !readyForPersistence) return
 
     async function loadWorklogState() {
+      async function restoreFromDraft(draft: Awaited<ReturnType<typeof loadWorklogDraft>> & { workerArray: unknown[]; taskTags: unknown[]; materialItems: unknown[] }) {
+        setHasDraft(true)
+        applyWorklogState({
+          worker_array: draft.workerArray.map((w: { name: string; count: number }) => ({ name: w.name, count: w.count })),
+          task_tags: draft.taskTags as string[],
+          material_items: draft.materialItems.map((m: { name: string; quantity: number }) => ({ name: m.name, quantity: m.quantity })),
+        })
+        // Draft 섹션으로 복원
+        setActiveSection(draft.activeSection)
+
+        // Draft에서 mediaAttachments 복원
+        if (draft.mediaAttachments && draft.mediaAttachments.length > 0) {
+          const restoredAttachments: LocalMediaAttachment[] = []
+          for (const meta of draft.mediaAttachments) {
+            // localBlobId가 없으면 건너뜀
+            if (!meta.localBlobId) {
+              console.warn('[worklog] draft media attachment missing localBlobId, skipping:', meta.id)
+              continue
+            }
+            try {
+              const blob = await getLocalBlob(meta.localBlobId)
+              if (blob) {
+                restoredAttachments.push({
+                  ...meta,
+                  previewUrl: URL.createObjectURL(blob),
+                  // file은 복원 시 없음 (blob store에서 Blob만 복원)
+                })
+              } else {
+                console.warn('[worklog] blob not found for localBlobId:', meta.localBlobId)
+              }
+            } catch (err) {
+              console.warn('[worklog] failed to restore blob for:', meta.localBlobId, err)
+            }
+          }
+          if (restoredAttachments.length > 0) {
+            setMediaAttachments(restoredAttachments)
+          }
+        }
+      }
+
       try {
         // 1. Server 데이터 로드
         const { data: serverData } = await supabase
@@ -640,14 +681,7 @@ function WorklogEditorView({
           // 2. Server에 없으면 IndexedDB Draft 로드
           const draft = await loadWorklogDraft(user.userId, selectedSite, selectedDate)
           if (draft) {
-            setHasDraft(true)
-            applyWorklogState({
-              worker_array: draft.workerArray.map(w => ({ name: w.name, count: w.count })),
-              task_tags: draft.taskTags,
-              material_items: draft.materialItems.map(m => ({ name: m.name, quantity: m.quantity })),
-            })
-            // Draft 섹션으로 복원
-            setActiveSection(draft.activeSection)
+            await restoreFromDraft(draft)
           } else {
             setExistingLog(null)
             applyWorklogState({ worker_array: [], task_tags: [], material_items: [] })
@@ -658,13 +692,7 @@ function WorklogEditorView({
         try {
           const draft = await loadWorklogDraft(user.userId, selectedSite, selectedDate)
           if (draft) {
-            setHasDraft(true)
-            applyWorklogState({
-              worker_array: draft.workerArray.map(w => ({ name: w.name, count: w.count })),
-              task_tags: draft.taskTags,
-              material_items: draft.materialItems.map(m => ({ name: m.name, quantity: m.quantity })),
-            })
-            setActiveSection(draft.activeSection)
+            await restoreFromDraft(draft)
           } else {
             setExistingLog(null)
             applyWorklogState({ worker_array: [], task_tags: [], material_items: [] })
@@ -795,7 +823,10 @@ function WorklogEditorView({
 
     autoSaveTimerRef.current = setTimeout(async () => {
       // 수정 중인 내용만 Draft로 저장 (server에 없는 경우만)
-      if (!existingLog?.id && (workerArray.length > 0 || taskTags.length > 0 || materialItems.length > 0)) {
+      // mediaAttachments 포함 시에도 저장 (blob은 이미 IndexedDB에 저장됨)
+      if (!existingLog?.id && (workerArray.length > 0 || taskTags.length > 0 || materialItems.length > 0 || mediaAttachments.length > 0)) {
+        // file과 previewUrl은 Draft에 저장하지 않음 (Blob은 IndexedDB blobs store에 이미 저장됨)
+        const mediaDraftItems = mediaAttachments.map(({ file, previewUrl, ...meta }) => meta)
         await saveWorklogDraft({
           userId: user.userId,
           siteId: selectedSite,
@@ -804,11 +835,12 @@ function WorklogEditorView({
           workerArray: workerArray.map(w => ({ name: w.name, count: w.count })),
           taskTags,
           materialItems: materialItems.map(m => ({ name: m.name, quantity: m.quantity })),
+          mediaAttachments: mediaDraftItems,
         })
         setHasDraft(true)
       }
     }, 3000)
-  }, [user, selectedSite, selectedDate, activeSection, workerArray, taskTags, materialItems, existingLog])
+  }, [user, selectedSite, selectedDate, activeSection, workerArray, taskTags, materialItems, mediaAttachments, existingLog])
 
   // 상태 변경 시 Draft 자동 저장 스케줄
   useEffect(() => {
