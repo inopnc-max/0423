@@ -4,22 +4,27 @@
  * This module provides:
  * - savePhotoSheetPdfToStorageAndCreateDocument: save PDF to Storage and create document record
  *
- * Uses documents table with these fields:
+ * Documents table fields used:
  * - id (uuid, primary key)
  * - site_id (text)
  * - category (text)
  * - title (text)
- * - file_url (text, full public URL)
+ * - file_url (text, full public URL) — kept for existing documents UI compatibility
  * - file_type (text, nullable)
  * - required (boolean)
  * - uploaded_by (text, nullable)
  * - created_at (timestamptz)
+ * - storage_bucket (text) — Storage bucket name, for signed URL transition
+ * - storage_path (text) — Storage file path, for signed URL transition
+ * - source_type (text) — Document source type, for deduplication and source tracking
+ * - source_id (text) — Source record ID, for deduplication and source tracking
  *
- * NOTE: documents table currently uses file_url for iframe src and download href directly.
- * This helper stores public URLs for compatibility with existing documents UI.
- * If reports bucket is changed to private, documents preview/download must be updated
- * to use signed URLs in a subsequent PR. This PR does not modify documents page
- * or PreviewCenter.
+ * NOTE: file_url is kept for backward compatibility with existing documents UI.
+ * storage_bucket/storage_path are metadata for future signed URL preview/download.
+ * source_type/source_id enable deduplication by source identity.
+ *
+ * This PR does NOT modify documents page or admin documents page.
+ * Signed URL preview/download will be implemented in a subsequent PR.
  */
 
 import type { PhotoSheetDraft } from './photo-sheet-mapping'
@@ -40,6 +45,17 @@ function buildReportsFileUrl(storagePath: string): string {
 }
 
 /**
+ * Build a deterministic source ID for photo sheet documents.
+ * Format: photo-sheet:{siteId}:{workDate}
+ *
+ * This ID is used for deduplication and source tracking in the documents table.
+ * It matches the storage path convention to ensure consistent identification.
+ */
+function buildPhotoSheetSourceId(draft: PhotoSheetDraft): string {
+  return `photo-sheet:${draft.siteId}:${draft.workDate}`
+}
+
+/**
  * Save photo sheet PDF to Storage and create documents record.
  *
  * This function:
@@ -47,8 +63,9 @@ function buildReportsFileUrl(storagePath: string): string {
  * 2. Generates public URL for the stored PDF
  * 3. Creates or returns an existing document record in the documents table
  *
- * Deduplication: If a document with the same site_id + title + file_url exists,
- * returns the existing document ID without updating (documents table has no updated_at).
+ * Deduplication: First checks by source_type + source_id, then falls back to
+ * site_id + title + file_url. Returns the existing document ID without updating
+ * (documents table has no updated_at column).
  *
  * @param input.draft - PhotoSheetDraft data to generate PDF from
  * @returns Promise with storage info and document ID
@@ -79,9 +96,36 @@ export async function savePhotoSheetPdfToStorageAndCreateDocument(input: {
     throw new Error('Failed to generate public URL for photo sheet PDF')
   }
 
-  // Step 3: Check for existing document record (deduplication by site_id + title + file_url)
+  // Step 3: Build source ID for deduplication
+  const sourceId = buildPhotoSheetSourceId(draft)
+
+  // Step 4: Check for existing document record by source_type + source_id (primary)
   const supabase = createClient()
-  const { data: existingDocs, error: queryError } = await supabase
+
+  const { data: existingBySource, error: sourceQueryError } = await supabase
+    .from('documents')
+    .select('id')
+    .eq('source_type', 'photo_sheet')
+    .eq('source_id', sourceId)
+    .limit(1)
+
+  if (sourceQueryError) {
+    throw new Error(`Failed to query existing documents by source: ${sourceQueryError.message}`)
+  }
+
+  // Return existing document ID if found by source
+  if (existingBySource && existingBySource.length > 0) {
+    // NOTE: documents table has no updated_at column
+    return {
+      bucket,
+      path,
+      fileUrl,
+      documentId: existingBySource[0].id,
+    }
+  }
+
+  // Fallback: Check by site_id + title + file_url (for legacy records)
+  const { data: existingByUrl, error: urlQueryError } = await supabase
     .from('documents')
     .select('id')
     .eq('site_id', draft.siteId)
@@ -89,23 +133,22 @@ export async function savePhotoSheetPdfToStorageAndCreateDocument(input: {
     .eq('file_url', fileUrl)
     .limit(1)
 
-  if (queryError) {
-    throw new Error(`Failed to query existing documents: ${queryError.message}`)
+  if (urlQueryError) {
+    throw new Error(`Failed to query existing documents by URL: ${urlQueryError.message}`)
   }
 
-  // Step 4: Return existing or insert new
-  if (existingDocs && existingDocs.length > 0) {
-    // Return existing document ID without update
+  // Return existing document ID if found by URL
+  if (existingByUrl && existingByUrl.length > 0) {
     // NOTE: documents table has no updated_at column
     return {
       bucket,
       path,
       fileUrl,
-      documentId: existingDocs[0].id,
+      documentId: existingByUrl[0].id,
     }
   }
 
-  // Insert new record
+  // Step 5: Insert new record with storage metadata
   const { data: insertedDoc, error: insertError } = await supabase
     .from('documents')
     .insert({
@@ -116,6 +159,10 @@ export async function savePhotoSheetPdfToStorageAndCreateDocument(input: {
       file_type: 'application/pdf',
       required: false,
       uploaded_by: null,
+      storage_bucket: bucket,
+      storage_path: path,
+      source_type: 'photo_sheet',
+      source_id: sourceId,
     })
     .select('id')
     .single()
