@@ -997,6 +997,15 @@ function WorklogEditorView({
       await clearWorklogDraft(user.userId, selectedSite, selectedDate)
       setHasDraft(false)
 
+      // localBlob cleanup - blobs that have been uploaded to storage can be removed
+      for (const attachment of attachmentsForPayload) {
+        if (attachment.localBlobId) {
+          deleteLocalBlob(attachment.localBlobId).catch(err => {
+            console.warn('[worklog] failed to delete local blob after upload:', attachment.localBlobId, err)
+          })
+        }
+      }
+
       setMessage({
         type: 'success',
         text: status === 'draft' ? '작업일지를 임시저장했습니다.' : '작업일지를 승인 요청 상태로 저장했습니다.',
