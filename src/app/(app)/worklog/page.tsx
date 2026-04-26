@@ -33,6 +33,8 @@ import { type WorklogMediaAttachment, type WorklogMediaInfo, createWorklogMediaA
 import { deleteLocalBlob, getLocalBlob, saveLocalBlob } from '@/lib/offline/blob-store'
 import { buildWorklogMediaStorageTarget, uploadToStorage } from '@/lib/storage/storage-helper'
 import { buildPhotoSheetDraftFromMediaInfo, type PhotoSheetDraft } from '@/lib/photo-sheet-mapping'
+import { PreviewCenter } from '@/components/preview'
+import { PhotoSheetDraftViewer } from '@/components/photo-sheet'
 
 interface Site {
   id: string
@@ -534,6 +536,8 @@ function WorklogEditorView({
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), [])
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestPhotoSheetDraftRef = useRef<PhotoSheetDraft | null>(null)
+  const [latestPhotoSheetDraft, setLatestPhotoSheetDraft] = useState<PhotoSheetDraft | null>(null)
+  const [isPhotoSheetPreviewOpen, setIsPhotoSheetPreviewOpen] = useState(false)
 
   function preparePhotoSheetDraft(input: {
     siteId: string
@@ -1036,6 +1040,9 @@ function WorklogEditorView({
 
       if (preparedPhotoSheetDraft) {
         latestPhotoSheetDraftRef.current = preparedPhotoSheetDraft
+        setLatestPhotoSheetDraft(preparedPhotoSheetDraft)
+      } else {
+        setLatestPhotoSheetDraft(null)
       }
 
       setMessage({
@@ -1509,6 +1516,18 @@ function WorklogEditorView({
         </div>
       )}
 
+      {message?.type === 'success' && latestPhotoSheetDraft && latestPhotoSheetDraft.items.length > 0 && (
+        <div className="mx-auto max-w-3xl px-4">
+          <button
+            type="button"
+            onClick={() => setIsPhotoSheetPreviewOpen(true)}
+            className="ui-btn ui-btn--primary ui-btn--block"
+          >
+            사진대지 미리보기
+          </button>
+        </div>
+      )}
+
       {mediaAttachments.length > 0 && (
         <div className="mx-auto max-w-3xl px-4 pb-2">
           <div className="rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm font-medium text-amber-700">
@@ -1538,6 +1557,19 @@ function WorklogEditorView({
             </button>
           </div>
         </div>
+      )}
+
+      {isPhotoSheetPreviewOpen && latestPhotoSheetDraft && (
+        <PreviewCenter
+          mode="fullscreen"
+          contentType="report"
+          title={latestPhotoSheetDraft.title}
+          subtitle={latestPhotoSheetDraft.workDate}
+          dockMode="readonly"
+          onClose={() => setIsPhotoSheetPreviewOpen(false)}
+        >
+          <PhotoSheetDraftViewer draft={latestPhotoSheetDraft} />
+        </PreviewCenter>
       )}
     </div>
   )
