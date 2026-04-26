@@ -333,20 +333,25 @@ async function prepareItemImageDataUrls(
   const result: Record<string, string | null> = {}
 
   for (const item of photoItems) {
-    const signedUrl = await createSignedPreviewUrl({
-      supabase,
-      bucket: item.storageBucket,
-      path: item.storagePath,
-      expiresIn: 3600,
-    })
+    try {
+      const signedUrl = await createSignedPreviewUrl({
+        supabase,
+        bucket: item.storageBucket,
+        path: item.storagePath,
+        expiresIn: 3600,
+      })
 
-    if (!signedUrl) {
+      if (!signedUrl) {
+        result[item.id] = null
+        continue
+      }
+
+      const dataUrl = await fetchAsDataUrl(signedUrl)
+      result[item.id] = dataUrl
+    } catch (err) {
+      console.warn('[photo-sheet-pdf] failed to prepare image:', item.id, err)
       result[item.id] = null
-      continue
     }
-
-    const dataUrl = await fetchAsDataUrl(signedUrl)
-    result[item.id] = dataUrl
   }
 
   return result
