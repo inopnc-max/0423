@@ -69,6 +69,8 @@ interface DocumentRow {
   file_url: string | null
   file_type: string | null
   created_at: string
+  storage_bucket: string | null
+  storage_path: string | null
 }
 
 /* ─── Worklog row from Supabase ─── */
@@ -211,7 +213,7 @@ export function useMenuSearch(options: MenuSearchOptions): UseMenuSearchReturn {
       try {
         let dbQuery = supabase
           .from('documents')
-          .select('id, site_id, category, title, file_url, file_type, created_at')
+          .select('id, site_id, category, title, file_url, file_type, created_at, storage_bucket, storage_path')
           .eq('site_id', selectedSiteId)
           .order('created_at', { ascending: false })
           .limit(50)
