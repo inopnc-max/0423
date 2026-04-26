@@ -30,6 +30,7 @@ import {
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { useMenuSearch } from '@/hooks'
 import { type WorklogMediaAttachment, createWorklogMediaAttachment } from '@/lib/worklog-media'
+import { deleteLocalBlob, saveLocalBlob } from '@/lib/offline/blob-store'
 
 interface Site {
   id: string
@@ -547,6 +548,7 @@ function WorklogEditorView({
   const [editorLoading, setEditorLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [readyForPersistence, setReadyForPersistence] = useState(false)
+  const [mediaSaving, setMediaSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [hasDraft, setHasDraft] = useState(false)
 
@@ -730,21 +732,48 @@ function WorklogEditorView({
     setMaterialItems(prev => prev.filter((_, i) => i !== index))
   }
 
-  function handleMediaFiles(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleMediaFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
-    const newAttachments: LocalMediaAttachment[] = files.map(file => ({
-      ...createWorklogMediaAttachment(file),
-      file,
-      previewUrl: URL.createObjectURL(file),
-    }))
-    setMediaAttachments(prev => [...prev, ...newAttachments])
-    e.target.value = ''
+    if (files.length === 0) return
+
+    setMediaSaving(true)
+    try {
+      const newAttachments: LocalMediaAttachment[] = []
+      for (const file of files) {
+        const meta = createWorklogMediaAttachment(file)
+        try {
+          const localBlobId = await saveLocalBlob({
+            blob: file,
+            namespace: 'worklog-media',
+            name: file.name,
+            mimeType: file.type || 'application/octet-stream',
+          })
+          newAttachments.push({
+            ...meta,
+            file,
+            previewUrl: URL.createObjectURL(file),
+            localBlobId,
+          })
+        } catch {
+          setMessage({ type: 'error', text: `파일 저장 실패: ${file.name}` })
+        }
+      }
+      setMediaAttachments(prev => [...prev, ...newAttachments])
+    } finally {
+      setMediaSaving(false)
+      e.target.value = ''
+    }
   }
 
   function removeMediaAttachment(id: string) {
     setMediaAttachments(prev => {
       const target = prev.find(a => a.id === id)
       if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl)
+      if (target?.localBlobId) {
+        void deleteLocalBlob(target.localBlobId).catch(err => {
+          console.warn('[worklog] failed to delete blob:', err)
+        })
+      }
       return prev.filter(a => a.id !== id)
     })
   }
@@ -1180,9 +1209,13 @@ function WorklogEditorView({
                 {/* 안내 문구 */}
                 <div className="rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-3">
                   <p className="text-sm font-medium text-amber-700">
-                    현재 첨부 파일은 이 화면에서 미리보기만 가능합니다.
-                    실제 저장/업로드는 다음 PR에서 연결됩니다.
+                    첨부 파일은 이 기기에 임시 저장됩니다. 서버 업로드는 다음 PR에서 연결됩니다.
                   </p>
+                  {mediaSaving && (
+                    <p className="mt-1 text-sm text-amber-600">
+                      첨부 파일을 로컬에 저장 중입니다.
+                    </p>
+                  )}
                 </div>
 
                 {/* 파일 선택 */}
@@ -1197,6 +1230,7 @@ function WorklogEditorView({
                     accept="image/*,application/pdf"
                     multiple
                     onChange={handleMediaFiles}
+                    disabled={mediaSaving}
                     className="hidden"
                   />
                 </label>
@@ -1301,7 +1335,7 @@ function WorklogEditorView({
       {mediaAttachments.length > 0 && (
         <div className="mx-auto max-w-3xl px-4 pb-2">
           <div className="rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm font-medium text-amber-700">
-            첨부 파일은 아직 저장되지 않습니다.
+            첨부 파일은 아직 서버에 저장되지 않습니다.
           </div>
         </div>
       )}
