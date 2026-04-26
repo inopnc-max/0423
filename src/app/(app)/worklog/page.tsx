@@ -29,7 +29,7 @@ import {
 } from '@/lib/ui-state'
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { useMenuSearch } from '@/hooks'
-import { type WorklogMediaAttachment, createWorklogMediaAttachment } from '@/lib/worklog-media'
+import { type WorklogMediaAttachment, createWorklogMediaAttachment, buildWorklogMediaInfo } from '@/lib/worklog-media'
 import { deleteLocalBlob, getLocalBlob, saveLocalBlob } from '@/lib/offline/blob-store'
 import { buildWorklogMediaStorageTarget, uploadToStorage } from '@/lib/storage/storage-helper'
 
@@ -583,7 +583,7 @@ function WorklogEditorView({
   }, [activeSection])
 
   const buildWorklogPayload = useCallback(
-    (status: 'draft' | 'pending') => {
+    (status: 'draft' | 'pending', attachmentsForPayload: LocalMediaAttachment[]) => {
       if (!selectedSite || !selectedDate || !user) return null
 
       return {
@@ -594,6 +594,7 @@ function WorklogEditorView({
         worker_array: workerArray,
         task_tags: taskTags,
         material_items: materialItems,
+        media_info: buildWorklogMediaInfo(attachmentsForPayload),
         status,
         site_info: {
           name: sites.find(site => site.id === selectedSite)?.name || '',
@@ -925,11 +926,14 @@ function WorklogEditorView({
     setMessage(null)
 
     try {
+      let attachmentsForPayload = mediaAttachments
+
       // Upload media attachments to Supabase Storage first
       if (mediaAttachments.length > 0) {
         setMediaUploading(true)
         try {
           const uploadedAttachments = await uploadMediaAttachments(mediaAttachments)
+          attachmentsForPayload = uploadedAttachments
           setMediaAttachments(uploadedAttachments)
         } catch (uploadError) {
           setMessage({
@@ -944,8 +948,18 @@ function WorklogEditorView({
         }
       }
 
-      const payload = buildWorklogPayload(status)
+      const payload = buildWorklogPayload(status, attachmentsForPayload)
       if (!payload) return
+
+      // Check if we have media attachments but no valid media_info
+      if (attachmentsForPayload.length > 0 && payload.media_info.attachments.length === 0) {
+        setMessage({
+          type: 'error',
+          text: '첨부 파일 업로드 정보가 없어 일지를 저장할 수 없습니다.',
+        })
+        setSaving(false)
+        return
+      }
 
       let savedRecordId = existingLog?.id
 
@@ -972,7 +986,7 @@ function WorklogEditorView({
         worker_array: workerArray,
         task_tags: taskTags,
         material_items: materialItems,
-        media_info: {},
+        media_info: payload.media_info,
         status,
         site_info: {},
         approved_at: null,
@@ -980,7 +994,6 @@ function WorklogEditorView({
         rejection_reason: null,
       })
 
-      // 성공 시 Draft 삭제
       await clearWorklogDraft(user.userId, selectedSite, selectedDate)
       setHasDraft(false)
 
@@ -1327,7 +1340,7 @@ function WorklogEditorView({
                 {/* 안내 문구 */}
                 <div className="rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-3">
                   <p className="text-sm font-medium text-amber-700">
-                    첨부 파일은 저장 시 서버 Storage에 업로드됩니다. 일지 첨부 목록 연결은 다음 PR에서 완료됩니다.
+                    첨부 파일은 저장 시 서버에 업로드되고 일지 첨부 목록에 연결됩니다.
                   </p>
                   {mediaSaving && (
                     <p className="mt-1 text-sm text-amber-600">
@@ -1458,7 +1471,7 @@ function WorklogEditorView({
       {mediaAttachments.length > 0 && (
         <div className="mx-auto max-w-3xl px-4 pb-2">
           <div className="rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm font-medium text-amber-700">
-            첨부 파일은 저장 시 서버 Storage에 업로드됩니다.
+            첨부 파일은 저장 시 일지에 함께 연결됩니다.
           </div>
         </div>
       )}
