@@ -33,6 +33,10 @@ type DocumentRow = Omit<Document, 'site_name' | 'uploader_name'> & {
   uploader?: { name?: string } | Array<{ name?: string }> | null
 }
 
+function hasResolvableDocumentUrl(doc: Document): boolean {
+  return Boolean(doc.file_url || (doc.storage_bucket && doc.storage_path))
+}
+
 export default function AdminDocumentsPage() {
   const [docs, setDocs] = useState<Document[]>([])
   const [sites, setSites] = useState<Site[]>([])
@@ -45,7 +49,7 @@ export default function AdminDocumentsPage() {
   const [resolvingDocId, setResolvingDocId] = useState<string | null>(null)
   const supabase = createClient()
 
-  async function resolveDocumentUrl(doc: Document): Promise<string | null> {
+  const resolveDocumentUrl = useCallback(async (doc: Document): Promise<string | null> => {
     if (doc.storage_bucket && doc.storage_path) {
       const signedUrl = await createSignedPreviewUrl({
         supabase,
@@ -56,30 +60,36 @@ export default function AdminDocumentsPage() {
       if (signedUrl) return signedUrl
     }
     return doc.file_url
-  }
+  }, [supabase])
 
   const handleOpenNewWindow = useCallback(async (doc: Document) => {
     setResolvingDocId(doc.id)
-    const url = await resolveDocumentUrl(doc)
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer')
+    try {
+      const url = await resolveDocumentUrl(doc)
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer')
+      }
+    } finally {
+      setResolvingDocId(null)
     }
-    setResolvingDocId(null)
-  }, [supabase])
+  }, [resolveDocumentUrl])
 
   const handleDownload = useCallback(async (doc: Document) => {
     setResolvingDocId(doc.id)
-    const url = await resolveDocumentUrl(doc)
-    if (url) {
-      const a = document.createElement('a')
-      a.href = url
-      a.download = doc.title
-      a.target = '_blank'
-      a.rel = 'noopener noreferrer'
-      a.click()
+    try {
+      const url = await resolveDocumentUrl(doc)
+      if (url) {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = doc.title
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+        a.click()
+      }
+    } finally {
+      setResolvingDocId(null)
     }
-    setResolvingDocId(null)
-  }, [supabase])
+  }, [resolveDocumentUrl])
 
   const fetchDocs = useCallback(async () => {
     setLoading(true)
@@ -271,7 +281,7 @@ export default function AdminDocumentsPage() {
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => handleOpenNewWindow(d)}
-                          disabled={resolvingDocId === d.id || !d.file_url}
+                          disabled={resolvingDocId === d.id || !hasResolvableDocumentUrl(d)}
                           className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition disabled:opacity-50"
                           title="새 창에서 열기"
                         >
@@ -279,7 +289,7 @@ export default function AdminDocumentsPage() {
                         </button>
                         <button
                           onClick={() => handleDownload(d)}
-                          disabled={resolvingDocId === d.id || !d.file_url}
+                          disabled={resolvingDocId === d.id || !hasResolvableDocumentUrl(d)}
                           className="p-1.5 rounded-lg hover:bg-gray-100 text-blue-600 transition disabled:opacity-50"
                           title="다운로드"
                         >
