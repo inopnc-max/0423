@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { useMenuSearch } from '@/hooks/useMenuSearch'
 import { Search, X } from 'lucide-react'
 import { PreviewCenter } from '@/components/preview'
+import { createClient } from '@/lib/supabase/client'
+import { createSignedPreviewUrl } from '@/lib/storage/storage-helper'
 
 const CATEGORIES = ['전체', '일지보고서', '사진대지', '도면마킹', '안전서류', '견적서', '시공계획서', '장비계획서', '기타서류', '확인서']
 
@@ -16,12 +18,17 @@ interface DocumentRow {
   file_url: string | null
   file_type: string | null
   created_at: string
+  storage_bucket: string | null
+  storage_path: string | null
 }
 
 export default function DocumentsPage() {
   const { selectedSiteId } = useSelectedSite()
   const [category, setCategory] = useState('전체')
   const [previewDoc, setPreviewDoc] = useState<DocumentRow | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewUrlLoading, setPreviewUrlLoading] = useState(false)
+  const [previewUrlError, setPreviewUrlError] = useState<string | null>(null)
 
   const {
     query,
@@ -43,14 +50,79 @@ export default function DocumentsPage() {
   /* ─── Preview handlers ─── */
 
   function handleDocClick(doc: DocumentRow) {
+    setPreviewUrl(null)
+    setPreviewUrlError(null)
     setPreviewDoc(doc)
   }
 
+  /* ─── Signed URL generation ─── */
+
+  useEffect(() => {
+    if (!previewDoc) {
+      setPreviewUrl(null)
+      setPreviewUrlError(null)
+      return
+    }
+
+    let cancelled = false
+    const doc = previewDoc
+
+    async function resolvePreviewUrl() {
+      setPreviewUrlLoading(true)
+      setPreviewUrlError(null)
+
+      try {
+        // Use storage metadata if available
+        if (doc.storage_bucket && doc.storage_path) {
+          const supabase = createClient()
+          const signedUrl = await createSignedPreviewUrl({
+            supabase,
+            bucket: doc.storage_bucket,
+            path: doc.storage_path,
+            expiresIn: 3600,
+          })
+
+          if (cancelled) return
+
+          if (signedUrl) {
+            setPreviewUrl(signedUrl)
+          } else if (doc.file_url) {
+            // Fallback to file_url if signed URL fails
+            setPreviewUrl(doc.file_url)
+          } else {
+            setPreviewUrl(null)
+            setPreviewUrlError('문서 미리보기를 불러오지 못했습니다.')
+          }
+        } else if (doc.file_url) {
+          // No storage metadata, use file_url directly
+          setPreviewUrl(doc.file_url)
+        } else {
+          setPreviewUrl(null)
+          setPreviewUrlError('파일 URL이 존재하지 않습니다.')
+        }
+      } catch {
+        if (!cancelled) {
+          setPreviewUrlError('문서 미리보기를 불러오지 못했습니다.')
+          setPreviewUrl(null)
+        }
+      } finally {
+        if (!cancelled) setPreviewUrlLoading(false)
+      }
+    }
+
+    void resolvePreviewUrl()
+    return () => {
+      cancelled = true
+    }
+  }, [previewDoc])
+
   function handleDownload() {
     const doc = previewDoc
-    if (!doc?.file_url) return
+    if (!doc) return
+    const downloadUrl = previewUrl ?? doc.file_url
+    if (!downloadUrl) return
     const a = document.createElement('a')
-    a.href = doc.file_url
+    a.href = downloadUrl
     a.download = doc.title
     a.target = '_blank'
     a.rel = 'noopener noreferrer'
@@ -182,14 +254,22 @@ export default function DocumentsPage() {
           title={previewDoc.title}
           subtitle={[previewDoc.category, previewDoc.file_type].filter(Boolean).join(' · ')}
           showBack={false}
-          onClose={() => setPreviewDoc(null)}
-          onBack={() => setPreviewDoc(null)}
+          onClose={() => { setPreviewDoc(null); setPreviewUrl(null); setPreviewUrlError(null) }}
+          onBack={() => { setPreviewDoc(null); setPreviewUrl(null); setPreviewUrlError(null) }}
           dockMode="readonly"
-          onDownload={previewDoc.file_url ? handleDownload : undefined}
+          onDownload={previewDoc.file_url || previewUrl ? handleDownload : undefined}
         >
-          {previewDoc.file_url ? (
+          {previewUrlLoading ? (
+            <div className="flex flex-col items-center justify-center py-16 text-[var(--color-text-secondary)]">
+              <p>문서를 불러오는 중...</p>
+            </div>
+          ) : previewUrlError ? (
+            <div className="flex flex-col items-center justify-center py-16 text-[var(--color-text-secondary)]">
+              <p>문서 미리보기를 불러오지 못했습니다.</p>
+            </div>
+          ) : previewUrl ? (
             <iframe
-              src={previewDoc.file_url}
+              src={previewUrl}
               title={previewDoc.title}
               className="w-full h-[calc(100dvh-200px)] border-0"
             />
