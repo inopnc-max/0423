@@ -28,17 +28,14 @@ function sanitizePathSegment(segment: string): string {
 
 /**
  * Build storage path for photo sheet PDF.
- * Format: photo-sheets/{siteId}/{workDate}/{deterministic-id}.pdf
- * Creates deterministic fallback id when draft.id is not available.
+ * Format: {siteId}/{workDate}/photo-sheet/{reportId}.pdf
+ * Uses deterministic reportId for consistency.
  */
 function buildPhotoSheetStoragePath(draft: PhotoSheetDraft): string {
   const safeSiteId = sanitizePathSegment(draft.siteId || 'unknown')
   const safeWorkDate = sanitizePathSegment(draft.workDate || 'unknown')
-
-  // Create deterministic fallback id
-  const fileId = `photo-sheet-${safeSiteId}-${safeWorkDate}`
-
-  return `photo-sheets/${safeSiteId}/${safeWorkDate}/${fileId}.pdf`
+  const reportId = `photo-sheet-${safeSiteId}-${safeWorkDate}`
+  return `${safeSiteId}/${safeWorkDate}/photo-sheet/${reportId}.pdf`
 }
 
 /**
@@ -447,7 +444,7 @@ export async function savePhotoSheetPdfToStorage(input: {
     path,
     blob,
     contentType: 'application/pdf',
-    // upsert: true - allow overwriting same PDF (e.g., re-generate from same worklog)
+    upsert: true, // allow overwriting same PDF (e.g., re-generate from same worklog)
   })
 
   return {
