@@ -6,19 +6,19 @@
  * - Uses jsPDF for PDF generation
  * - Downloads PDF directly in browser
  * - Uses signed URLs for image insertion
- * - No Storage upload
+ * - Optionally uploads PDF to Supabase Storage (reports bucket)
  * - No DB save
  */
 
 import type { PhotoSheetDraft } from './photo-sheet-mapping'
 import { createClient } from './supabase/client'
-import { createSignedPreviewUrl } from './storage/storage-helper'
+import { createSignedPreviewUrl, uploadToStorage } from './storage/storage-helper'
 
 /**
- * Sanitize filename by removing/replacing invalid characters.
+ * Sanitize path segments by removing/replacing invalid characters.
  */
-function sanitizeFilename(name: string): string {
-  return name
+function sanitizePathSegment(segment: string): string {
+  return segment
     .replace(/[<>:"/\\|?*]/g, '-')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
@@ -27,24 +27,36 @@ function sanitizeFilename(name: string): string {
 }
 
 /**
- * Download photo sheet as PDF using browser rendering for Korean text support.
+ * Build storage path for photo sheet PDF.
+ * Format: {siteId}/{workDate}/photo-sheet/{reportId}.pdf
+ * Uses deterministic reportId for consistency.
+ */
+function buildPhotoSheetStoragePath(draft: PhotoSheetDraft): string {
+  const safeSiteId = sanitizePathSegment(draft.siteId || 'unknown')
+  const safeWorkDate = sanitizePathSegment(draft.workDate || 'unknown')
+  const reportId = `photo-sheet-${safeSiteId}-${safeWorkDate}`
+  return `${safeSiteId}/${safeWorkDate}/photo-sheet/${reportId}.pdf`
+}
+
+/**
+ * Create photo sheet PDF blob using browser rendering for Korean text support.
  *
  * This approach:
  * 1. Creates a temporary HTML container with Korean text
  * 2. Renders it using browser fonts (Korean-safe)
  * 3. Captures with html2canvas
  * 4. Inserts as image into jsPDF
- * 5. Handles multi-page if content exceeds one page
+ * 5. Returns PDF as Blob
  *
  * @param input.draft - PhotoSheetDraft data to generate PDF from
- * @returns Promise that resolves when download starts
+ * @returns Promise that resolves to PDF Blob
  *
  * @example
- * await downloadPhotoSheetPdf({ draft })
+ * const blob = await createPhotoSheetPdfBlob({ draft })
  */
-export async function downloadPhotoSheetPdf(input: {
+export async function createPhotoSheetPdfBlob(input: {
   draft: PhotoSheetDraft
-}): Promise<void> {
+}): Promise<Blob> {
   const { draft } = input
 
   // A4 dimensions in mm
@@ -270,16 +282,45 @@ export async function downloadPhotoSheetPdf(input: {
       doc.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight)
     }
 
-    // Download
-    const safeSiteId = sanitizeFilename(draft.siteId || 'unknown')
-    const safeDate = sanitizeFilename(draft.workDate || 'unknown')
-    const filename = `photo-sheet-${safeSiteId}-${safeDate}.pdf`
-    doc.save(filename)
+    // Return PDF as Blob
+    return doc.output('blob')
 
   } finally {
     // Cleanup
     document.body.removeChild(iframe)
   }
+}
+
+/**
+ * Download photo sheet as PDF using browser rendering for Korean text support.
+ *
+ * This is a convenience wrapper that calls createPhotoSheetPdfBlob()
+ * and triggers a browser download.
+ *
+ * @param input.draft - PhotoSheetDraft data to generate PDF from
+ * @returns Promise that resolves when download starts
+ *
+ * @example
+ * await downloadPhotoSheetPdf({ draft })
+ */
+export async function downloadPhotoSheetPdf(input: {
+  draft: PhotoSheetDraft
+}): Promise<void> {
+  const blob = await createPhotoSheetPdfBlob(input)
+
+  // Download
+  const safeSiteId = sanitizePathSegment(input.draft.siteId || 'unknown')
+  const safeDate = sanitizePathSegment(input.draft.workDate || 'unknown')
+  const filename = `photo-sheet-${safeSiteId}-${safeDate}.pdf`
+
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 
 /**
@@ -364,4 +405,50 @@ function escapeHtml(text: string): string {
   const div = document.createElement('div')
   div.textContent = text
   return div.innerHTML
+}
+
+/**
+ * Save photo sheet PDF to Supabase Storage (reports bucket).
+ *
+ * This function:
+ * 1. Creates PDF blob using createPhotoSheetPdfBlob()
+ * 2. Uploads to 'reports' bucket at path: {siteId}/{workDate}/photo-sheet/{reportId}.pdf
+ * 3. Uses browser client (not service role key)
+ *
+ * @param input.draft - PhotoSheetDraft data to generate PDF from
+ * @returns Promise that resolves to storage path info
+ *
+ * @example
+ * const result = await savePhotoSheetPdfToStorage({ draft })
+ * // => { bucket: 'reports', path: 'site-123/2024-01-15/photo-sheet/photo-sheet-site-123-2024-01-15.pdf' }
+ */
+export async function savePhotoSheetPdfToStorage(input: {
+  draft: PhotoSheetDraft
+}): Promise<{
+  bucket: 'reports'
+  path: string
+}> {
+  const { draft } = input
+
+  // Create PDF blob
+  const blob = await createPhotoSheetPdfBlob({ draft })
+
+  // Build storage path
+  const path = buildPhotoSheetStoragePath(draft)
+
+  // Upload using browser client
+  const supabase = createClient()
+  await uploadToStorage({
+    supabase,
+    bucket: 'reports',
+    path,
+    blob,
+    contentType: 'application/pdf',
+    upsert: true, // allow overwriting same PDF (e.g., re-generate from same worklog)
+  })
+
+  return {
+    bucket: 'reports',
+    path,
+  }
 }
