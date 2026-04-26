@@ -994,6 +994,9 @@ function WorklogEditorView({
         rejection_reason: null,
       })
 
+      await clearWorklogDraft(user.userId, selectedSite, selectedDate)
+      setHasDraft(false)
+
       setMessage({
         type: 'success',
         text: status === 'draft' ? '작업일지를 임시저장했습니다.' : '작업일지를 승인 요청 상태로 저장했습니다.',
