@@ -15,7 +15,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { WorklogMediaKind } from '../worklog-media'
+import type { WorklogMediaBucket, WorklogMediaKind } from '../worklog-media'
 
 /** MIME type to file extension fallback map */
 const MIME_TO_EXT: Record<string, string> = {
@@ -88,8 +88,6 @@ export function buildWorklogMediaStoragePath(input: BuildWorklogMediaStoragePath
       return `documents/${siteId}/site/${mediaId}.${ext}`
   }
 }
-
-export type WorklogMediaBucket = 'photos' | 'drawings' | 'documents'
 
 export interface BuildWorklogMediaStorageTargetResult {
   bucket: WorklogMediaBucket

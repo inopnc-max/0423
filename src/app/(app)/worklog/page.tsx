@@ -649,8 +649,11 @@ function WorklogEditorView({
             try {
               const blob = await getLocalBlob(meta.localBlobId)
               if (blob) {
+                // storageBucket이 없으면 kind 기준으로 보정
+                const storageBucket = meta.storageBucket ?? (meta.kind === 'photo' ? 'photos' : meta.kind === 'drawing' ? 'drawings' : 'documents')
                 restoredAttachments.push({
                   ...meta,
+                  storageBucket,
                   previewUrl: URL.createObjectURL(blob),
                   // file은 복원 시 없음 (blob store에서 Blob만 복원)
                 })
@@ -832,8 +835,7 @@ function WorklogEditorView({
       }
 
       if (!blob) {
-        console.warn('[worklog] no blob available for attachment:', attachment.id, attachment.name)
-        continue
+        throw new Error(`첨부 파일 "${attachment.name}"을(를) 찾을 수 없어 업로드할 수 없습니다.`)
       }
 
       const target = buildWorklogMediaStorageTarget({
@@ -856,6 +858,7 @@ function WorklogEditorView({
 
         uploaded.push({
           ...attachment,
+          storageBucket: target.bucket,
           storagePath: target.path,
         })
       } catch (err) {
@@ -1324,7 +1327,7 @@ function WorklogEditorView({
                 {/* 안내 문구 */}
                 <div className="rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-3">
                   <p className="text-sm font-medium text-amber-700">
-                    첨부 파일은 저장 시 서버에 업로드됩니다.
+                    첨부 파일은 저장 시 서버 Storage에 업로드됩니다. 일지 첨부 목록 연결은 다음 PR에서 완료됩니다.
                   </p>
                   {mediaSaving && (
                     <p className="mt-1 text-sm text-amber-600">
@@ -1455,7 +1458,7 @@ function WorklogEditorView({
       {mediaAttachments.length > 0 && (
         <div className="mx-auto max-w-3xl px-4 pb-2">
           <div className="rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm font-medium text-amber-700">
-            첨부 파일은 저장 시 서버에 업로드됩니다.
+            첨부 파일은 저장 시 서버 Storage에 업로드됩니다.
           </div>
         </div>
       )}

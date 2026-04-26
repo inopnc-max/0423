@@ -6,6 +6,8 @@
 
 export type WorklogMediaKind = 'photo' | 'drawing' | 'other'
 
+export type WorklogMediaBucket = 'photos' | 'drawings' | 'documents'
+
 export type WorklogMediaAttachment = {
   id: string
   name: string
@@ -14,6 +16,8 @@ export type WorklogMediaAttachment = {
   size: number
   /** Optional preview URL — populated when file is selected locally */
   previewUrl?: string
+  /** Storage bucket after upload to Supabase Storage */
+  storageBucket?: WorklogMediaBucket
   /** Storage path after upload to Supabase Storage */
   storagePath?: string
   /** IndexedDB blob key (used before storage upload) */
