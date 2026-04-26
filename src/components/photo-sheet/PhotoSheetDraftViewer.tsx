@@ -28,7 +28,7 @@ export function PhotoSheetDraftViewer({ draft }: PhotoSheetDraftViewerProps) {
   const loadingItemsRef = useRef(loadingItems)
   const failedItemsRef = useRef(failedItems)
 
-  // Keep refs in sync with state
+  // Keep refs in sync with state (fallback for non-async updates)
   useEffect(() => {
     signedUrlsRef.current = signedUrls
   }, [signedUrls])
@@ -62,7 +62,11 @@ export function PhotoSheetDraftViewer({ draft }: PhotoSheetDraftViewerProps) {
       if (failedItemsRef.current.has(item.id)) continue
       if (loadingItemsRef.current.has(item.id)) continue
 
-      setLoadingItems(prev => new Set(prev).add(item.id))
+      // Immediately update ref to prevent duplicate requests
+      const nextLoading = new Set(loadingItemsRef.current)
+      nextLoading.add(item.id)
+      loadingItemsRef.current = nextLoading
+      setLoadingItems(nextLoading)
 
       try {
         const url = await createSignedPreviewUrl({
@@ -72,20 +76,32 @@ export function PhotoSheetDraftViewer({ draft }: PhotoSheetDraftViewerProps) {
           expiresIn: 3600,
         })
 
-        // Update state after async operation completes
+        // Immediately update ref and state on success
         if (url) {
-          setSignedUrls(prev => ({ ...prev, [item.id]: url }))
+          signedUrlsRef.current = {
+            ...signedUrlsRef.current,
+            [item.id]: url,
+          }
+          setSignedUrls(signedUrlsRef.current)
         } else {
-          setFailedItems(prev => new Set(prev).add(item.id))
+          // Immediately update ref and state on failure
+          const nextFailed = new Set(failedItemsRef.current)
+          nextFailed.add(item.id)
+          failedItemsRef.current = nextFailed
+          setFailedItems(nextFailed)
         }
       } catch {
-        setFailedItems(prev => new Set(prev).add(item.id))
+        // Immediately update ref and state on error
+        const nextFailed = new Set(failedItemsRef.current)
+        nextFailed.add(item.id)
+        failedItemsRef.current = nextFailed
+        setFailedItems(nextFailed)
       } finally {
-        setLoadingItems(prev => {
-          const next = new Set(prev)
-          next.delete(item.id)
-          return next
-        })
+        // Immediately remove from loading
+        const finalLoading = new Set(loadingItemsRef.current)
+        finalLoading.delete(item.id)
+        loadingItemsRef.current = finalLoading
+        setLoadingItems(finalLoading)
       }
     }
   }, [items])
