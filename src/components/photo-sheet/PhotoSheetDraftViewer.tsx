@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { ImageIcon } from 'lucide-react'
 import type { PhotoSheetDraft } from '@/lib/photo-sheet-mapping'
 import { createClient } from '@/lib/supabase/client'
@@ -23,33 +23,69 @@ export function PhotoSheetDraftViewer({ draft }: PhotoSheetDraftViewerProps) {
   const [loadingItems, setLoadingItems] = useState<Set<string>>(new Set())
   const [failedItems, setFailedItems] = useState<Set<string>>(new Set())
 
+  // Use refs to track current state values in async callbacks
+  const signedUrlsRef = useRef(signedUrls)
+  const loadingItemsRef = useRef(loadingItems)
+  const failedItemsRef = useRef(failedItems)
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    signedUrlsRef.current = signedUrls
+  }, [signedUrls])
+
+  useEffect(() => {
+    loadingItemsRef.current = loadingItems
+  }, [loadingItems])
+
+  useEffect(() => {
+    failedItemsRef.current = failedItems
+  }, [failedItems])
+
   const generateSignedUrls = useCallback(async () => {
+    // Filter pending items (not yet processed)
+    const pendingItems = items.filter(item =>
+      item.storageBucket === 'photos' &&
+      item.storagePath &&
+      !signedUrlsRef.current[item.id] &&
+      !failedItemsRef.current.has(item.id) &&
+      !loadingItemsRef.current.has(item.id)
+    )
+
+    // No pending items, skip
+    if (pendingItems.length === 0) return
+
     const supabase = createClient()
 
-    for (const item of items) {
-      if (item.storageBucket === 'photos' && item.storagePath) {
-        setLoadingItems(prev => new Set(prev).add(item.id))
+    for (const item of pendingItems) {
+      // Double-check before processing (in case of race condition)
+      if (signedUrlsRef.current[item.id]) continue
+      if (failedItemsRef.current.has(item.id)) continue
+      if (loadingItemsRef.current.has(item.id)) continue
 
-        try {
-          const url = await createSignedPreviewUrl({
-            supabase,
-            bucket: item.storageBucket,
-            path: item.storagePath,
-            expiresIn: 3600,
-          })
+      setLoadingItems(prev => new Set(prev).add(item.id))
+
+      try {
+        const url = await createSignedPreviewUrl({
+          supabase,
+          bucket: item.storageBucket,
+          path: item.storagePath,
+          expiresIn: 3600,
+        })
+
+        // Update state after async operation completes
+        if (url) {
           setSignedUrls(prev => ({ ...prev, [item.id]: url }))
-          if (!url) {
-            setFailedItems(prev => new Set(prev).add(item.id))
-          }
-        } catch {
+        } else {
           setFailedItems(prev => new Set(prev).add(item.id))
-        } finally {
-          setLoadingItems(prev => {
-            const next = new Set(prev)
-            next.delete(item.id)
-            return next
-          })
         }
+      } catch {
+        setFailedItems(prev => new Set(prev).add(item.id))
+      } finally {
+        setLoadingItems(prev => {
+          const next = new Set(prev)
+          next.delete(item.id)
+          return next
+        })
       }
     }
   }, [items])
