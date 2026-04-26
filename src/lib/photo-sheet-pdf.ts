@@ -5,11 +5,14 @@
  * - Uses html2canvas for Korean text rendering (browser-safe)
  * - Uses jsPDF for PDF generation
  * - Downloads PDF directly in browser
+ * - Uses signed URLs for image insertion
  * - No Storage upload
  * - No DB save
  */
 
 import type { PhotoSheetDraft } from './photo-sheet-mapping'
+import { createClient } from './supabase/client'
+import { createSignedPreviewUrl } from './storage/storage-helper'
 
 /**
  * Sanitize filename by removing/replacing invalid characters.
@@ -56,13 +59,32 @@ export async function downloadPhotoSheetPdf(input: {
   const pageHeightPx = Math.floor(pageHeight * mmToPx * scale)
   const contentPadding = 40 * scale
 
-  // Build HTML content
+  // Prepare image dataURLs for photo items (non-blocking failures)
+  const imageDataUrls = await prepareItemImageDataUrls(draft.items)
+
+  // Build HTML content with image areas
   const itemHtml = draft.items.map((item, i) => {
     const pathPreview = item.storagePath.length > 50
       ? '...' + item.storagePath.slice(-47)
       : item.storagePath
+
+    // Determine image display
+    let imageArea = ''
+    const hasImage = item.storageBucket === 'photos' && item.storagePath
+    if (hasImage) {
+      const dataUrl = imageDataUrls[item.id]
+      if (dataUrl) {
+        imageArea = `<img class="item-image" src="${escapeHtml(dataUrl)}" alt="${escapeHtml(item.caption || item.fileName)}" />`
+      } else {
+        imageArea = `<div class="item-image-error">이미지 불러오기 실패</div>`
+      }
+    } else {
+      imageArea = `<div class="item-image-none">이미지 없음</div>`
+    }
+
     return `
       <div class="item">
+        ${hasImage ? `<div class="item-image-wrapper">${imageArea}</div>` : ''}
         <div class="item-header">${i + 1}. ${escapeHtml(item.title || '-')}</div>
         <div class="item-row">설명: ${escapeHtml(item.caption || '-')}</div>
         <div class="item-row">파일: ${escapeHtml(item.fileName || '-')}</div>
@@ -141,6 +163,33 @@ export async function downloadPhotoSheetPdf(input: {
           color: #999;
           margin-top: 4px;
           word-break: break-all;
+        }
+        .item-image-wrapper {
+          margin-bottom: 12px;
+        }
+        .item-image {
+          max-width: 100%;
+          max-height: 200px;
+          object-fit: contain;
+          border-radius: 4px;
+        }
+        .item-image-error {
+          padding: 16px;
+          background: #fff3f3;
+          border: 1px solid #ffcdd2;
+          border-radius: 4px;
+          color: #c62828;
+          font-size: 13px;
+          text-align: center;
+        }
+        .item-image-none {
+          padding: 16px;
+          background: #f5f5f5;
+          border: 1px dashed #ccc;
+          border-radius: 4px;
+          color: #999;
+          font-size: 13px;
+          text-align: center;
         }
         .empty {
           text-align: center;
@@ -231,6 +280,76 @@ export async function downloadPhotoSheetPdf(input: {
     // Cleanup
     document.body.removeChild(iframe)
   }
+}
+
+/**
+ * Fetch and convert a URL to a data URL (for embedding images in PDF).
+ */
+async function fetchAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) {
+      console.warn('[photo-sheet-pdf] fetch failed:', response.status, url)
+      return null
+    }
+    const blob = await response.blob()
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const result = reader.result as string
+        if (result && result.startsWith('data:')) {
+          resolve(result)
+        } else {
+          reject(new Error('Invalid data URL'))
+        }
+      }
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(blob)
+    })
+  } catch (err) {
+    console.warn('[photo-sheet-pdf] fetch error:', err)
+    return null
+  }
+}
+
+/**
+ * Prepare image dataURLs for draft items that have photos.
+ * Returns a map of item.id -> dataURL (or null if failed).
+ * Failures are non-fatal - individual items will show "이미지 불러오기 실패".
+ */
+async function prepareItemImageDataUrls(
+  items: PhotoSheetDraft['items']
+): Promise<Record<string, string | null>> {
+  const photoItems = items.filter(
+    (item) => item.storageBucket === 'photos' && item.storagePath
+  )
+
+  if (photoItems.length === 0) {
+    return {}
+  }
+
+  const supabase = createClient()
+  const result: Record<string, string | null> = {}
+
+  for (const item of photoItems) {
+    const signedUrl = await createSignedPreviewUrl({
+      supabase,
+      bucket: item.storageBucket,
+      path: item.storagePath,
+      expiresIn: 3600,
+    })
+
+    if (!signedUrl) {
+      result[item.id] = null
+      continue
+    }
+
+    const dataUrl = await fetchAsDataUrl(signedUrl)
+    result[item.id] = dataUrl
+  }
+
+  return result
 }
 
 /**
