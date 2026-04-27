@@ -564,7 +564,7 @@ function WorklogEditorView({
 
   async function handleSavePhotoSheetFinal() {
     if (!latestPhotoSheetDraft || latestPhotoSheetDraft.items.length === 0) return
-    if (isSavingPhotoSheetFinal) return
+    if (isSavingPhotoSheetFinal || savedPhotoSheetDocumentId) return
 
     setIsSavingPhotoSheetFinal(true)
     setPhotoSheetFinalMessage(null)
@@ -1616,7 +1616,12 @@ function WorklogEditorView({
               <button
                 type="button"
                 onClick={() => void handleSavePhotoSheetFinal()}
-                disabled={isSavingPhotoSheetFinal || !latestPhotoSheetDraft || latestPhotoSheetDraft.items.length === 0}
+                disabled={
+                  isSavingPhotoSheetFinal ||
+                  Boolean(savedPhotoSheetDocumentId) ||
+                  !latestPhotoSheetDraft ||
+                  latestPhotoSheetDraft.items.length === 0
+                }
                 className="ui-btn ui-btn--primary"
               >
                 {isSavingPhotoSheetFinal ? '최종본 저장 중...' : savedPhotoSheetDocumentId ? '최종본 저장 완료' : '최종본 저장'}
