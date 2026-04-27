@@ -131,14 +131,17 @@ export default function DocumentsPage() {
           if (signedUrl) {
             setPreviewUrl(signedUrl)
           } else if (doc.file_url) {
-            // Fallback to file_url if signed URL fails
+            console.warn('[documents] signed URL creation failed, using file_url fallback:', {
+              documentId: doc.id,
+              storageBucket: doc.storage_bucket,
+              storagePath: doc.storage_path,
+            })
             setPreviewUrl(doc.file_url)
           } else {
             setPreviewUrl(null)
             setPreviewUrlError('문서 미리보기를 불러오지 못했습니다.')
           }
         } else if (doc.file_url) {
-          // No storage metadata, use file_url directly
           setPreviewUrl(doc.file_url)
         } else {
           setPreviewUrl(null)
@@ -147,6 +150,11 @@ export default function DocumentsPage() {
       } catch {
         if (!cancelled) {
           if (doc.file_url) {
+            console.warn('[documents] signed URL creation error, using file_url fallback:', {
+              documentId: doc.id,
+              storageBucket: doc.storage_bucket,
+              storagePath: doc.storage_path,
+            })
             setPreviewUrl(doc.file_url)
             setPreviewUrlError(null)
           } else {

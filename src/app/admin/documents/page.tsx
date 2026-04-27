@@ -81,13 +81,33 @@ export default function AdminDocumentsPage() {
 
   const resolveDocumentUrl = useCallback(async (doc: Document): Promise<string | null> => {
     if (doc.storage_bucket && doc.storage_path) {
-      const signedUrl = await createSignedPreviewUrl({
-        supabase,
-        bucket: doc.storage_bucket,
-        path: doc.storage_path,
-        expiresIn: 3600,
-      })
-      if (signedUrl) return signedUrl
+      try {
+        const signedUrl = await createSignedPreviewUrl({
+          supabase,
+          bucket: doc.storage_bucket,
+          path: doc.storage_path,
+          expiresIn: 3600,
+        })
+
+        if (signedUrl) return signedUrl
+
+        if (doc.file_url) {
+          console.warn('[admin/documents] signed URL creation failed, using file_url fallback:', {
+            documentId: doc.id,
+            storageBucket: doc.storage_bucket,
+            storagePath: doc.storage_path,
+          })
+        }
+      } catch (error) {
+        if (doc.file_url) {
+          console.warn('[admin/documents] signed URL creation error, using file_url fallback:', {
+            documentId: doc.id,
+            storageBucket: doc.storage_bucket,
+            storagePath: doc.storage_path,
+            error,
+          })
+        }
+      }
     }
     return doc.file_url
   }, [supabase])
