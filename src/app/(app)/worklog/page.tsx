@@ -642,9 +642,12 @@ function WorklogEditorView({
 
   // Check for locked/approved photo sheet document when latestPhotoSheetDraft changes
   useEffect(() => {
+    let cancelled = false
+
     if (!latestPhotoSheetDraft || savedPhotoSheetDocumentId || photoSheetLockedMessage) return
 
     const sourceId = `photo-sheet:${selectedSite}:${selectedDate}`
+
     supabase
       .from('documents')
       .select('id, approval_status, locked_at')
@@ -652,10 +655,13 @@ function WorklogEditorView({
       .eq('source_id', sourceId)
       .limit(1)
       .then(({ data, error }) => {
+        if (cancelled) return
+
         if (error) {
           console.warn('[worklog] failed to check locked document:', error)
           return
         }
+
         if (data && data.length > 0) {
           const doc = data[0]
           if (doc.locked_at || doc.approval_status === 'approved') {
@@ -663,6 +669,10 @@ function WorklogEditorView({
           }
         }
       })
+
+    return () => {
+      cancelled = true
+    }
   }, [latestPhotoSheetDraft, selectedSite, selectedDate, savedPhotoSheetDocumentId, photoSheetLockedMessage, supabase])
 
   const buildWorklogPayload = useCallback(
