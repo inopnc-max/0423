@@ -22,8 +22,16 @@ interface Document {
   created_at: string
   storage_bucket: string | null
   storage_path: string | null
+  source_type: string | null
+  source_id: string | null
   site_name?: string
   uploader_name?: string
+  // Approval/Lock metadata (PR #36)
+  approval_status: string | null
+  approved_at: string | null
+  approved_by: string | null
+  locked_at: string | null
+  locked_by: string | null
 }
 
 interface Site { id: string; name: string }
@@ -31,6 +39,27 @@ interface Site { id: string; name: string }
 type DocumentRow = Omit<Document, 'site_name' | 'uploader_name'> & {
   site?: { name?: string } | Array<{ name?: string }> | null
   uploader?: { name?: string } | Array<{ name?: string }> | null
+}
+
+/**
+ * Check if a document is a photo sheet document.
+ * Identified by source_type = 'photo_sheet' or category = '사진대지'.
+ */
+function isPhotoSheetDocument(doc: Document): boolean {
+  return doc.source_type === 'photo_sheet' || doc.category === '사진대지'
+}
+
+/**
+ * Get the display label for approval status.
+ */
+function getApprovalStatusLabel(doc: Document): string | null {
+  if (doc.approval_status === 'approved' || doc.locked_at) {
+    return '승인완료'
+  }
+  if (doc.approval_status === 'rejected') {
+    return '반려'
+  }
+  return '승인대기'
 }
 
 function hasResolvableDocumentUrl(doc: Document): boolean {
@@ -47,6 +76,7 @@ export default function AdminDocumentsPage() {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [resolvingDocId, setResolvingDocId] = useState<string | null>(null)
+  const [approvingDocId, setApprovingDocId] = useState<string | null>(null)
   const supabase = createClient()
 
   const resolveDocumentUrl = useCallback(async (doc: Document): Promise<string | null> => {
@@ -95,7 +125,9 @@ export default function AdminDocumentsPage() {
     setLoading(true)
     const [{ data, error }, { data: sitesData }] = await Promise.all([
       supabase.from('documents').select(`
-        id, site_id, category, title, file_url, file_type, required, uploaded_by, created_at, storage_bucket, storage_path,
+        id, site_id, category, title, file_url, file_type, required, uploaded_by, created_at,
+        storage_bucket, storage_path, source_type, source_id,
+        approval_status, approved_at, approved_by, locked_at, locked_by,
         site:sites(name),
         uploader:workers(name)
       `).order('created_at', { ascending: false }).limit(300),
@@ -119,8 +151,16 @@ export default function AdminDocumentsPage() {
           created_at: doc.created_at,
           storage_bucket: doc.storage_bucket,
           storage_path: doc.storage_path,
+          source_type: doc.source_type,
+          source_id: doc.source_id,
           site_name: site?.name,
           uploader_name: uploader?.name,
+          // Approval/Lock metadata (PR #36)
+          approval_status: doc.approval_status ?? null,
+          approved_at: doc.approved_at ?? null,
+          approved_by: doc.approved_by ?? null,
+          locked_at: doc.locked_at ?? null,
+          locked_by: doc.locked_by ?? null,
         }
       })
 
@@ -150,6 +190,54 @@ export default function AdminDocumentsPage() {
     setDeleting(null)
     setConfirmDelete(null)
   }, [supabase, docs])
+
+  /**
+   * Approve a photo sheet document.
+   * Sets approval_status to 'approved' and locks the document.
+   */
+  const handleApprovePhotoSheetDocument = useCallback(async (doc: Document) => {
+    if (!isPhotoSheetDocument(doc)) return
+    if (doc.approval_status === 'approved' || doc.locked_at) return
+
+    setApprovingDocId(doc.id)
+
+    try {
+      const now = new Date().toISOString()
+
+      const { error } = await supabase
+        .from('documents')
+        .update({
+          approval_status: 'approved',
+          approved_at: now,
+          approved_by: null,
+          locked_at: now,
+          locked_by: null,
+        })
+        .eq('id', doc.id)
+
+      if (error) {
+        console.error('[admin/documents] failed to approve photo sheet document:', error)
+        return
+      }
+
+      setDocs(prev =>
+        prev.map(item =>
+          item.id === doc.id
+            ? {
+                ...item,
+                approval_status: 'approved',
+                approved_at: now,
+                approved_by: null,
+                locked_at: now,
+                locked_by: null,
+              }
+            : item
+        )
+      )
+    } finally {
+      setApprovingDocId(null)
+    }
+  }, [supabase])
 
   const filtered = docs.filter(d => {
     if (categoryFilter !== '전체' && d.category !== categoryFilter) return false
@@ -254,11 +342,18 @@ export default function AdminDocumentsPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">업로더</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">날짜</th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">필수</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">승인</th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">작업</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.map(d => (
+                {filtered.map(d => {
+                  const isPhotoSheet = isPhotoSheetDocument(d)
+                  const approvalLabel = isPhotoSheet ? getApprovalStatusLabel(d) : null
+                  const canApprove = isPhotoSheet && d.approval_status !== 'approved' && !d.locked_at
+                  const isApproving = approvingDocId === d.id
+
+                  return (
                   <tr key={d.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -276,6 +371,21 @@ export default function AdminDocumentsPage() {
                       {d.required
                         ? <span className="text-xs text-red-500 font-medium">필수</span>
                         : <span className="text-xs text-gray-400">선택</span>}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {isPhotoSheet && approvalLabel ? (
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          approvalLabel === '승인완료'
+                            ? 'bg-green-100 text-green-700'
+                            : approvalLabel === '반려'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {approvalLabel}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
@@ -295,6 +405,25 @@ export default function AdminDocumentsPage() {
                         >
                           <Download className="h-4 w-4" strokeWidth={1.9} />
                         </button>
+                        {canApprove && (
+                          <button
+                            onClick={() => void handleApprovePhotoSheetDocument(d)}
+                            disabled={isApproving}
+                            className="p-1.5 rounded-lg hover:bg-green-50 text-green-600 transition disabled:opacity-50"
+                            title="사진대지 승인"
+                          >
+                            {isApproving ? (
+                              <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                            ) : (
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </button>
+                        )}
                         <button
                           onClick={() => setConfirmDelete(d.id)}
                           className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition"
@@ -305,7 +434,8 @@ export default function AdminDocumentsPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
