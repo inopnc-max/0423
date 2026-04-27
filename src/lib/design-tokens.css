@@ -349,7 +349,6 @@
   /* Header title, active nav item, active tab use role color */
 }
 .ui-header__title,
-.ui-bottom-nav__item.is-active,
 .ui-tab.is-active { color: var(--color-role-primary); }
 
 .ui-btn--primary {
