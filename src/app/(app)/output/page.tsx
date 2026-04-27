@@ -212,9 +212,13 @@ export default function OutputPage() {
         const isSiteManagerOrAdmin = currentUser.role === 'site_manager' || currentUser.role === 'admin'
         const isPartner = isPartnerUser
 
+        const dailyLogsSelectFields = isPartner
+          ? 'id, site_id, work_date, status, task_tags, site_info'
+          : 'id, site_id, work_date, status, worker_array, task_tags, site_info'
+
         let logsQuery = supabase
           .from('daily_logs')
-          .select('id, site_id, work_date, status, worker_array, task_tags, site_info')
+          .select(dailyLogsSelectFields)
           .eq('site_id', selectedSiteId)
           .gte('work_date', startDate)
           .lte('work_date', endDate)
@@ -242,7 +246,7 @@ export default function OutputPage() {
         ])
 
         if (logsResponse.data) {
-          const rawLogs = logsResponse.data as DailyLog[]
+          const rawLogs = logsResponse.data as unknown as DailyLog[]
           if (isPartner) {
             // Partner must not receive raw worker_array in UI data.
             const sanitized = rawLogs.map(log => ({
