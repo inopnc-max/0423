@@ -26,7 +26,7 @@ interface Document {
   source_id: string | null
   site_name?: string
   uploader_name?: string
-  // Approval/Lock metadata (PR #37)
+  // Approval/Lock metadata (PR #36)
   approval_status: string | null
   approved_at: string | null
   approved_by: string | null
@@ -155,7 +155,7 @@ export default function AdminDocumentsPage() {
           source_id: doc.source_id,
           site_name: site?.name,
           uploader_name: uploader?.name,
-          // Approval/Lock metadata (PR #37)
+          // Approval/Lock metadata (PR #36)
           approval_status: doc.approval_status ?? null,
           approved_at: doc.approved_at ?? null,
           approved_by: doc.approved_by ?? null,

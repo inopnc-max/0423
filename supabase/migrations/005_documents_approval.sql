@@ -1,6 +1,6 @@
 -- ============================================================
 -- documents 테이블 승인/잠금 metadata 추가
--- PR #37: admin documents 사진대지 승인 UI 1차 구현
+-- PR #36: admin documents 사진대지 승인 UI 1차 구현
 --
 -- 추가 컬럼 (nullable, additive only):
 --   - approval_status: 승인 상태 (pending, approved, rejected)
