@@ -7,8 +7,11 @@ import { Search, X } from 'lucide-react'
 import { PreviewCenter } from '@/components/preview'
 import { createClient } from '@/lib/supabase/client'
 import { createSignedPreviewUrl } from '@/lib/storage/storage-helper'
+import { useAuth } from '@/contexts/auth-context'
+import { isPartner } from '@/lib/roles'
 
 const CATEGORIES = ['전체', '일지보고서', '사진대지', '도면마킹', '안전서류', '견적서', '시공계획서', '장비계획서', '기타서류', '확인서']
+const APPROVAL_FILTERS = ['전체', '승인완료', '승인대기', '반려']
 
 interface DocumentRow {
   id: string
@@ -20,11 +23,28 @@ interface DocumentRow {
   created_at: string
   storage_bucket: string | null
   storage_path: string | null
+  source_type: string | null
+  source_id: string | null
+  approval_status: string | null
+  locked_at: string | null
+}
+
+function isPhotoSheetDocument(doc: DocumentRow): boolean {
+  return doc.source_type === 'photo_sheet' || doc.category === '사진대지'
+}
+
+function getApprovalStatusLabel(doc: DocumentRow): string | null {
+  if (!isPhotoSheetDocument(doc)) return null
+  if (doc.approval_status === 'approved' || doc.locked_at) return '승인완료'
+  if (doc.approval_status === 'rejected') return '반려'
+  return '승인대기'
 }
 
 export default function DocumentsPage() {
   const { selectedSiteId } = useSelectedSite()
+  const { user } = useAuth()
   const [category, setCategory] = useState('전체')
+  const [approvalFilter, setApprovalFilter] = useState('전체')
   const [previewDoc, setPreviewDoc] = useState<DocumentRow | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewUrlLoading, setPreviewUrlLoading] = useState(false)
@@ -39,12 +59,35 @@ export default function DocumentsPage() {
     clear,
   } = useMenuSearch({ scope: 'documents' })
 
-  /* ─── Category + search combined filter ─── */
+  /* ─── Category + approval + partner filter ─── */
 
   const displayed = (() => {
-    const docs = filteredDocuments
-    if (category === '전체') return docs
-    return docs.filter(doc => doc.category === category)
+    const isPartnerUser = user ? isPartner(user.role) : false
+
+    // Step 1: Apply partner filter (only for photo sheet documents)
+    let docs = filteredDocuments
+    if (isPartnerUser) {
+      docs = docs.filter(doc => {
+        if (!isPhotoSheetDocument(doc)) return true
+        return doc.approval_status === 'approved' || doc.locked_at
+      })
+    }
+
+    // Step 2: Apply category filter
+    if (category !== '전체') {
+      docs = docs.filter(doc => doc.category === category)
+    }
+
+    // Step 3: Apply approval status filter (only for photo sheet documents)
+    if (approvalFilter !== '전체') {
+      docs = docs.filter(doc => {
+        if (!isPhotoSheetDocument(doc)) return false
+        const label = getApprovalStatusLabel(doc)
+        return label === approvalFilter
+      })
+    }
+
+    return docs
   })()
 
   /* ─── Preview handlers ─── */
@@ -174,7 +217,7 @@ export default function DocumentsPage() {
         </div>
 
         {/* Category Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide">
           {CATEGORIES.map(cat => (
             <button
               key={cat}
@@ -186,6 +229,29 @@ export default function DocumentsPage() {
               }`}
             >
               {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Approval Status Filter Tabs (for photo sheet documents) */}
+        <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide">
+          {APPROVAL_FILTERS.map(filter => (
+            <button
+              key={filter}
+              onClick={() => setApprovalFilter(filter)}
+              className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition ${
+                approvalFilter === filter
+                  ? filter === '승인완료'
+                    ? 'bg-green-600 text-white'
+                    : filter === '승인대기'
+                    ? 'bg-yellow-500 text-white'
+                    : filter === '반려'
+                    ? 'bg-red-500 text-white'
+                    : 'bg-[var(--color-navy)] text-white'
+                  : 'bg-white text-[var(--color-text-secondary)] border border-[var(--color-border)]'
+              }`}
+            >
+              {filter}
             </button>
           ))}
         </div>
@@ -231,7 +297,18 @@ export default function DocumentsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium truncate">{doc.title}</h3>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {isPhotoSheetDocument(doc) && (
+                        <span className={`px-2 py-0.5 text-xs rounded font-medium ${
+                          getApprovalStatusLabel(doc) === '승인완료'
+                            ? 'bg-green-100 text-green-700'
+                            : getApprovalStatusLabel(doc) === '반려'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {getApprovalStatusLabel(doc)}
+                        </span>
+                      )}
                       <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
                         {doc.category}
                       </span>

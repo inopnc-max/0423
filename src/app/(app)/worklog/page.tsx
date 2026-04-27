@@ -543,6 +543,7 @@ function WorklogEditorView({
   const [isSavingPhotoSheetFinal, setIsSavingPhotoSheetFinal] = useState(false)
   const [photoSheetFinalMessage, setPhotoSheetFinalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [savedPhotoSheetDocumentId, setSavedPhotoSheetDocumentId] = useState<string | null>(null)
+  const [photoSheetLockedMessage, setPhotoSheetLockedMessage] = useState<string | null>(null)
 
   function preparePhotoSheetDraft(input: {
     siteId: string
@@ -638,6 +639,31 @@ function WorklogEditorView({
   useEffect(() => {
     setWorklogSection(activeSection)
   }, [activeSection])
+
+  // Check for locked/approved photo sheet document when latestPhotoSheetDraft changes
+  useEffect(() => {
+    if (!latestPhotoSheetDraft || savedPhotoSheetDocumentId || photoSheetLockedMessage) return
+
+    const sourceId = `photo-sheet:${selectedSite}:${selectedDate}`
+    supabase
+      .from('documents')
+      .select('id, approval_status, locked_at')
+      .eq('source_type', 'photo_sheet')
+      .eq('source_id', sourceId)
+      .limit(1)
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn('[worklog] failed to check locked document:', error)
+          return
+        }
+        if (data && data.length > 0) {
+          const doc = data[0]
+          if (doc.locked_at || doc.approval_status === 'approved') {
+            setPhotoSheetLockedMessage('이미 승인된 사진대지가 있어 다시 저장할 수 없습니다.')
+          }
+        }
+      })
+  }, [latestPhotoSheetDraft, selectedSite, selectedDate, savedPhotoSheetDocumentId, photoSheetLockedMessage, supabase])
 
   const buildWorklogPayload = useCallback(
     (status: 'draft' | 'pending', attachmentsForPayload: LocalMediaAttachment[]) => {
@@ -1076,11 +1102,13 @@ function WorklogEditorView({
         setLatestPhotoSheetDraft(preparedPhotoSheetDraft)
         setSavedPhotoSheetDocumentId(null)
         setPhotoSheetFinalMessage(null)
+        setPhotoSheetLockedMessage(null)
       } else {
         setLatestPhotoSheetDraft(null)
         latestPhotoSheetDraftRef.current = null
         setSavedPhotoSheetDocumentId(null)
         setPhotoSheetFinalMessage(null)
+        setPhotoSheetLockedMessage(null)
       }
 
       setMessage({
@@ -1619,6 +1647,7 @@ function WorklogEditorView({
                 disabled={
                   isSavingPhotoSheetFinal ||
                   Boolean(savedPhotoSheetDocumentId) ||
+                  Boolean(photoSheetLockedMessage) ||
                   !latestPhotoSheetDraft ||
                   latestPhotoSheetDraft.items.length === 0
                 }
@@ -1626,6 +1655,10 @@ function WorklogEditorView({
               >
                 {isSavingPhotoSheetFinal ? '최종본 저장 중...' : savedPhotoSheetDocumentId ? '최종본 저장 완료' : '최종본 저장'}
               </button>
+
+              {photoSheetLockedMessage && (
+                <p className="text-sm text-amber-700">{photoSheetLockedMessage}</p>
+              )}
 
               {photoSheetFinalMessage && (
                 <p className={photoSheetFinalMessage.type === 'success' ? 'text-sm text-green-700' : 'text-sm text-red-700'}>

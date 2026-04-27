@@ -59,16 +59,18 @@ function buildPhotoSheetSourceId(draft: PhotoSheetDraft): string {
  * Save photo sheet PDF to Storage and create documents record.
  *
  * This function:
- * 1. Saves PDF to Storage reports bucket (via savePhotoSheetPdfToStorage)
- * 2. Generates public URL for the stored PDF
- * 3. Creates or returns an existing document record in the documents table
+ * 1. Checks for existing locked/approved document BEFORE uploading
+ * 2. Saves PDF to Storage reports bucket (via savePhotoSheetPdfToStorage)
+ * 3. Generates public URL for the stored PDF
+ * 4. Creates or returns an existing document record in the documents table
  *
- * Deduplication: First checks by source_type + source_id, then falls back to
- * site_id + title + file_url. Returns the existing document ID without updating
- * (documents table has no updated_at column).
+ * Lock protection: If an approved or locked photo sheet exists for the same
+ * siteId + workDate, throws an error to prevent accidental overwriting.
  *
  * @param input.draft - PhotoSheetDraft data to generate PDF from
  * @returns Promise with storage info and document ID
+ *
+ * @throws Error if a locked or approved document already exists
  *
  * @example
  * const result = await savePhotoSheetPdfToStorageAndCreateDocument({ draft })
@@ -84,6 +86,32 @@ export async function savePhotoSheetPdfToStorageAndCreateDocument(input: {
 }> {
   const { draft } = input
 
+  // Step 0: Check for existing locked/approved document BEFORE uploading
+  const sourceId = buildPhotoSheetSourceId(draft)
+  const supabase = createClient()
+
+  const { data: existingDoc, error: existingQueryError } = await supabase
+    .from('documents')
+    .select('id, approval_status, locked_at')
+    .eq('source_type', 'photo_sheet')
+    .eq('source_id', sourceId)
+    .limit(1)
+
+  if (existingQueryError) {
+    throw new Error(`Failed to check existing document: ${existingQueryError.message}`)
+  }
+
+  // Block if document is locked or approved
+  if (existingDoc && existingDoc.length > 0) {
+    const doc = existingDoc[0]
+    if (doc.locked_at) {
+      throw new Error('이미 승인된 사진대지가 있어 다시 저장할 수 없습니다.')
+    }
+    if (doc.approval_status === 'approved') {
+      throw new Error('이미 승인된 사진대지가 있어 다시 저장할 수 없습니다.')
+    }
+  }
+
   // Step 1: Save PDF to Storage
   const { bucket, path } = await savePhotoSheetPdfToStorage({ draft })
 
@@ -96,38 +124,11 @@ export async function savePhotoSheetPdfToStorageAndCreateDocument(input: {
     throw new Error('Failed to generate public URL for photo sheet PDF')
   }
 
-  // Step 3: Build source ID for deduplication
-  const sourceId = buildPhotoSheetSourceId(draft)
-
-  // Step 4: Check for existing document record by source_type + source_id (primary)
-  const supabase = createClient()
-
-  const { data: existingBySource, error: sourceQueryError } = await supabase
-    .from('documents')
-    .select('id')
-    .eq('source_type', 'photo_sheet')
-    .eq('source_id', sourceId)
-    .limit(1)
-
-  if (sourceQueryError) {
-    throw new Error(`Failed to query existing documents by source: ${sourceQueryError.message}`)
-  }
-
-  // Return existing document ID if found by source
-  if (existingBySource && existingBySource.length > 0) {
-    // NOTE: documents table has no updated_at column
-    return {
-      bucket,
-      path,
-      fileUrl,
-      documentId: existingBySource[0].id,
-    }
-  }
-
-  // Fallback: Check by site_id + title + file_url (for legacy records)
+  // Step 2: Check for existing document by URL (legacy fallback only)
+  // Note: Existing doc check by source_type + source_id was done in Step 0 above
   const { data: existingByUrl, error: urlQueryError } = await supabase
     .from('documents')
-    .select('id')
+    .select('id, approval_status, locked_at')
     .eq('site_id', draft.siteId)
     .eq('title', draft.title)
     .eq('file_url', fileUrl)
@@ -137,18 +138,24 @@ export async function savePhotoSheetPdfToStorageAndCreateDocument(input: {
     throw new Error(`Failed to query existing documents by URL: ${urlQueryError.message}`)
   }
 
-  // Return existing document ID if found by URL
+  // Return existing document ID if found by URL (only if not locked/approved)
   if (existingByUrl && existingByUrl.length > 0) {
-    // NOTE: documents table has no updated_at column
+    const urlDoc = existingByUrl[0]
+    if (urlDoc.locked_at) {
+      throw new Error('이미 승인된 사진대지가 있어 다시 저장할 수 없습니다.')
+    }
+    if (urlDoc.approval_status === 'approved') {
+      throw new Error('이미 승인된 사진대지가 있어 다시 저장할 수 없습니다.')
+    }
     return {
       bucket,
       path,
       fileUrl,
-      documentId: existingByUrl[0].id,
+      documentId: urlDoc.id,
     }
   }
 
-  // Step 5: Insert new record with storage metadata
+  // Step 3: Insert new record with storage metadata
   const { data: insertedDoc, error: insertError } = await supabase
     .from('documents')
     .insert({
