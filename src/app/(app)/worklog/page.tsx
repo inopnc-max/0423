@@ -34,6 +34,7 @@ import { deleteLocalBlob, getLocalBlob, saveLocalBlob } from '@/lib/offline/blob
 import { buildWorklogMediaStorageTarget, uploadToStorage } from '@/lib/storage/storage-helper'
 import { buildPhotoSheetDraftFromMediaInfo, type PhotoSheetDraft } from '@/lib/photo-sheet-mapping'
 import { downloadPhotoSheetPdf } from '@/lib/photo-sheet-pdf'
+import { savePhotoSheetPdfToStorageAndCreateDocument } from '@/lib/photo-sheet-document'
 import { PreviewCenter } from '@/components/preview'
 import { PhotoSheetDraftViewer } from '@/components/photo-sheet'
 
@@ -539,6 +540,9 @@ function WorklogEditorView({
   const latestPhotoSheetDraftRef = useRef<PhotoSheetDraft | null>(null)
   const [latestPhotoSheetDraft, setLatestPhotoSheetDraft] = useState<PhotoSheetDraft | null>(null)
   const [isPhotoSheetPreviewOpen, setIsPhotoSheetPreviewOpen] = useState(false)
+  const [isSavingPhotoSheetFinal, setIsSavingPhotoSheetFinal] = useState(false)
+  const [photoSheetFinalMessage, setPhotoSheetFinalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [savedPhotoSheetDocumentId, setSavedPhotoSheetDocumentId] = useState<string | null>(null)
 
   function preparePhotoSheetDraft(input: {
     siteId: string
@@ -556,6 +560,34 @@ function WorklogEditorView({
     })
 
     return draft.items.length > 0 ? draft : null
+  }
+
+  async function handleSavePhotoSheetFinal() {
+    if (!latestPhotoSheetDraft || latestPhotoSheetDraft.items.length === 0) return
+    if (isSavingPhotoSheetFinal || savedPhotoSheetDocumentId) return
+
+    setIsSavingPhotoSheetFinal(true)
+    setPhotoSheetFinalMessage(null)
+
+    try {
+      const result = await savePhotoSheetPdfToStorageAndCreateDocument({
+        draft: latestPhotoSheetDraft,
+      })
+
+      setSavedPhotoSheetDocumentId(result.documentId)
+      setPhotoSheetFinalMessage({
+        type: 'success',
+        text: '사진대지 최종본이 문서함에 저장되었습니다.',
+      })
+    } catch (err) {
+      console.error('[worklog] failed to save photo sheet final:', err)
+      setPhotoSheetFinalMessage({
+        type: 'error',
+        text: '사진대지 최종본 저장에 실패했습니다.',
+      })
+    } finally {
+      setIsSavingPhotoSheetFinal(false)
+    }
   }
 
   const [selectedSite, setSelectedSite] = useState('')
@@ -1042,8 +1074,13 @@ function WorklogEditorView({
       if (preparedPhotoSheetDraft) {
         latestPhotoSheetDraftRef.current = preparedPhotoSheetDraft
         setLatestPhotoSheetDraft(preparedPhotoSheetDraft)
+        setSavedPhotoSheetDocumentId(null)
+        setPhotoSheetFinalMessage(null)
       } else {
         setLatestPhotoSheetDraft(null)
+        latestPhotoSheetDraftRef.current = null
+        setSavedPhotoSheetDocumentId(null)
+        setPhotoSheetFinalMessage(null)
       }
 
       setMessage({
@@ -1574,7 +1611,31 @@ function WorklogEditorView({
             })
           }}
         >
-          <PhotoSheetDraftViewer draft={latestPhotoSheetDraft} />
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-white p-3">
+              <button
+                type="button"
+                onClick={() => void handleSavePhotoSheetFinal()}
+                disabled={
+                  isSavingPhotoSheetFinal ||
+                  Boolean(savedPhotoSheetDocumentId) ||
+                  !latestPhotoSheetDraft ||
+                  latestPhotoSheetDraft.items.length === 0
+                }
+                className="ui-btn ui-btn--primary"
+              >
+                {isSavingPhotoSheetFinal ? '최종본 저장 중...' : savedPhotoSheetDocumentId ? '최종본 저장 완료' : '최종본 저장'}
+              </button>
+
+              {photoSheetFinalMessage && (
+                <p className={photoSheetFinalMessage.type === 'success' ? 'text-sm text-green-700' : 'text-sm text-red-700'}>
+                  {photoSheetFinalMessage.text}
+                </p>
+              )}
+            </div>
+
+            <PhotoSheetDraftViewer draft={latestPhotoSheetDraft} />
+          </div>
         </PreviewCenter>
       )}
     </div>
