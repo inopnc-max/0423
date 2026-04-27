@@ -1646,12 +1646,21 @@ select option {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   Role Theme Override Layer
-   역할별 컬러 테마가 헤더, 네비, 버튼, 토글 등에 확실히 반영되도록 최종 보강
-   ═══════════════════════════════════════════════════════════════════ */
+/* ==========================================================================
+   Role Theme Visibility Final Override
+   기존 UI 구조를 바꾸지 않고 역할색만 최종 반영
+   ========================================================================== */
 
-/* 색상만 변경: 텍스트/아이콘 색상 */
+.ui-app-shell.ui-role-worker,
+.ui-app-shell.ui-role-site-manager,
+.ui-app-shell.ui-role-partner,
+.ui-app-shell.ui-role-admin,
+.ui-app-shell.ui-role-production-manager {
+  --active-role-color: var(--color-role-primary, var(--color-primary-strong));
+  --active-role-color-soft: var(--color-role-primary-soft, var(--color-primary-soft));
+  --active-role-color-border: color-mix(in srgb, var(--active-role-color) 24%, transparent);
+}
+
 .ui-app-shell .ui-header__title,
 .ui-app-shell .ui-header__brand,
 .ui-app-shell .ui-section-header__title,
@@ -1667,7 +1676,6 @@ select option {
   color: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
 }
 
-/* 배경/테두리까지 역할색: 주요 버튼, 토글 active */
 .ui-app-shell .ui-btn--primary,
 .ui-app-shell .ui-toolbar-button--primary,
 .ui-app-shell .ui-output-view-toggle__item.is-active {
@@ -1676,22 +1684,47 @@ select option {
   color: var(--color-text-white);
 }
 
-/* Soft 배경: 아이콘/탭 active */
+.ui-app-shell .ui-btn--primary:hover,
+.ui-app-shell .ui-toolbar-button--primary:hover {
+  background: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
+  border-color: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
+  filter: brightness(0.96);
+}
+
 .ui-app-shell .ui-header-icon.is-active,
 .ui-app-shell .ui-action-icon.is-active,
 .ui-app-shell .ui-tab.is-active,
-.ui-app-shell .ui-toggle__item.is-active {
-  background: var(--active-role-color-soft, var(--color-role-primary-soft, var(--color-primary-soft)));
-  color: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
-}
-
-/* 하단 네비 active: soft 배경 + 역할색 텍스트 */
+.ui-app-shell .ui-toggle__item.is-active,
 .ui-app-shell .ui-bottom-nav__item.is-active {
   background: var(--active-role-color-soft, var(--color-role-primary-soft, var(--color-primary-soft)));
   color: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
 }
 
-/* FAB 역할색 보강 */
+.ui-app-shell .ui-choice-chip.is-active,
+.ui-app-shell .ui-choice-chip[aria-pressed='true'],
+.ui-app-shell .ui-choice-chip[aria-selected='true'] {
+  background: var(--active-role-color-soft, var(--color-role-primary-soft, var(--color-primary-soft)));
+  border-color: var(--active-role-color-soft, var(--color-role-primary-soft, var(--color-primary-soft)));
+  color: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
+}
+
+.ui-app-shell .ui-notice-box__icon {
+  background: var(--active-role-color-soft, var(--color-role-primary-soft, var(--color-primary-soft)));
+  color: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
+}
+
+.ui-app-shell .ui-date-cell--draft,
+.ui-app-shell .ui-date-cell.is-draft,
+.ui-app-shell .ui-date-cell.is-selected {
+  background: var(--active-role-color-soft, var(--color-role-primary-soft, var(--color-primary-soft)));
+}
+
+.ui-app-shell .ui-date-cell__site,
+.ui-app-shell .ui-calendar-title,
+.ui-app-shell .ui-calendar__title {
+  color: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
+}
+
 .ui-app-shell a.bg-\[var\(--color-navy\)\] {
-  background: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong))) !important;
+  background: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
 }
