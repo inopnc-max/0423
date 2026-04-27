@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { FileText, Download, Trash2, Search, FolderOpen, ExternalLink, Building2, Calendar, Upload } from 'lucide-react'
+import { createSignedPreviewUrl } from '@/lib/storage/storage-helper'
+import { FileText, Download, Trash2, Search, ExternalLink } from 'lucide-react'
 
 const CATEGORIES = [
   '전체', '일지보고서', '사진대지', '도면마킹', '안전서류', '견적서',
@@ -14,11 +15,13 @@ interface Document {
   site_id: string
   category: string
   title: string
-  file_url: string
+  file_url: string | null
   file_type: string | null
   required: boolean
   uploaded_by: string | null
   created_at: string
+  storage_bucket: string | null
+  storage_path: string | null
   site_name?: string
   uploader_name?: string
 }
@@ -30,6 +33,10 @@ type DocumentRow = Omit<Document, 'site_name' | 'uploader_name'> & {
   uploader?: { name?: string } | Array<{ name?: string }> | null
 }
 
+function hasResolvableDocumentUrl(doc: Document): boolean {
+  return Boolean(doc.file_url || (doc.storage_bucket && doc.storage_path))
+}
+
 export default function AdminDocumentsPage() {
   const [docs, setDocs] = useState<Document[]>([])
   const [sites, setSites] = useState<Site[]>([])
@@ -39,13 +46,56 @@ export default function AdminDocumentsPage() {
   const [siteFilter, setSiteFilter] = useState<string>('all')
   const [deleting, setDeleting] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [resolvingDocId, setResolvingDocId] = useState<string | null>(null)
   const supabase = createClient()
+
+  const resolveDocumentUrl = useCallback(async (doc: Document): Promise<string | null> => {
+    if (doc.storage_bucket && doc.storage_path) {
+      const signedUrl = await createSignedPreviewUrl({
+        supabase,
+        bucket: doc.storage_bucket,
+        path: doc.storage_path,
+        expiresIn: 3600,
+      })
+      if (signedUrl) return signedUrl
+    }
+    return doc.file_url
+  }, [supabase])
+
+  const handleOpenNewWindow = useCallback(async (doc: Document) => {
+    setResolvingDocId(doc.id)
+    try {
+      const url = await resolveDocumentUrl(doc)
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer')
+      }
+    } finally {
+      setResolvingDocId(null)
+    }
+  }, [resolveDocumentUrl])
+
+  const handleDownload = useCallback(async (doc: Document) => {
+    setResolvingDocId(doc.id)
+    try {
+      const url = await resolveDocumentUrl(doc)
+      if (url) {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = doc.title
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+        a.click()
+      }
+    } finally {
+      setResolvingDocId(null)
+    }
+  }, [resolveDocumentUrl])
 
   const fetchDocs = useCallback(async () => {
     setLoading(true)
     const [{ data, error }, { data: sitesData }] = await Promise.all([
       supabase.from('documents').select(`
-        id, site_id, category, title, file_url, file_type, required, uploaded_by, created_at,
+        id, site_id, category, title, file_url, file_type, required, uploaded_by, created_at, storage_bucket, storage_path,
         site:sites(name),
         uploader:workers(name)
       `).order('created_at', { ascending: false }).limit(300),
@@ -67,6 +117,8 @@ export default function AdminDocumentsPage() {
           required: doc.required,
           uploaded_by: doc.uploaded_by,
           created_at: doc.created_at,
+          storage_bucket: doc.storage_bucket,
+          storage_path: doc.storage_path,
           site_name: site?.name,
           uploader_name: uploader?.name,
         }
@@ -83,9 +135,15 @@ export default function AdminDocumentsPage() {
   const handleDelete = useCallback(async (id: string) => {
     setDeleting(id)
     const doc = docs.find(d => d.id === id)
-    if (doc?.file_url) {
-      const path = doc.file_url.replace(/.*\/storage\/v1\/object\/public\//, '')
-      await supabase.storage.from('documents').remove([path]).catch(() => {})
+    if (doc) {
+      if (doc.storage_bucket && doc.storage_path) {
+        await supabase.storage.from(doc.storage_bucket).remove([doc.storage_path]).catch(() => {})
+      } else if (doc.file_url) {
+        const legacyPath = doc.file_url.replace(/.*\/storage\/v1\/object\/public\/documents\//, '')
+        if (legacyPath && legacyPath !== doc.file_url) {
+          await supabase.storage.from('documents').remove([legacyPath]).catch(() => {})
+        }
+      }
     }
     await supabase.from('documents').delete().eq('id', id)
     setDocs(prev => prev.filter(d => d.id !== id))
@@ -221,23 +279,22 @@ export default function AdminDocumentsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
-                        <a
-                          href={d.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition"
+                        <button
+                          onClick={() => handleOpenNewWindow(d)}
+                          disabled={resolvingDocId === d.id || !hasResolvableDocumentUrl(d)}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition disabled:opacity-50"
                           title="새 창에서 열기"
                         >
                           <ExternalLink className="h-4 w-4" strokeWidth={1.9} />
-                        </a>
-                        <a
-                          href={d.file_url}
-                          download
-                          className="p-1.5 rounded-lg hover:bg-gray-100 text-blue-600 transition"
+                        </button>
+                        <button
+                          onClick={() => handleDownload(d)}
+                          disabled={resolvingDocId === d.id || !hasResolvableDocumentUrl(d)}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 text-blue-600 transition disabled:opacity-50"
                           title="다운로드"
                         >
                           <Download className="h-4 w-4" strokeWidth={1.9} />
-                        </a>
+                        </button>
                         <button
                           onClick={() => setConfirmDelete(d.id)}
                           className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition"
