@@ -1,6 +1,6 @@
 -- ============================================================
 -- documents 테이블 partner 역할 사진대지 승인완료 RLS 정책 강화
--- PR #39: documents RLS partner 승인완료 조건 추가
+-- PR #40: documents RLS partner 승인완료 조건 추가
 --
 -- 목적:
 --   partner role 사용자가 documents 테이블에서 사진대지 문서를 조회할 때
