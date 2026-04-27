@@ -1412,7 +1412,7 @@ select option {
 .ui-date-cell--approved { background: #eaf8f5; }
 .ui-date-cell--pending  { background: #fff7ea; }
 .ui-date-cell--rejected { background: #fff0f0; }
-.ui-date-cell--draft    { background: var(--color-primary-soft); }
+.ui-date-cell--draft    { background: var(--color-role-primary-soft, var(--color-primary-soft)); }
 .ui-date-cell--missing  { background: #f3f5f7; }
 .ui-date-cell--off      { background: var(--color-bg-surface); }
 
@@ -1444,6 +1444,16 @@ select option {
   font-size: 10px;
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-sub);
+}
+
+.ui-date-cell__summary {
+  max-width: 100%;
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ─── Bottom Navigation (하단 네비게이션) ─── */
@@ -1636,6 +1646,7 @@ select option {
 
 /* 역할별 컬러가 기존 기본색에 덮이지 않도록 최종 override */
 .ui-app-shell .ui-header__title,
+.ui-app-shell .ui-header__brand,
 .ui-app-shell .ui-bottom-nav__item.is-active,
 .ui-app-shell .ui-tab.is-active,
 .ui-app-shell .ui-toggle__item.is-active,
@@ -1662,6 +1673,12 @@ select option {
 .ui-app-shell .ui-toggle__item.is-active {
   background: var(--active-role-color-soft);
   border-color: var(--active-role-color-soft);
+  color: var(--active-role-color);
+}
+
+.ui-app-shell .ui-header-icon.is-active,
+.ui-app-shell .ui-action-icon.is-active {
+  background: var(--active-role-color-soft);
   color: var(--active-role-color);
 }
 

@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { CalendarDays, Info, List, Search, X } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
+import { useSelectedSite } from '@/contexts/selected-site-context'
 import { createClient } from '@/lib/supabase/client'
 import { hideSalary } from '@/lib/roles'
 import { useMenuSearch } from '@/hooks'
@@ -14,8 +15,8 @@ interface DailyLog {
   site_id: string
   work_date: string
   status: string
-  worker_array: { name: string; count: number }[]
-  task_tags: string[]
+  worker_array: unknown
+  task_tags: unknown
   site_info: { name: string }
 }
 
@@ -44,9 +45,135 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: '반려',
 }
 
+type WorkerItem = { name: string | undefined; manDay: number }
+
+function normalizeTaskTagsArray(task_tags: unknown): string[] {
+  if (!task_tags) return []
+  if (!Array.isArray(task_tags)) return []
+  return task_tags.filter((tag): tag is string => typeof tag === 'string')
+}
+
+function normalizeTaskSummary(task_tags: unknown): string {
+  if (!task_tags) return ''
+
+  if (Array.isArray(task_tags)) {
+    const parts = task_tags
+      .map(item => {
+        if (typeof item === 'string') return item
+        if (item && typeof item === 'object') {
+          const maybeSummary = (item as { summaryText?: unknown }).summaryText
+          if (typeof maybeSummary === 'string') return maybeSummary
+          const maybeName = (item as { name?: unknown }).name
+          if (typeof maybeName === 'string') return maybeName
+        }
+        return ''
+      })
+      .filter(Boolean)
+    return parts.join(', ')
+  }
+
+  if (typeof task_tags === 'string') return task_tags
+
+  if (task_tags && typeof task_tags === 'object') {
+    const maybeTasks = (task_tags as { tasks?: unknown }).tasks
+    if (Array.isArray(maybeTasks)) {
+      const parts = maybeTasks
+        .map(item => {
+          if (typeof item === 'string') return item
+          if (item && typeof item === 'object') {
+            const maybeSummary = (item as { summaryText?: unknown }).summaryText
+            if (typeof maybeSummary === 'string') return maybeSummary
+            const maybeName = (item as { name?: unknown }).name
+            if (typeof maybeName === 'string') return maybeName
+          }
+          return ''
+        })
+        .filter(Boolean)
+      return parts.join(', ')
+    }
+  }
+
+  return ''
+}
+
+function normalizeWorkerItems(worker_array: unknown): WorkerItem[] {
+  if (!worker_array) return []
+  if (!Array.isArray(worker_array)) return []
+
+  return worker_array
+    .map(item => {
+      if (!item || typeof item !== 'object') return null
+      const obj = item as Record<string, unknown>
+
+      const name = typeof obj.name === 'string' ? obj.name : undefined
+
+      const rawCount =
+        typeof obj.manDay === 'number'
+          ? obj.manDay
+          : typeof obj.man_day === 'number'
+            ? obj.man_day
+            : typeof obj.count === 'number'
+              ? obj.count
+              : 0
+
+      const manDay = Number.isFinite(rawCount) ? rawCount : 0
+      return { name, manDay }
+    })
+    .filter((x): x is WorkerItem => x !== null && x.manDay > 0)
+}
+
+function getLogTotalManDay(log: DailyLog): number {
+  return normalizeWorkerItems(log.worker_array).reduce((sum, item) => sum + (item.manDay || 0), 0)
+}
+
+function getDateStatus(logsForDate: DailyLog[]): 'approved' | 'pending' | 'rejected' | 'draft' | 'missing' | 'off' {
+  if (!logsForDate || logsForDate.length === 0) return 'missing'
+
+  const statuses = new Set(logsForDate.map(log => log.status))
+  if (statuses.has('approved')) return 'approved'
+  if (statuses.has('pending')) return 'pending'
+  if (statuses.has('rejected')) return 'rejected'
+  if (statuses.has('draft')) return 'draft'
+  return 'missing'
+}
+
+function getCalendarCells(year: number, month: number) {
+  const firstDate = new Date(year, month - 1, 1)
+  const lastDate = new Date(year, month, 0)
+  const startWeekday = firstDate.getDay() // 0 (Sun) - 6 (Sat)
+  const totalDays = lastDate.getDate()
+
+  const cells: Array<
+    | { kind: 'empty'; key: string }
+    | { kind: 'day'; key: string; date: Date; dateKey: string; day: number; isSun: boolean; isSat: boolean }
+  > = []
+
+  for (let i = 0; i < startWeekday; i += 1) {
+    cells.push({ kind: 'empty', key: `empty-${year}-${month}-${i}` })
+  }
+
+  for (let day = 1; day <= totalDays; day += 1) {
+    const date = new Date(year, month - 1, day)
+    const dateKey = format(date, 'yyyy-MM-dd')
+    const weekday = date.getDay()
+    cells.push({
+      kind: 'day',
+      key: dateKey,
+      date,
+      dateKey,
+      day,
+      isSun: weekday === 0,
+      isSat: weekday === 6,
+    })
+  }
+
+  return { firstDate, lastDate, cells }
+}
+
 export default function OutputPage() {
   const { user } = useAuth()
-  const supabase = createClient()
+  const { selectedSiteId } = useSelectedSite()
+  const supabase = useMemo(() => createClient(), [])
 
   const [logs, setLogs] = useState<DailyLog[]>([])
   const [salary, setSalary] = useState<SalaryEntry | null>(null)
@@ -71,13 +198,38 @@ export default function OutputPage() {
 
     async function fetchData() {
       try {
+        const { firstDate, lastDate } = getCalendarCells(selectedYear, selectedMonth)
+        const startDate = format(firstDate, 'yyyy-MM-dd')
+        const endDate = format(lastDate, 'yyyy-MM-dd')
+
+        if (!selectedSiteId) {
+          setLogs([])
+          setSalary(null)
+          return
+        }
+
+        const isWorker = currentUser.role === 'worker'
+        const isSiteManagerOrAdmin = currentUser.role === 'site_manager' || currentUser.role === 'admin'
+        const isPartner = isPartnerUser
+
+        let logsQuery = supabase
+          .from('daily_logs')
+          .select('id, site_id, work_date, status, worker_array, task_tags, site_info')
+          .eq('site_id', selectedSiteId)
+          .gte('work_date', startDate)
+          .lte('work_date', endDate)
+          .order('work_date', { ascending: true })
+
+        if (isWorker) {
+          logsQuery = logsQuery.eq('user_id', currentUser.userId)
+        }
+
+        if (isPartner) {
+          logsQuery = logsQuery.eq('status', 'approved')
+        }
+
         const [logsResponse, salaryResponse] = await Promise.all([
-          supabase
-            .from('daily_logs')
-            .select('id, site_id, work_date, status, worker_array, task_tags, site_info')
-            .eq('user_id', currentUser.userId)
-            .order('work_date', { ascending: false })
-            .limit(30),
+          logsQuery,
           !isPartnerUser
             ? supabase
                 .from('salary_entries')
@@ -90,7 +242,20 @@ export default function OutputPage() {
         ])
 
         if (logsResponse.data) {
-          setLogs(logsResponse.data)
+          const rawLogs = logsResponse.data as DailyLog[]
+          if (isPartner) {
+            // Partner must not receive raw worker_array in UI data.
+            const sanitized = rawLogs.map(log => ({
+              ...log,
+              worker_array: null,
+              task_tags: normalizeTaskSummary(log.task_tags),
+            }))
+            setLogs(sanitized)
+          } else if (isSiteManagerOrAdmin) {
+            setLogs(rawLogs)
+          } else {
+            setLogs(rawLogs)
+          }
         }
 
         if (!salaryResponse.error && salaryResponse.data) {
@@ -106,7 +271,7 @@ export default function OutputPage() {
     }
 
     void fetchData()
-  }, [isPartnerUser, selectedMonth, selectedYear, supabase, user])
+  }, [isPartnerUser, selectedMonth, selectedYear, selectedSiteId, supabase, user])
 
   const isSearching = query.trim().length >= 2
   const displayLogs: DailyLog[] = isSearching
@@ -114,9 +279,25 @@ export default function OutputPage() {
     : logs
 
   const totalMan = displayLogs.reduce((sum, log) => {
-    const logTotal = log.worker_array?.reduce((acc, worker) => acc + (worker.count || 0), 0) || 0
-    return sum + logTotal
+    if (isPartnerUser) return sum
+    return sum + getLogTotalManDay(log)
   }, 0)
+
+  const { cells: calendarCells } = useMemo(
+    () => getCalendarCells(selectedYear, selectedMonth),
+    [selectedMonth, selectedYear]
+  )
+
+  const logsByDate = useMemo(() => {
+    const map = new Map<string, DailyLog[]>()
+    for (const log of logs) {
+      const dateKey = log.work_date
+      const current = map.get(dateKey) ?? []
+      current.push(log)
+      map.set(dateKey, current)
+    }
+    return map
+  }, [logs])
 
   if (loading) {
     return (
@@ -266,17 +447,106 @@ export default function OutputPage() {
         </h2>
 
         {viewMode === 'calendar' && (
-          <section className="ui-notice-box ui-notice-box--info">
-            <span className="ui-notice-box__icon">
-              <Info size={18} strokeWidth={2} />
-            </span>
-            <div className="ui-notice-box__body">
-              <div className="ui-notice-box__title">전체보기 준비 중</div>
-              <div className="ui-notice-box__desc">
-                출역 달력 UI CSS는 반영되었으며, 월별 날짜 셀 데이터 연결은 다음 PR에서 진행합니다.
-              </div>
-            </div>
-          </section>
+          <>
+            {!selectedSiteId ? (
+              <section className="ui-notice-box ui-notice-box--info">
+                <span className="ui-notice-box__icon">
+                  <Info size={18} strokeWidth={2} />
+                </span>
+                <div className="ui-notice-box__body">
+                  <div className="ui-notice-box__title">현장을 선택해주세요</div>
+                  <div className="ui-notice-box__desc">
+                    전체보기(달력)는 선택된 현장 기준으로만 조회합니다.
+                  </div>
+                </div>
+              </section>
+            ) : (
+              <section className="ui-calendar">
+                <div className="ui-calendar__header">
+                  <div className="ui-calendar__title">
+                    {selectedYear}년 {selectedMonth}월
+                  </div>
+                </div>
+
+                <div className="ui-calendar__grid" role="grid" aria-label="월별 출역 달력">
+                  {['일', '월', '화', '수', '목', '금', '토'].map((label, idx) => (
+                    <div
+                      key={label}
+                      className={`ui-calendar__weekday${idx === 0 ? ' is-sun' : idx === 6 ? ' is-sat' : ''}`}
+                      role="columnheader"
+                    >
+                      {label}
+                    </div>
+                  ))}
+
+                  {calendarCells.map(cell => {
+                    if (cell.kind === 'empty') {
+                      return <div key={cell.key} className="ui-date-cell ui-date-cell--off" aria-hidden="true" />
+                    }
+
+                    const logsForDate = logsByDate.get(cell.dateKey) ?? []
+                    const status = getDateStatus(logsForDate)
+                    const statusClass = `ui-date-cell--${status}`
+
+                    const firstLog = logsForDate[0]
+                    const siteName = firstLog?.site_info?.name ?? ''
+                    const taskSummary = isPartnerUser
+                      ? normalizeTaskSummary(firstLog?.task_tags)
+                      : normalizeTaskSummary(firstLog?.task_tags)
+
+                    const manDayText = (() => {
+                      if (isPartnerUser) {
+                        const workerCount = logsForDate.length
+                        return workerCount > 0 ? `${workerCount}건` : ''
+                      }
+                      const total = logsForDate.reduce((sum, log) => sum + getLogTotalManDay(log), 0)
+                      return total > 0 ? `${total}` : ''
+                    })()
+
+                    const dots = (() => {
+                      const statuses = new Set(logsForDate.map(log => log.status))
+                      const list: Array<'approved' | 'pending' | 'rejected' | 'draft'> = []
+                      if (statuses.has('approved')) list.push('approved')
+                      if (statuses.has('pending')) list.push('pending')
+                      if (statuses.has('rejected')) list.push('rejected')
+                      if (statuses.has('draft')) list.push('draft')
+                      return list.slice(0, 3)
+                    })()
+
+                    return (
+                      <div
+                        key={cell.key}
+                        className={`ui-date-cell ${statusClass}${cell.isSun ? ' is-sun' : ''}${cell.isSat ? ' is-sat' : ''}`}
+                        role="gridcell"
+                      >
+                        <button
+                          type="button"
+                          className="ui-date-cell__button"
+                          onClick={() => {
+                            // Minimal interaction for now (no bottom sheet in scope)
+                            alert(`${cell.dateKey}`)
+                          }}
+                        >
+                          <div className="ui-date-cell__day">{cell.day}</div>
+                          <div className="ui-date-cell__site">{siteName}</div>
+                          {manDayText ? <div className="ui-date-cell__man-day">{manDayText}</div> : <div className="ui-date-cell__man-day">&nbsp;</div>}
+                          {taskSummary ? <div className="ui-date-cell__summary">{taskSummary}</div> : <div className="ui-date-cell__summary">&nbsp;</div>}
+                          <div className="ui-date-cell__dots" aria-hidden="true">
+                            {dots.map(dot => (
+                              <span
+                                key={dot}
+                                className={`ui-date-cell__dot${dot === 'approved' ? ' is-success' : dot === 'pending' ? ' is-warning' : dot === 'rejected' ? ' is-danger' : ' is-navy'}`}
+                              />
+                            ))}
+                          </div>
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+          </>
         )}
 
         {viewMode === 'list' && (
@@ -304,9 +574,9 @@ export default function OutputPage() {
                         {STATUS_LABELS[log.status] || log.status}
                       </span>
                     </div>
-                    {log.task_tags?.length > 0 && (
+                    {normalizeTaskTagsArray(log.task_tags).length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
-                        {log.task_tags.map(tag => (
+                        {normalizeTaskTagsArray(log.task_tags).map(tag => (
                           <span key={tag} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-[var(--color-text-secondary)]">
                             {tag}
                           </span>

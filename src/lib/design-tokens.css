@@ -279,15 +279,15 @@
   --role-production-manager-primary-soft: #f1effc;
 }
 
-/* ─────────────────────────────────────────────────────────────────
+ /* ─────────────────────────────────────────────────────────────────
    Role Theme CSS Custom Property Classes
    PR 1 기준 — 변경 금지
    ───────────────────────────────────────────────────────────────── */
-.ui-role-worker             { --color-role-primary: var(--role-worker-primary);             --color-role-primary-soft: var(--role-worker-primary-soft); }
-.ui-role-site-manager       { --color-role-primary: var(--role-site-manager-primary);     --color-role-primary-soft: var(--role-site-manager-primary-soft); }
-.ui-role-partner            { --color-role-primary: var(--role-partner-primary);          --color-role-primary-soft: var(--role-partner-primary-soft); }
-.ui-role-admin              { --color-role-primary: var(--role-admin-primary);            --color-role-primary-soft: var(--role-admin-primary-soft); }
-.ui-role-production-manager  { --color-role-primary: var(--role-production-manager-primary); --color-role-primary-soft: var(--role-production-manager-primary-soft); }
+.ui-role-worker             { --color-role-primary: var(--role-worker-primary);             --color-role-primary-soft: var(--role-worker-primary-soft);             --color-primary-strong: var(--role-worker-primary);             --color-primary-soft: var(--role-worker-primary-soft);             --color-navy: var(--role-worker-primary);             --color-navy-hover: var(--role-worker-primary); }
+.ui-role-site-manager       { --color-role-primary: var(--role-site-manager-primary);     --color-role-primary-soft: var(--role-site-manager-primary-soft);     --color-primary-strong: var(--role-site-manager-primary);     --color-primary-soft: var(--role-site-manager-primary-soft);     --color-navy: var(--role-site-manager-primary);     --color-navy-hover: var(--role-site-manager-primary); }
+.ui-role-partner            { --color-role-primary: var(--role-partner-primary);          --color-role-primary-soft: var(--role-partner-primary-soft);          --color-primary-strong: var(--role-partner-primary);          --color-primary-soft: var(--role-partner-primary-soft);          --color-navy: var(--role-partner-primary);          --color-navy-hover: var(--role-partner-primary); }
+.ui-role-admin              { --color-role-primary: var(--role-admin-primary);            --color-role-primary-soft: var(--role-admin-primary-soft);            --color-primary-strong: var(--role-admin-primary);            --color-primary-soft: var(--role-admin-primary-soft);            --color-navy: var(--role-admin-primary);            --color-navy-hover: var(--role-admin-primary); }
+.ui-role-production-manager  { --color-role-primary: var(--role-production-manager-primary); --color-role-primary-soft: var(--role-production-manager-primary-soft); --color-primary-strong: var(--role-production-manager-primary); --color-primary-soft: var(--role-production-manager-primary-soft); --color-navy: var(--role-production-manager-primary); --color-navy-hover: var(--role-production-manager-primary); }
 
 /* ─────────────────────────────────────────────────────────────────
    Role Theme Applied to UI Components
