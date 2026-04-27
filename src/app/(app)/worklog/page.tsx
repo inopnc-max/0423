@@ -34,6 +34,7 @@ import { deleteLocalBlob, getLocalBlob, saveLocalBlob } from '@/lib/offline/blob
 import { buildWorklogMediaStorageTarget, uploadToStorage } from '@/lib/storage/storage-helper'
 import { buildPhotoSheetDraftFromMediaInfo, type PhotoSheetDraft } from '@/lib/photo-sheet-mapping'
 import { downloadPhotoSheetPdf } from '@/lib/photo-sheet-pdf'
+import { savePhotoSheetPdfToStorageAndCreateDocument } from '@/lib/photo-sheet-document'
 import { PreviewCenter } from '@/components/preview'
 import { PhotoSheetDraftViewer } from '@/components/photo-sheet'
 
@@ -539,6 +540,8 @@ function WorklogEditorView({
   const latestPhotoSheetDraftRef = useRef<PhotoSheetDraft | null>(null)
   const [latestPhotoSheetDraft, setLatestPhotoSheetDraft] = useState<PhotoSheetDraft | null>(null)
   const [isPhotoSheetPreviewOpen, setIsPhotoSheetPreviewOpen] = useState(false)
+  const [isSavingPhotoSheetFinal, setIsSavingPhotoSheetFinal] = useState(false)
+  const [photoSheetFinalMessage, setPhotoSheetFinalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   function preparePhotoSheetDraft(input: {
     siteId: string
@@ -556,6 +559,32 @@ function WorklogEditorView({
     })
 
     return draft.items.length > 0 ? draft : null
+  }
+
+  async function handleSavePhotoSheetFinal() {
+    if (!latestPhotoSheetDraft) return
+
+    setIsSavingPhotoSheetFinal(true)
+    setPhotoSheetFinalMessage(null)
+
+    try {
+      const result = await savePhotoSheetPdfToStorageAndCreateDocument({
+        draft: latestPhotoSheetDraft,
+      })
+
+      setPhotoSheetFinalMessage({
+        type: 'success',
+        text: '사진대지 최종본이 문서함에 저장되었습니다.',
+      })
+    } catch (err) {
+      console.error('[worklog] failed to save photo sheet final:', err)
+      setPhotoSheetFinalMessage({
+        type: 'error',
+        text: '사진대지 최종본 저장에 실패했습니다.',
+      })
+    } finally {
+      setIsSavingPhotoSheetFinal(false)
+    }
   }
 
   const [selectedSite, setSelectedSite] = useState('')
@@ -1518,14 +1547,29 @@ function WorklogEditorView({
       )}
 
       {message?.type === 'success' && latestPhotoSheetDraft && latestPhotoSheetDraft.items.length > 0 && (
-        <div className="mx-auto max-w-3xl px-4">
-          <button
-            type="button"
-            onClick={() => setIsPhotoSheetPreviewOpen(true)}
-            className="ui-btn ui-btn--primary ui-btn--block"
-          >
-            사진대지 미리보기
-          </button>
+        <div className="mx-auto max-w-3xl space-y-3 px-4">
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setIsPhotoSheetPreviewOpen(true)}
+              className="ui-btn ui-btn--primary flex-1"
+            >
+              사진대지 미리보기
+            </button>
+            <button
+              type="button"
+              onClick={handleSavePhotoSheetFinal}
+              disabled={isSavingPhotoSheetFinal}
+              className="ui-btn ui-btn--primary flex-1"
+            >
+              {isSavingPhotoSheetFinal ? '최종본 저장 중...' : '최종본 저장'}
+            </button>
+          </div>
+          {photoSheetFinalMessage && (
+            <div className={`rounded-xl px-4 py-3 text-sm ${photoSheetFinalMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+              {photoSheetFinalMessage.text}
+            </div>
+          )}
         </div>
       )}
 
