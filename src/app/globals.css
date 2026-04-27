@@ -1219,798 +1219,6 @@ select option {
 }
 
 .ui-date-cell__day {
-  width: 24px;
-  font-family: var(--font-family-number);
-  font-size: var(--calendar-day-size);
-  font-weight: var(--font-weight-semibold);
-  line-height: 1.18;
-  letter-spacing: -0.05em;
-  text-align: center;
-  color: var(--color-text-title);
-}
-
-.ui-date-cell__meta {
-  min-height: 1.2em;
-  font-size: var(--calendar-meta-size);
-  font-weight: var(--font-weight-medium);
-  line-height: 1.2;
-  text-align: center;
-  color: var(--color-primary-strong);
-}
-
-.ui-date-cell__dots {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  min-height: 6px;
-}
-
-.ui-date-cell__dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: var(--color-primary-strong);
-}
-
-.ui-date-cell__dot.is-navy { background: var(--color-primary-strong); }
-.ui-date-cell__dot.is-info { background: var(--color-info); }
-.ui-date-cell__dot.is-success { background: var(--color-success); }
-.ui-date-cell__dot.is-warning { background: var(--color-warning); }
-.ui-date-cell__dot.is-danger { background: var(--color-danger); }
-
-.ui-date-cell.is-disabled { opacity: 0.27; }
-.ui-date-cell.is-disabled .ui-date-cell__meta { color: var(--color-text-muted); }
-.ui-date-cell.is-sun .ui-date-cell__day { color: #e48787; }
-.ui-date-cell.is-sat .ui-date-cell__day { color: #5b86dc; }
-.ui-date-cell.is-range .ui-date-cell__button { background: var(--color-accent-soft); }
-
-.ui-date-cell.is-selected .ui-date-cell__button {
-  background: var(--color-primary-soft);
-  box-shadow: inset 0 0 0 2px var(--color-primary-strong);
-}
-
-.ui-date-cell.is-selected .ui-date-cell__day,
-.ui-date-cell.is-selected .ui-date-cell__meta {
-  color: var(--color-primary-strong);
-}
-
-.ui-date-cell.is-pending .ui-date-cell__meta { color: var(--color-warning); }
-.ui-date-cell.is-rejected .ui-date-cell__meta { color: var(--color-danger); }
-.ui-date-cell.is-doc .ui-date-cell__meta { color: var(--color-success); }
-.ui-date-cell.is-photo .ui-date-cell__meta { color: var(--color-info); }
-
-.ui-calendar__footer {
-  padding: 10px 16px 14px;
-  border-top: 1px solid var(--color-divider);
-}
-
-.ui-calendar-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-}
-
-.ui-calendar-legend__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--font-size-caption);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-sub);
-}
-
-/* ─── Bottom Sheet (바텀시트) ─── */
-.ui-sheet-backdrop {
-  position: fixed;
-  inset: 0;
-  background: var(--color-bg-overlay);
-  z-index: 59;
-}
-
-.ui-sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 60;
-  min-height: 300px;
-  max-height: min(82dvh, 760px);
-  background: var(--color-bg-surface);
-  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
-  box-shadow: var(--shadow-sheet);
-  overflow: hidden;
-}
-
-.ui-sheet__handle-wrap {
-  display: flex;
-  justify-content: center;
-  padding-top: 10px;
-}
-
-.ui-sheet__handle {
-  width: var(--sheet-handle-width);
-  height: var(--sheet-handle-height);
-  border-radius: 999px;
-  background: #cbd0d8;
-}
-
-.ui-sheet__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--color-divider);
-}
-
-.ui-sheet__title {
-  min-width: 0;
-  font-size: var(--font-size-h3);
-  font-weight: var(--font-weight-bold);
-  line-height: 1.3;
-  color: var(--color-primary-strong);
-}
-
-.ui-sheet__close {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-pill);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-sub);
-}
-
-.ui-sheet__close svg {
-  width: 20px;
-  height: 20px;
-  stroke-width: 2.1;
-}
-
-.ui-sheet__close:hover {
-  background: var(--color-bg-highlight);
-}
-
-.ui-sheet__body {
-  max-height: calc(82dvh - var(--sheet-footer-height) - 74px);
-  overflow: auto;
-  padding: 16px;
-}
-
-.ui-sheet__footer {
-  position: sticky;
-  bottom: 0;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-3);
-  padding: 12px 16px calc(12px + var(--safe-bottom));
-  background: var(--color-bg-surface);
-  border-top: 1px solid var(--color-divider);
-}
-
-.ui-sheet__point {
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  background: var(--color-bg-selected);
-  border: 1px solid var(--color-accent-soft-3);
-}
-
-.ui-sheet__point-title {
-  font-size: var(--font-size-label);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary-ink);
-}
-
-.ui-sheet__point-desc {
-  margin-top: 4px;
-  font-size: var(--font-size-caption);
-  color: var(--color-text-sub);
-  line-height: 1.45;
-}
-
-/* ─── Calendar Status Variants (출역 캘린더 상태별 배경) ─── */
-.ui-date-cell--approved { background: #eaf8f5; }
-.ui-date-cell--pending  { background: #fff7ea; }
-.ui-date-cell--rejected { background: #fff0f0; }
-.ui-date-cell--draft    { background: var(--color-role-primary-soft, var(--color-primary-soft)); }
-.ui-date-cell--missing  { background: #f3f5f7; }
-.ui-date-cell--off      { background: var(--color-bg-surface); }
-
-/* ─── Calendar Inner Elements ─── */
-.ui-date-cell__button {
-  width: 100%;
-  min-height: var(--calendar-cell-height);
-  padding: 6px 4px;
-  border-radius: var(--radius-md);
-  display: grid;
-  grid-template-rows: auto auto auto auto;
-  align-content: start;
-  justify-items: center;
-  gap: 2px;
-}
-
-.ui-date-cell__site {
-  max-width: 100%;
-  font-size: 10px;
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary-strong);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ui-date-cell__man-day {
-  font-family: var(--font-family-number);
-  font-size: 10px;
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-sub);
-}
-
-.ui-date-cell__summary {
-  max-width: 100%;
-  font-size: 10px;
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-sub);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ─── Bottom Navigation (하단 네비게이션) ─── */
-.ui-bottom-nav {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: 960px;
-  width: 100%;
-  bottom: 0;
-  z-index: 55;
-  display: grid;
-  align-items: center;
-  min-height: calc(var(--bottom-nav-height) + var(--safe-bottom));
-  padding: 8px 16px calc(8px + var(--safe-bottom));
-  background: var(--color-bg-bottom-nav);
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
-  border-top: 1px solid rgba(209, 217, 228, 0.88);
-  backdrop-filter: blur(14px);
-}
-
-.ui-bottom-nav__item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  min-height: 52px;
-  color: var(--color-text-muted);
-  transition: color var(--transition-fast), transform var(--transition-fast);
-}
-
-.ui-bottom-nav__item-label {
-  font-size: var(--font-size-micro);
-  font-weight: var(--font-weight-bold);
-  line-height: 1.2;
-  letter-spacing: var(--letter-spacing-loose);
-}
-
-.ui-bottom-nav__item.is-active {
-  color: var(--color-primary-strong);
-}
-
-.ui-bottom-nav__item:not(.is-disabled):hover {
-  color: #484F7F;
-}
-
-.ui-bottom-nav__item.is-active .ui-nav-icon {
-  transform: translateY(-1px);
-}
-
-.ui-bottom-nav__item.is-disabled {
-  color: var(--color-text-disabled);
-  opacity: var(--disabled-opacity);
-}
-
-/* ─── Navigation Coachmark (네비게이션 메시지 알림) ─── */
-.ui-nav-coachmark {
-  position: fixed;
-  left: 50%;
-  bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 10px);
-  z-index: 46;
-  transform: translateX(-50%);
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  max-width: min(92vw, 328px);
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: var(--color-bg-coachmark);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-coachmark);
-}
-
-.ui-nav-coachmark::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -8px;
-  width: 14px;
-  height: 14px;
-  background: var(--color-bg-coachmark);
-  border-right: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
-  transform: translateX(-50%) rotate(45deg);
-}
-
-.ui-nav-coachmark__icon {
-  width: 26px;
-  height: 26px;
-  border-radius: var(--radius-pill);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-primary-strong);
-  background: var(--color-bg-coachmark-icon);
-}
-
-.ui-nav-coachmark__icon svg {
-  width: 16px;
-  height: 16px;
-  stroke-width: 2.1;
-}
-
-.ui-nav-coachmark__text {
-  min-width: 0;
-  font-size: var(--font-size-label);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary-ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ui-nav-coachmark__sub {
-  font-size: var(--font-size-caption);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-sub);
-  margin-left: 2px;
-}
-
-.ui-nav-coachmark__close {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-pill);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  background: var(--color-bg-soft);
-}
-
-.ui-nav-coachmark__close svg {
-  width: 14px;
-  height: 14px;
-  stroke-width: 2.2;
-}
-
-/* ─── Sub Navigation (서브네비게이션) ─── */
-.ui-subnav {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  background: var(--color-bg-surface);
-  border-bottom: 1px solid var(--color-divider);
-}
-
-.ui-subnav__item {
-  position: relative;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  color: var(--color-text-sub);
-  font-size: var(--font-size-label);
-  font-weight: var(--font-weight-semibold);
-}
-
-.ui-subnav__item + .ui-subnav__item::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 12px;
-  bottom: 12px;
-  width: 1px;
-  background: var(--color-separator);
-}
-
-.ui-subnav__item.is-active {
-  color: var(--color-primary-strong);
-}
-
-/* ==========================================================================
-   INOPNC UI Patch Layer
-   역할색 override + 출역 보기 토글 + 출역 달력 + 칩 + 공수 컨트롤 + 바텀시트 + 툴팁
-   ========================================================================== */
-
-/* 역할별 컬러 변수는 AppShell의 ui-role-* 클래스를 통해 상속 */
-.ui-app-shell.ui-role-worker,
-.ui-app-shell.ui-role-site-manager,
-.ui-app-shell.ui-role-partner,
-.ui-app-shell.ui-role-admin,
-.ui-app-shell.ui-role-production-manager {
-  --active-role-color: var(--color-role-primary, var(--color-primary-strong));
-  --active-role-color-soft: var(--color-role-primary-soft, var(--color-primary-soft));
-  --active-role-color-border: color-mix(in srgb, var(--active-role-color) 24%, transparent);
-}
-
-/* 역할별 컬러가 기존 기본색에 덮이지 않도록 최종 override */
-.ui-app-shell .ui-header__title,
-.ui-app-shell .ui-header__brand,
-.ui-app-shell .ui-bottom-nav__item.is-active,
-.ui-app-shell .ui-tab.is-active,
-.ui-app-shell .ui-toggle__item.is-active,
-.ui-app-shell .ui-month-mover__title,
-.ui-app-shell .ui-section-header__title {
-  color: var(--active-role-color);
-}
-
-.ui-app-shell .ui-btn--primary,
-.ui-app-shell .ui-toolbar-button--primary {
-  background: var(--active-role-color);
-  border-color: var(--active-role-color);
-  color: var(--color-text-white);
-}
-
-.ui-app-shell .ui-btn--primary:hover,
-.ui-app-shell .ui-toolbar-button--primary:hover {
-  background: var(--active-role-color);
-  border-color: var(--active-role-color);
-  filter: brightness(0.96);
-}
-
-.ui-app-shell .ui-tab.is-active,
-.ui-app-shell .ui-toggle__item.is-active {
-  background: var(--active-role-color-soft);
-  border-color: var(--active-role-color-soft);
-  color: var(--active-role-color);
-}
-
-.ui-app-shell .ui-header-icon.is-active,
-.ui-app-shell .ui-action-icon.is-active {
-  background: var(--active-role-color-soft);
-  color: var(--active-role-color);
-}
-
-/* ─── 출역 보기 전환 토글 ─── */
-.ui-output-view-switch {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.ui-output-view-switch__label {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.ui-output-view-switch__title {
-  font-size: var(--font-size-title);
-  font-weight: var(--font-weight-bold);
-  line-height: 1.35;
-  color: var(--color-text-title);
-}
-
-.ui-output-view-switch__desc {
-  font-size: var(--font-size-caption);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-sub);
-}
-
-.ui-output-view-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 40px;
-  padding: 4px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-soft);
-}
-
-.ui-output-view-toggle__item {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 76px;
-  min-height: 32px;
-  padding: 0 14px;
-  border-radius: var(--radius-pill);
-  font-size: var(--font-size-label);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-sub);
-  white-space: nowrap;
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast),
-    box-shadow var(--transition-fast);
-}
-
-.ui-output-view-toggle__item.is-active,
-.ui-output-view-toggle__item[aria-pressed='true'] {
-  color: var(--active-role-color, var(--color-primary-strong));
-  background: var(--color-bg-surface);
-  box-shadow: 0 4px 10px rgba(67, 81, 135, 0.12);
-}
-
-/* ─── 폰트 보조 유틸리티 ─── */
-.ui-text-title-strong {
-  font-size: var(--font-size-title);
-  font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-tight);
-  letter-spacing: var(--letter-spacing-tight);
-  color: var(--color-text-title);
-}
-
-.ui-text-body-strong {
-  font-size: var(--font-size-body);
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-base);
-  color: var(--color-text-strong);
-}
-
-.ui-text-meta {
-  font-size: var(--font-size-caption);
-  font-weight: var(--font-weight-medium);
-  line-height: 1.42;
-  color: var(--color-text-muted);
-}
-
-.ui-text-number-strong {
-  font-family: var(--font-family-number);
-  font-size: var(--font-size-title);
-  font-weight: var(--font-weight-bold);
-  font-variant-numeric: tabular-nums;
-  color: var(--active-role-color, var(--color-primary-strong));
-}
-
-/* ─── 알림상자 ─── */
-.ui-notice-box {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-surface);
-  box-shadow: var(--shadow-xs);
-}
-
-.ui-notice-box__icon {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-md);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  background: var(--active-role-color-soft, var(--color-bg-coachmark-icon));
-  color: var(--active-role-color, var(--color-primary-strong));
-}
-
-.ui-notice-box__icon svg {
-  width: 18px;
-  height: 18px;
-  stroke-width: 2.05;
-}
-
-.ui-notice-box__body {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
-.ui-notice-box__title {
-  font-size: var(--font-size-label);
-  font-weight: var(--font-weight-bold);
-  line-height: 1.35;
-  color: var(--color-text-title);
-}
-
-.ui-notice-box__desc {
-  font-size: var(--font-size-caption);
-  font-weight: var(--font-weight-medium);
-  line-height: 1.45;
-  color: var(--color-text-sub);
-}
-
-.ui-notice-box--info {
-  border-color: var(--color-accent-soft-3);
-  background: var(--color-accent-soft);
-}
-
-.ui-notice-box--warning {
-  border-color: #f0ddbb;
-  background: #fff7ea;
-}
-
-.ui-notice-box--danger {
-  border-color: #f0c3c3;
-  background: #fff0f0;
-}
-
-.ui-notice-box--success {
-  border-color: #bedfce;
-  background: #eef8f3;
-}
-
-/* ─── 선택칩 / 필터칩 ─── */
-.ui-choice-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 34px;
-  padding: 0 13px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-surface);
-  color: var(--color-text-sub);
-  font-size: var(--font-size-label);
-  font-weight: var(--font-weight-semibold);
-  line-height: 1;
-  white-space: nowrap;
-  transition:
-    background-color var(--transition-fast),
-    border-color var(--transition-fast),
-    color var(--transition-fast),
-    box-shadow var(--transition-fast);
-}
-
-.ui-choice-chip:hover {
-  background: var(--color-bg-highlight);
-  border-color: var(--color-border-strong);
-}
-
-.ui-choice-chip.is-active,
-.ui-choice-chip[aria-pressed='true'],
-.ui-choice-chip[aria-selected='true'] {
-  background: var(--active-role-color-soft, var(--color-primary-soft));
-  border-color: var(--active-role-color-soft, var(--color-primary-soft-3));
-  color: var(--active-role-color, var(--color-primary-strong));
-  box-shadow: inset 0 0 0 1px var(--active-role-color-border, rgba(67, 81, 135, 0.16));
-}
-
-.ui-choice-chip__count {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 6px;
-  border-radius: var(--radius-pill);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-bg-muted);
-  color: var(--color-text-sub);
-  font-size: 10px;
-  font-weight: var(--font-weight-bold);
-}
-
-.ui-choice-chip.is-active .ui-choice-chip__count {
-  background: var(--active-role-color, var(--color-primary-strong));
-  color: var(--color-text-white);
-}
-
-/* ─── 출역 달력 공통 UI ─── */
-.ui-attendance-calendar {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.ui-attendance-calendar__toolbar {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.ui-calendar-card {
-  padding: var(--space-4);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.ui-calendar-header {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.ui-calendar-title {
-  text-align: center;
-  font-family: var(--font-family-number);
-  font-size: var(--calendar-month-size);
-  font-weight: var(--font-weight-bold);
-  line-height: 1.1;
-  letter-spacing: -0.04em;
-  color: var(--active-role-color, var(--color-primary-strong));
-}
-
-.ui-calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: var(--calendar-gap);
-}
-
-.ui-calendar-weekday {
-  min-height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--calendar-weekday-size);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-muted);
-}
-
-.ui-calendar-weekday.is-sun { color: var(--color-danger); }
-.ui-calendar-weekday.is-sat { color: var(--color-info); }
-
-.ui-date-cell {
-  min-width: 0;
-  border-radius: var(--radius-md);
-  background: var(--color-bg-surface);
-}
-
-.ui-date-cell--approved,
-.ui-date-cell.is-approved { background: #eaf8f5; }
-
-.ui-date-cell--pending,
-.ui-date-cell.is-pending { background: #fff7ea; }
-
-.ui-date-cell--rejected,
-.ui-date-cell.is-rejected { background: #fff0f0; }
-
-.ui-date-cell--draft,
-.ui-date-cell.is-draft,
-.ui-date-cell.is-selected { background: var(--active-role-color-soft, var(--color-primary-soft)); }
-
-.ui-date-cell--missing,
-.ui-date-cell.is-missing { background: #f3f5f7; }
-
-.ui-date-cell--off,
-.ui-date-cell.is-disabled {
-  background: var(--color-bg-surface);
-  opacity: var(--readonly-opacity);
-}
-
-.ui-date-cell__button {
-  width: 100%;
-  min-height: var(--calendar-cell-height);
-  padding: 6px 4px;
-  border-radius: var(--radius-md);
-  border: 1px solid transparent;
-  display: grid;
-  grid-template-rows: auto auto auto auto;
-  align-content: start;
-  justify-items: center;
-  gap: 2px;
-  color: var(--color-text-main);
-  transition:
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast),
-    transform var(--transition-fast);
-}
-
-.ui-date-cell__button:hover {
-  border-color: var(--active-role-color-border, var(--color-primary-ring));
-  box-shadow: inset 0 0 0 1px var(--active-role-color-border, rgba(67, 81, 135, 0.16));
-}
-
-.ui-date-cell__button:active { transform: translateY(1px); }
-
-.ui-date-cell__day {
   font-family: var(--font-family-number);
   font-size: var(--calendar-day-size);
   font-weight: var(--font-weight-bold);
@@ -2138,6 +1346,108 @@ select option {
   background: var(--active-role-color, var(--color-primary-strong));
   border-color: var(--active-role-color, var(--color-primary-strong));
   color: var(--color-text-white);
+}
+
+/* ─── 바텀 네비게이션 ─── */
+.ui-bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: calc(var(--bottom-nav-height) + var(--safe-bottom));
+  padding: 0 var(--space-4) var(--safe-bottom);
+  background: var(--color-bg-bottom-nav);
+  border-top: 1px solid var(--color-divider);
+  backdrop-filter: blur(12px);
+}
+
+.ui-bottom-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 0 8px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.ui-bottom-nav__item.is-active {
+  color: var(--color-primary-strong);
+  background: var(--color-primary-soft);
+}
+
+.ui-bottom-nav__item:active {
+  transform: translateY(1px);
+}
+
+.ui-bottom-nav__icon {
+  width: 24px;
+  height: 24px;
+}
+
+.ui-bottom-nav__icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.05;
+}
+
+.ui-bottom-nav__label {
+  font-size: var(--font-size-micro);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+}
+
+/* ─── 보기 토글 (출역 캘린더/리스트 전환) ─── */
+.ui-output-view-switch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-output-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-soft);
+  border: 1px solid var(--color-border);
+}
+
+.ui-output-view-toggle__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 64px;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-sub);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.ui-output-view-toggle__item.is-active {
+  color: var(--color-primary-strong);
+  background: var(--color-bg-surface);
+  box-shadow: 0 4px 10px rgba(67, 81, 135, 0.12);
+}
+
+.ui-output-view-toggle__item svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.05;
 }
 
 /* ─── 바텀시트 통일 ─── */
@@ -2334,4 +1644,54 @@ select option {
     flex-direction: column;
     align-items: stretch;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Role Theme Override Layer
+   역할별 컬러 테마가 헤더, 네비, 버튼, 토글 등에 확실히 반영되도록 최종 보강
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* 색상만 변경: 텍스트/아이콘 색상 */
+.ui-app-shell .ui-header__title,
+.ui-app-shell .ui-header__brand,
+.ui-app-shell .ui-section-header__title,
+.ui-app-shell .ui-type-h1,
+.ui-app-shell .ui-type-h2,
+.ui-app-shell .ui-type-emphasis,
+.ui-app-shell .ui-bottom-nav__item.is-active,
+.ui-app-shell .ui-output-view-toggle__item.is-active,
+.ui-app-shell .ui-toggle__item.is-active,
+.ui-app-shell .ui-tab.is-active,
+.ui-app-shell .ui-toolbar-button,
+.ui-app-shell .ui-month-mover__title {
+  color: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
+}
+
+/* 배경/테두리까지 역할색: 주요 버튼, 토글 active */
+.ui-app-shell .ui-btn--primary,
+.ui-app-shell .ui-toolbar-button--primary,
+.ui-app-shell .ui-output-view-toggle__item.is-active {
+  background: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
+  border-color: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
+  color: var(--color-text-white);
+}
+
+/* Soft 배경: 아이콘/탭 active */
+.ui-app-shell .ui-header-icon.is-active,
+.ui-app-shell .ui-action-icon.is-active,
+.ui-app-shell .ui-tab.is-active,
+.ui-app-shell .ui-toggle__item.is-active {
+  background: var(--active-role-color-soft, var(--color-role-primary-soft, var(--color-primary-soft)));
+  color: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
+}
+
+/* 하단 네비 active: soft 배경 + 역할색 텍스트 */
+.ui-app-shell .ui-bottom-nav__item.is-active {
+  background: var(--active-role-color-soft, var(--color-role-primary-soft, var(--color-primary-soft)));
+  color: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
+}
+
+/* FAB 역할색 보강 */
+.ui-app-shell a.bg-\[var\(--color-navy\)\] {
+  background: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong))) !important;
 }
