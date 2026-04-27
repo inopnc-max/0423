@@ -542,6 +542,7 @@ function WorklogEditorView({
   const [isPhotoSheetPreviewOpen, setIsPhotoSheetPreviewOpen] = useState(false)
   const [isSavingPhotoSheetFinal, setIsSavingPhotoSheetFinal] = useState(false)
   const [photoSheetFinalMessage, setPhotoSheetFinalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [savedPhotoSheetDocumentId, setSavedPhotoSheetDocumentId] = useState<string | null>(null)
 
   function preparePhotoSheetDraft(input: {
     siteId: string
@@ -562,7 +563,8 @@ function WorklogEditorView({
   }
 
   async function handleSavePhotoSheetFinal() {
-    if (!latestPhotoSheetDraft) return
+    if (!latestPhotoSheetDraft || latestPhotoSheetDraft.items.length === 0) return
+    if (isSavingPhotoSheetFinal) return
 
     setIsSavingPhotoSheetFinal(true)
     setPhotoSheetFinalMessage(null)
@@ -572,6 +574,7 @@ function WorklogEditorView({
         draft: latestPhotoSheetDraft,
       })
 
+      setSavedPhotoSheetDocumentId(result.documentId)
       setPhotoSheetFinalMessage({
         type: 'success',
         text: '사진대지 최종본이 문서함에 저장되었습니다.',
@@ -1071,8 +1074,13 @@ function WorklogEditorView({
       if (preparedPhotoSheetDraft) {
         latestPhotoSheetDraftRef.current = preparedPhotoSheetDraft
         setLatestPhotoSheetDraft(preparedPhotoSheetDraft)
+        setSavedPhotoSheetDocumentId(null)
+        setPhotoSheetFinalMessage(null)
       } else {
         setLatestPhotoSheetDraft(null)
+        latestPhotoSheetDraftRef.current = null
+        setSavedPhotoSheetDocumentId(null)
+        setPhotoSheetFinalMessage(null)
       }
 
       setMessage({
@@ -1547,29 +1555,14 @@ function WorklogEditorView({
       )}
 
       {message?.type === 'success' && latestPhotoSheetDraft && latestPhotoSheetDraft.items.length > 0 && (
-        <div className="mx-auto max-w-3xl space-y-3 px-4">
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => setIsPhotoSheetPreviewOpen(true)}
-              className="ui-btn ui-btn--primary flex-1"
-            >
-              사진대지 미리보기
-            </button>
-            <button
-              type="button"
-              onClick={handleSavePhotoSheetFinal}
-              disabled={isSavingPhotoSheetFinal}
-              className="ui-btn ui-btn--primary flex-1"
-            >
-              {isSavingPhotoSheetFinal ? '최종본 저장 중...' : '최종본 저장'}
-            </button>
-          </div>
-          {photoSheetFinalMessage && (
-            <div className={`rounded-xl px-4 py-3 text-sm ${photoSheetFinalMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-              {photoSheetFinalMessage.text}
-            </div>
-          )}
+        <div className="mx-auto max-w-3xl px-4">
+          <button
+            type="button"
+            onClick={() => setIsPhotoSheetPreviewOpen(true)}
+            className="ui-btn ui-btn--primary ui-btn--block"
+          >
+            사진대지 미리보기
+          </button>
         </div>
       )}
 
@@ -1618,7 +1611,26 @@ function WorklogEditorView({
             })
           }}
         >
-          <PhotoSheetDraftViewer draft={latestPhotoSheetDraft} />
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-white p-3">
+              <button
+                type="button"
+                onClick={() => void handleSavePhotoSheetFinal()}
+                disabled={isSavingPhotoSheetFinal || !latestPhotoSheetDraft || latestPhotoSheetDraft.items.length === 0}
+                className="ui-btn ui-btn--primary"
+              >
+                {isSavingPhotoSheetFinal ? '최종본 저장 중...' : savedPhotoSheetDocumentId ? '최종본 저장 완료' : '최종본 저장'}
+              </button>
+
+              {photoSheetFinalMessage && (
+                <p className={photoSheetFinalMessage.type === 'success' ? 'text-sm text-green-700' : 'text-sm text-red-700'}>
+                  {photoSheetFinalMessage.text}
+                </p>
+              )}
+            </div>
+
+            <PhotoSheetDraftViewer draft={latestPhotoSheetDraft} />
+          </div>
         </PreviewCenter>
       )}
     </div>
