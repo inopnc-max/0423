@@ -1,6 +1,6 @@
 -- ============================================================
 -- reports bucket Storage policy 추가
--- PR #46: reports Storage policy 추가
+-- PR #45: reports Storage policy 추가
 --
 -- 목적:
 --   reports bucket private 전환 전에 Storage objects에 대한
