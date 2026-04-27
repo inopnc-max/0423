@@ -61,7 +61,7 @@ function docsToResults(docs: DocumentRow[], scope: MenuSearchScope): MenuSearchR
 
 /* ─── Document row from Supabase ─── */
 
-interface DocumentRow {
+export interface DocumentRow {
   id: string
   site_id: string
   category: string
@@ -71,6 +71,10 @@ interface DocumentRow {
   created_at: string
   storage_bucket: string | null
   storage_path: string | null
+  source_type: string | null
+  source_id: string | null
+  approval_status: string | null
+  locked_at: string | null
 }
 
 /* ─── Worklog row from Supabase ─── */
@@ -213,7 +217,7 @@ export function useMenuSearch(options: MenuSearchOptions): UseMenuSearchReturn {
       try {
         let dbQuery = supabase
           .from('documents')
-          .select('id, site_id, category, title, file_url, file_type, created_at, storage_bucket, storage_path')
+          .select('id, site_id, category, title, file_url, file_type, created_at, storage_bucket, storage_path, source_type, source_id, approval_status, locked_at')
           .eq('site_id', selectedSiteId)
           .order('created_at', { ascending: false })
           .limit(50)
