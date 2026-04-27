@@ -1483,6 +1483,7 @@ select option {
   justify-content: center;
   gap: 2px;
   min-height: 52px;
+  background: transparent;
   color: var(--color-text-muted);
   transition: color var(--transition-fast), transform var(--transition-fast);
 }
@@ -1495,10 +1496,12 @@ select option {
 }
 
 .ui-bottom-nav__item.is-active {
+  background: transparent;
   color: var(--color-primary-strong);
 }
 
 .ui-bottom-nav__item:not(.is-disabled):hover {
+  background: transparent;
   color: #484F7F;
 }
 
@@ -1647,7 +1650,6 @@ select option {
 /* 역할별 컬러가 기존 기본색에 덮이지 않도록 최종 override */
 .ui-app-shell .ui-header__title,
 .ui-app-shell .ui-header__brand,
-.ui-app-shell .ui-bottom-nav__item.is-active,
 .ui-app-shell .ui-tab.is-active,
 .ui-app-shell .ui-toggle__item.is-active,
 .ui-app-shell .ui-month-mover__title,
@@ -2357,7 +2359,6 @@ select option {
 .ui-app-shell .ui-type-h1,
 .ui-app-shell .ui-type-h2,
 .ui-app-shell .ui-type-emphasis,
-.ui-app-shell .ui-bottom-nav__item.is-active,
 .ui-app-shell .ui-output-view-toggle__item.is-active,
 .ui-app-shell .ui-toggle__item.is-active,
 .ui-app-shell .ui-tab.is-active,
@@ -2384,8 +2385,7 @@ select option {
 .ui-app-shell .ui-header-icon.is-active,
 .ui-app-shell .ui-action-icon.is-active,
 .ui-app-shell .ui-tab.is-active,
-.ui-app-shell .ui-toggle__item.is-active,
-.ui-app-shell .ui-bottom-nav__item.is-active {
+.ui-app-shell .ui-toggle__item.is-active {
   background: var(--active-role-color-soft, var(--color-role-primary-soft, var(--color-primary-soft)));
   color: var(--active-role-color, var(--color-role-primary, var(--color-primary-strong)));
 }
