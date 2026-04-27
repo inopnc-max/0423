@@ -31,6 +31,10 @@ import type { PhotoSheetDraft } from './photo-sheet-mapping'
 import { createClient } from './supabase/client'
 import { savePhotoSheetPdfToStorage } from './photo-sheet-pdf'
 import { resolvePublicUrl } from './storage/storage-helper'
+import {
+  buildPhotoSheetSourceId,
+  buildPhotoSheetStoragePath,
+} from './photo-sheet-path'
 
 /**
  * Build the public file URL for a reports bucket file.
@@ -42,42 +46,6 @@ import { resolvePublicUrl } from './storage/storage-helper'
 function buildReportsFileUrl(storagePath: string): string {
   const supabase = createClient()
   return resolvePublicUrl({ supabase, bucket: 'reports', path: storagePath }) ?? ''
-}
-
-/**
- * Build a deterministic source ID for photo sheet documents.
- * Format: photo-sheet:{siteId}:{workDate}
- *
- * This ID is used for deduplication and source tracking in the documents table.
- * It matches the storage path convention to ensure consistent identification.
- */
-function buildPhotoSheetSourceId(draft: PhotoSheetDraft): string {
-  return `photo-sheet:${draft.siteId}:${draft.workDate}`
-}
-
-/**
- * Sanitize path segment by removing invalid characters.
- * Mirrors photo-sheet-pdf.ts buildPhotoSheetStoragePath logic.
- */
-function sanitizePathSegment(segment: string): string {
-  return segment
-    .replace(/[<>:"/\\|?*]/g, '-')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .substring(0, 100)
-}
-
-/**
- * Build the expected storage path for a photo sheet PDF.
- * Must match photo-sheet-pdf.ts buildPhotoSheetStoragePath() exactly.
- * Format: {siteId}/{workDate}/photo-sheet/{reportId}.pdf
- */
-function buildExpectedStoragePath(draft: PhotoSheetDraft): string {
-  const safeSiteId = sanitizePathSegment(draft.siteId || 'unknown')
-  const safeWorkDate = sanitizePathSegment(draft.workDate || 'unknown')
-  const reportId = `photo-sheet-${safeSiteId}-${safeWorkDate}`
-  return `${safeSiteId}/${safeWorkDate}/photo-sheet/${reportId}.pdf`
 }
 
 /**
@@ -111,8 +79,14 @@ export async function savePhotoSheetPdfToStorageAndCreateDocument(input: {
   documentId: string
 }> {
   const { draft } = input
-  const sourceId = buildPhotoSheetSourceId(draft)
-  const expectedPath = buildExpectedStoragePath(draft)
+  const sourceId = buildPhotoSheetSourceId({
+    siteId: draft.siteId,
+    workDate: draft.workDate,
+  })
+  const expectedPath = buildPhotoSheetStoragePath({
+    siteId: draft.siteId,
+    workDate: draft.workDate,
+  })
   const supabase = createClient()
 
   // Step 1: Build expected file URL (to check legacy documents before upload)
