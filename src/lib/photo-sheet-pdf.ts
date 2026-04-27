@@ -13,30 +13,10 @@
 import type { PhotoSheetDraft } from './photo-sheet-mapping'
 import { createClient } from './supabase/client'
 import { createSignedPreviewUrl, uploadToStorage } from './storage/storage-helper'
-
-/**
- * Sanitize path segments by removing/replacing invalid characters.
- */
-function sanitizePathSegment(segment: string): string {
-  return segment
-    .replace(/[<>:"/\\|?*]/g, '-')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .substring(0, 100)
-}
-
-/**
- * Build storage path for photo sheet PDF.
- * Format: {siteId}/{workDate}/photo-sheet/{reportId}.pdf
- * Uses deterministic reportId for consistency.
- */
-function buildPhotoSheetStoragePath(draft: PhotoSheetDraft): string {
-  const safeSiteId = sanitizePathSegment(draft.siteId || 'unknown')
-  const safeWorkDate = sanitizePathSegment(draft.workDate || 'unknown')
-  const reportId = `photo-sheet-${safeSiteId}-${safeWorkDate}`
-  return `${safeSiteId}/${safeWorkDate}/photo-sheet/${reportId}.pdf`
-}
+import {
+  buildPhotoSheetDownloadFilename,
+  buildPhotoSheetStoragePath,
+} from './photo-sheet-path'
 
 /**
  * Create photo sheet PDF blob using browser rendering for Korean text support.
@@ -309,9 +289,10 @@ export async function downloadPhotoSheetPdf(input: {
   const blob = await createPhotoSheetPdfBlob(input)
 
   // Download
-  const safeSiteId = sanitizePathSegment(input.draft.siteId || 'unknown')
-  const safeDate = sanitizePathSegment(input.draft.workDate || 'unknown')
-  const filename = `photo-sheet-${safeSiteId}-${safeDate}.pdf`
+  const filename = buildPhotoSheetDownloadFilename({
+    siteId: input.draft.siteId,
+    workDate: input.draft.workDate,
+  })
 
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -434,7 +415,10 @@ export async function savePhotoSheetPdfToStorage(input: {
   const blob = await createPhotoSheetPdfBlob({ draft })
 
   // Build storage path
-  const path = buildPhotoSheetStoragePath(draft)
+  const path = buildPhotoSheetStoragePath({
+    siteId: draft.siteId,
+    workDate: draft.workDate,
+  })
 
   // Upload using browser client
   const supabase = createClient()
