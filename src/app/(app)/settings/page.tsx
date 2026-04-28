@@ -43,8 +43,12 @@ function getSyncStatusColor(status: string): { text: string; bg: string } {
   }
 }
 
-function formatSyncItemDate(iso: string): string {
+function formatSyncItemDate(iso?: string | null): string {
+  if (!iso) return '시간 정보 없음'
+
   const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '시간 정보 없음'
+
   const date = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
   const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
   return `${date} ${time}`
@@ -176,7 +180,7 @@ export default function SettingsPage() {
                       </span>
                     </div>
                     <div className="mt-1 flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
-                      <span>{formatSyncItemDate(item.updatedAt)}</span>
+                      <span>{formatSyncItemDate(item.updatedAt ?? item.createdAt)}</span>
                       {item.retryCount > 0 && (
                         <span className="text-red-500">재시도 {item.retryCount}회</span>
                       )}
