@@ -22,6 +22,9 @@ export type ConfirmationStoragePathInput = ConfirmationStorageScope & {
   confirmationFormId: string
 }
 
+/**
+ * Sanitize a single path segment for safe Storage paths.
+ */
 function sanitizePathSegment(value: string | null | undefined): string {
   return (value ?? '')
     .trim()
@@ -29,6 +32,15 @@ function sanitizePathSegment(value: string | null | undefined): string {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
+}
+
+/**
+ * Sanitize a confirmation form ID segment for use in Storage paths.
+ *
+ * Falls back to 'confirmation' if the input is empty or becomes empty after sanitization.
+ */
+function buildConfirmationFormIdSegment(confirmationFormId: string): string {
+  return sanitizePathSegment(confirmationFormId) || 'confirmation'
 }
 
 /**
@@ -61,7 +73,8 @@ export function buildConfirmationSiteKey(scope: ConfirmationStorageScope): strin
  */
 export function buildConfirmationPdfPath(input: ConfirmationStoragePathInput): string {
   const siteKey = buildConfirmationSiteKey(input)
-  return `reports/${siteKey}/confirmation/${input.confirmationFormId}.pdf`
+  const formId = buildConfirmationFormIdSegment(input.confirmationFormId)
+  return `reports/${siteKey}/confirmation/${formId}.pdf`
 }
 
 /**
@@ -75,7 +88,8 @@ export function buildConfirmationPdfPath(input: ConfirmationStoragePathInput): s
  */
 export function buildConfirmationSnapshotPath(input: ConfirmationStoragePathInput): string {
   const siteKey = buildConfirmationSiteKey(input)
-  return `reports/${siteKey}/confirmation/${input.confirmationFormId}_snapshot.json`
+  const formId = buildConfirmationFormIdSegment(input.confirmationFormId)
+  return `reports/${siteKey}/confirmation/${formId}_snapshot.json`
 }
 
 /**
@@ -89,7 +103,8 @@ export function buildConfirmationSnapshotPath(input: ConfirmationStoragePathInpu
  */
 export function buildConfirmationThumbPath(input: ConfirmationStoragePathInput): string {
   const siteKey = buildConfirmationSiteKey(input)
-  return `reports/${siteKey}/confirmation/${input.confirmationFormId}_thumb.webp`
+  const formId = buildConfirmationFormIdSegment(input.confirmationFormId)
+  return `reports/${siteKey}/confirmation/${formId}_thumb.webp`
 }
 
 /**
@@ -105,8 +120,9 @@ export function buildConfirmationSignaturePath(
   input: ConfirmationStoragePathInput & { signatureId: string },
 ): string {
   const siteKey = buildConfirmationSiteKey(input)
+  const formId = buildConfirmationFormIdSegment(input.confirmationFormId)
   const signatureId = sanitizePathSegment(input.signatureId) || 'signature'
-  return `signatures/${siteKey}/confirmation/${input.confirmationFormId}/${signatureId}.png`
+  return `signatures/${siteKey}/confirmation/${formId}/${signatureId}.png`
 }
 
 /**
@@ -122,6 +138,7 @@ export function buildDailyLogConfirmationAttachmentPath(
   input: ConfirmationStoragePathInput,
 ): string {
   const siteKey = buildConfirmationSiteKey(input)
+  const formId = buildConfirmationFormIdSegment(input.confirmationFormId)
   const workDate = sanitizePathSegment(input.workDate) || 'undated'
-  return `daily-log-attachments/${siteKey}/${workDate}/confirmation/${input.confirmationFormId}.pdf`
+  return `daily-log-attachments/${siteKey}/${workDate}/confirmation/${formId}.pdf`
 }
