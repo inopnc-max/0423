@@ -22,10 +22,10 @@ import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
 import { loadWorklogDraft, saveWorklogDraft, clearWorklogDraft, type WorklogDraftRecord } from '@/lib/offline/worklog-draft'
 import {
   getSelectedSiteId as getLocalSelectedSiteId,
-  getSelectedDate,
+  getSelectedWorkDate,
   getWorklogSection,
   setSelectedSiteId as setLocalSelectedSiteId,
-  setSelectedDate,
+  setSelectedWorkDate,
   setWorklogSection,
 } from '@/lib/ui-state'
 import { useSelectedSite } from '@/contexts/selected-site-context'
@@ -683,7 +683,7 @@ function WorklogEditorView({
   }, [selectedSite])
 
   useEffect(() => {
-    if (selectedDate) setSelectedDate(selectedDate)
+    if (selectedDate) setSelectedWorkDate(selectedDate)
   }, [selectedDate])
 
   useEffect(() => {
@@ -754,7 +754,7 @@ function WorklogEditorView({
 
     // URL 파라미터 우선, 없으면 localStorage
     const resolvedSite = querySite || getLocalSelectedSiteId() || ''
-    const resolvedDate = queryDate || getSelectedDate() || today
+    const resolvedDate = queryDate || getSelectedWorkDate() || today
 
     setSelectedSite(resolvedSite)
     setSelectedDate(resolvedDate)
@@ -764,6 +764,7 @@ function WorklogEditorView({
 
     // localStorage 저장 (URL 파라미터 없이 재접속 시 복원용)
     if (!querySite) setLocalSelectedSiteId(resolvedSite || null)
+    if (queryDate) setSelectedWorkDate(queryDate)
   }, [searchParams, today])
 
   // Worklog 상태 로드: Server → IndexedDB Draft 순서
