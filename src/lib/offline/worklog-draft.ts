@@ -32,8 +32,16 @@ export interface WorklogDraftRecord {
   updatedAt: string
 }
 
-function buildDraftKey(userId: string, siteId: string, workDate: string) {
+export function buildWorklogDraftKey(userId: string, siteId: string, workDate: string): string {
   return `${userId}:${siteId}:${workDate}`
+}
+
+function isValidDraftScope(input: {
+  userId?: string | null
+  siteId?: string | null
+  workDate?: string | null
+}): boolean {
+  return Boolean(input.userId && input.siteId && input.workDate)
 }
 
 export async function loadWorklogDraft(
@@ -41,10 +49,12 @@ export async function loadWorklogDraft(
   siteId: string,
   workDate: string
 ): Promise<WorklogDraftRecord | null> {
+  if (!isValidDraftScope({ userId, siteId, workDate })) return null
+
   try {
     return await readOfflineRecord<WorklogDraftRecord>(
       OFFLINE_STORE_NAMES.worklogDrafts,
-      buildDraftKey(userId, siteId, workDate)
+      buildWorklogDraftKey(userId, siteId, workDate)
     )
   } catch (error) {
     console.warn('[offline] failed to load worklog draft', error)
@@ -55,10 +65,12 @@ export async function loadWorklogDraft(
 export async function saveWorklogDraft(
   draft: Omit<WorklogDraftRecord, 'key' | 'updatedAt'>
 ): Promise<void> {
+  if (!isValidDraftScope(draft)) return
+
   try {
     await writeOfflineRecord(OFFLINE_STORE_NAMES.worklogDrafts, {
       ...draft,
-      key: buildDraftKey(draft.userId, draft.siteId, draft.workDate),
+      key: buildWorklogDraftKey(draft.userId, draft.siteId, draft.workDate),
       updatedAt: new Date().toISOString(),
     })
   } catch (error) {
@@ -71,10 +83,12 @@ export async function clearWorklogDraft(
   siteId: string,
   workDate: string
 ): Promise<void> {
+  if (!isValidDraftScope({ userId, siteId, workDate })) return
+
   try {
     await deleteOfflineRecord(
       OFFLINE_STORE_NAMES.worklogDrafts,
-      buildDraftKey(userId, siteId, workDate)
+      buildWorklogDraftKey(userId, siteId, workDate)
     )
   } catch (error) {
     console.warn('[offline] failed to clear worklog draft', error)
