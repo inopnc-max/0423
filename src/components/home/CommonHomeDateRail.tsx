@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { format, addDays, startOfWeek, endOfWeek, isSameDay } from 'date-fns'
+import { format, addDays, startOfWeek, isSameDay, parseISO, isValid } from 'date-fns'
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 
 type CommonHomeDateRailProps = {
@@ -14,7 +14,18 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 export function CommonHomeDateRail({ selectedDate, onDateSelect }: CommonHomeDateRailProps) {
   const today = useMemo(() => new Date(), [])
 
-  const weekStart = useMemo(() => startOfWeek(today, { weekStartsOn: 1 }), [today])
+  const selectedDateObj = useMemo(() => {
+    if (!selectedDate) return null
+    const parsed = parseISO(selectedDate)
+    return isValid(parsed) ? parsed : null
+  }, [selectedDate])
+
+  const anchorDate = selectedDateObj ?? today
+
+  const weekStart = useMemo(
+    () => startOfWeek(anchorDate, { weekStartsOn: 1 }),
+    [anchorDate]
+  )
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -28,14 +39,6 @@ export function CommonHomeDateRail({ selectedDate, onDateSelect }: CommonHomeDat
     }
     return `${format(start, 'M월 d일')} ~ ${format(end, 'M월 d일')}`
   }, [weekDays])
-
-  const selectedDateObj = useMemo(() => {
-    try {
-      return new Date(selectedDate)
-    } catch {
-      return null
-    }
-  }, [selectedDate])
 
   function moveWeek(delta: number) {
     const newDate = addDays(weekStart, delta * 7)
