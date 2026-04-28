@@ -22,11 +22,9 @@ import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
 import { loadWorklogDraft, saveWorklogDraft, clearWorklogDraft, type WorklogDraftRecord } from '@/lib/offline/worklog-draft'
 import {
   getSelectedSiteId as getLocalSelectedSiteId,
-  getSelectedDate as getLocalSelectedDate,
   getSelectedWorkDate,
   getWorklogSection,
   setSelectedSiteId as setLocalSelectedSiteId,
-  setSelectedDate as setLocalSelectedDate,
   setSelectedWorkDate,
   setWorklogSection,
 } from '@/lib/ui-state'
