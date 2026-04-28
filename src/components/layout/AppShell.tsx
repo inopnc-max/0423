@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LogOut, ShieldCheck } from 'lucide-react'
+import { AlertCircle, CloudOff, LogOut, ShieldCheck } from 'lucide-react'
 import AppHeader, {
   type AppHeaderAction,
   type AppHeaderLeading,
@@ -26,6 +26,7 @@ import {
 } from '@/lib/routes'
 import { createClient } from '@/lib/supabase/client'
 import { loadUserUiState } from '@/lib/user-ui-state'
+import { useSyncQueueStatus } from '@/hooks/useSyncQueueStatus'
 
 function getParentRoute(pathname: string): string {
   const segments = pathname.split('/').filter(Boolean)
@@ -44,6 +45,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const { user, signOut } = useAuth()
   const { unreadCount } = useNotifications()
+  const { summary: syncSummary, hasFailedItems } = useSyncQueueStatus()
   const [currentSiteId, setCurrentSiteId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -196,6 +198,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         leading={leading}
         actions={headerActions}
         utilityActions={utilityActions}
+        status={
+          syncSummary.totalOpenCount > 0
+            ? {
+                label: `${syncSummary.totalOpenCount}건${hasFailedItems ? ' (실패 포함)' : ''}`,
+                title: '동기화 대기 항목이 있습니다',
+                icon: hasFailedItems ? AlertCircle : CloudOff,
+                tone: hasFailedItems ? 'danger' : 'warning',
+              }
+            : undefined
+        }
       />
 
       <main

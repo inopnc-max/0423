@@ -65,6 +65,14 @@ export type EnqueueSyncQueueInput = {
   blobKey?: string
 }
 
+export type SyncQueueStatusSummary = {
+  pendingCount: number
+  failedCount: number
+  syncingCount: number
+  doneCount: number
+  totalOpenCount: number
+}
+
 function createLocalId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID()
@@ -165,5 +173,33 @@ export async function deleteSyncQueueItem(key: string): Promise<void> {
     await deleteOfflineRecord(OFFLINE_STORE_NAMES.syncQueue, key)
   } catch (error) {
     console.warn('[sync-queue] failed to delete item', error)
+  }
+}
+
+export async function getSyncQueueStatusSummary(): Promise<SyncQueueStatusSummary> {
+  try {
+    const items = await readAllOfflineRecords<SyncQueueItem>(OFFLINE_STORE_NAMES.syncQueue)
+
+    const pendingCount = items.filter(item => item.status === 'pending').length
+    const failedCount = items.filter(item => item.status === 'failed').length
+    const syncingCount = items.filter(item => item.status === 'syncing').length
+    const doneCount = items.filter(item => item.status === 'done').length
+
+    return {
+      pendingCount,
+      failedCount,
+      syncingCount,
+      doneCount,
+      totalOpenCount: pendingCount + failedCount + syncingCount,
+    }
+  } catch (error) {
+    console.warn('[sync-queue] failed to read status summary', error)
+    return {
+      pendingCount: 0,
+      failedCount: 0,
+      syncingCount: 0,
+      doneCount: 0,
+      totalOpenCount: 0,
+    }
   }
 }
