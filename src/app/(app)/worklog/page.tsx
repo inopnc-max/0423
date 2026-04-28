@@ -616,6 +616,13 @@ function WorklogEditorView({
   async function handleSavePhotoSheetFinal() {
     if (!latestPhotoSheetDraft || latestPhotoSheetDraft.items.length === 0) return
     if (isSavingPhotoSheetFinal || savedPhotoSheetDocumentId) return
+    if (!canPersistWorklog) {
+      setPhotoSheetFinalMessage({
+        type: 'error',
+        text: worklogGuardMessage ?? '현장과 작업일자를 선택한 뒤 사진대지 최종본을 저장해주세요.',
+      })
+      return
+    }
 
     setIsSavingPhotoSheetFinal(true)
     setPhotoSheetFinalMessage(null)
@@ -649,6 +656,15 @@ function WorklogEditorView({
   const [workerArray, setWorkerArray] = useState<{ name: string; count: number }[]>([])
   const [taskTags, setTaskTags] = useState<string[]>([])
   const [materialItems, setMaterialItems] = useState<{ name: string; quantity: number }[]>([])
+
+  const canPersistWorklog = Boolean(selectedSite && selectedDate && user?.userId)
+
+  const worklogGuardMessage = (() => {
+    if (!selectedSite) return '현장을 먼저 선택해주세요.'
+    if (!selectedDate) return '작업일자를 먼저 선택해주세요.'
+    if (!user?.userId) return '사용자 정보를 불러오는 중입니다.'
+    return null
+  })()
 
   const [newWorkerName, setNewWorkerName] = useState('')
   const [newMaterialName, setNewMaterialName] = useState('')
@@ -959,6 +975,10 @@ function WorklogEditorView({
   async function uploadMediaAttachments(
     attachments: LocalMediaAttachment[]
   ): Promise<LocalMediaAttachment[]> {
+    if (!canPersistWorklog) {
+      throw new Error(worklogGuardMessage ?? '현장과 작업일자를 선택한 뒤 첨부해주세요.')
+    }
+
     const toUpload = attachments.filter(a => !a.storagePath)
     if (toUpload.length === 0) return attachments
 
@@ -1065,7 +1085,10 @@ function WorklogEditorView({
   }, [scheduleDraftSave])
 
   async function handleSave(status: 'draft' | 'pending') {
-    if (!selectedSite || !selectedDate || !user) return
+    if (!canPersistWorklog) {
+      setMessage({ type: 'error', text: worklogGuardMessage ?? '현장과 작업일자를 확인해주세요.' })
+      return
+    }
     setSaving(true)
     setMessage(null)
 
@@ -1669,7 +1692,7 @@ function WorklogEditorView({
             <button
               type="button"
               onClick={() => handleSave('draft')}
-              disabled={saving || mediaUploading}
+              disabled={saving || mediaUploading || !canPersistWorklog}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50 disabled:opacity-60"
             >
               임시저장
@@ -1677,12 +1700,15 @@ function WorklogEditorView({
             <button
               type="button"
               onClick={() => handleSave('pending')}
-              disabled={saving || mediaUploading}
+              disabled={saving || mediaUploading || !canPersistWorklog}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--color-navy)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-navy-hover)] disabled:opacity-60"
             >
               {saving || mediaUploading ? '저장 중...' : '승인 요청'}
             </button>
           </div>
+          {worklogGuardMessage && (
+            <p className="mt-2 text-center text-xs text-red-600">{worklogGuardMessage}</p>
+          )}
         </div>
       )}
 
