@@ -1,7 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { getSyncQueueStatusSummary, type SyncQueueStatusSummary } from '@/lib/offline/sync-queue'
+import {
+  getSyncQueueStatusSummary,
+  readOpenSyncQueueItems,
+  type SyncQueueItem,
+  type SyncQueueStatusSummary,
+} from '@/lib/offline/sync-queue'
 
 const EMPTY_SUMMARY: SyncQueueStatusSummary = {
   pendingCount: 0,
@@ -13,11 +18,16 @@ const EMPTY_SUMMARY: SyncQueueStatusSummary = {
 
 export function useSyncQueueStatus(options?: { intervalMs?: number }) {
   const [summary, setSummary] = useState<SyncQueueStatusSummary>(EMPTY_SUMMARY)
+  const [items, setItems] = useState<SyncQueueItem[]>([])
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(async () => {
-    const next = await getSyncQueueStatusSummary()
-    setSummary(next)
+    const [nextSummary, nextItems] = await Promise.all([
+      getSyncQueueStatusSummary(),
+      readOpenSyncQueueItems(10),
+    ])
+    setSummary(nextSummary)
+    setItems(nextItems)
     setLoading(false)
   }, [])
 
@@ -25,9 +35,13 @@ export function useSyncQueueStatus(options?: { intervalMs?: number }) {
     let cancelled = false
 
     async function run() {
-      const next = await getSyncQueueStatusSummary()
+      const [nextSummary, nextItems] = await Promise.all([
+        getSyncQueueStatusSummary(),
+        readOpenSyncQueueItems(10),
+      ])
       if (!cancelled) {
-        setSummary(next)
+        setSummary(nextSummary)
+        setItems(nextItems)
         setLoading(false)
       }
     }
@@ -59,6 +73,7 @@ export function useSyncQueueStatus(options?: { intervalMs?: number }) {
 
   return {
     summary,
+    items,
     loading,
     refresh,
     hasOpenItems: summary.totalOpenCount > 0,
