@@ -3,10 +3,56 @@
 import { useAuth } from '@/contexts/auth-context'
 import { ROLE_LABELS } from '@/lib/roles'
 import { useSyncQueueStatus } from '@/hooks/useSyncQueueStatus'
+import type { SyncQueueItem } from '@/lib/offline/sync-queue'
+
+const ENTITY_LABELS: Record<string, string> = {
+  daily_logs: '작업일지',
+  photos: '사진',
+  drawings: '도면',
+  documents: '문서',
+  reports: '보고서',
+  production_stock_movements: '생산 입출고',
+  production_expenses: '생산 지출',
+  user_ui_state: '사용자 상태',
+}
+
+const ACTION_LABELS: Record<string, string> = {
+  insert: '생성',
+  update: '수정',
+  delete: '삭제',
+  upload: '업로드',
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: '대기',
+  syncing: '동기화 중',
+  failed: '실패',
+  done: '완료',
+}
+
+function getSyncStatusColor(status: string): { text: string; bg: string } {
+  switch (status) {
+    case 'failed':
+      return { text: 'text-red-600', bg: 'bg-red-50' }
+    case 'syncing':
+      return { text: 'text-blue-600', bg: 'bg-blue-50' }
+    case 'pending':
+      return { text: 'text-amber-600', bg: 'bg-amber-50' }
+    default:
+      return { text: 'text-slate-600', bg: 'bg-slate-50' }
+  }
+}
+
+function formatSyncItemDate(iso: string): string {
+  const d = new Date(iso)
+  const date = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
+  const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return `${date} ${time}`
+}
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
-  const { summary, loading, refresh } = useSyncQueueStatus({ intervalMs: 30000 })
+  const { summary, items, loading, refresh } = useSyncQueueStatus({ intervalMs: 30000 })
 
   return (
     <div className="p-4">
@@ -86,6 +132,60 @@ export default function SettingsPage() {
             <span className="text-[var(--color-text-secondary)]">완료 기록</span>
             <span className="font-semibold text-green-600">{summary.doneCount}</span>
           </div>
+        </div>
+
+        <div className="mt-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-[var(--color-text)]">대기 항목</h3>
+            <span className="text-xs text-[var(--color-text-secondary)]">최근 10건</span>
+          </div>
+
+          {items.length === 0 ? (
+            <p className="mt-2 rounded-xl bg-slate-50 p-3 text-sm text-[var(--color-text-secondary)]">
+              표시할 대기 항목이 없습니다.
+            </p>
+          ) : (
+            <div className="mt-2 space-y-2">
+              {items.map((item: SyncQueueItem) => {
+                const color = getSyncStatusColor(item.status)
+                return (
+                  <div
+                    key={item.key}
+                    className="rounded-xl border border-slate-100 bg-white p-3 text-sm"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <span className="font-medium text-[var(--color-text)] truncate">
+                          {ENTITY_LABELS[item.entity] ?? item.entity}
+                        </span>
+                        <span className="text-slate-300 shrink-0">·</span>
+                        <span className="text-[var(--color-text-secondary)] shrink-0">
+                          {ACTION_LABELS[item.action] ?? item.action}
+                        </span>
+                        {item.siteId && (
+                          <>
+                            <span className="text-slate-300 shrink-0">·</span>
+                            <span className="text-[var(--color-text-secondary)] text-xs truncate">
+                              현장 {item.siteId}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold shrink-0 ${color.text} ${color.bg}`}>
+                        {STATUS_LABELS[item.status] ?? item.status}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
+                      <span>{formatSyncItemDate(item.updatedAt)}</span>
+                      {item.retryCount > 0 && (
+                        <span className="text-red-500">재시도 {item.retryCount}회</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </section>
 

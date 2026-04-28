@@ -203,3 +203,17 @@ export async function getSyncQueueStatusSummary(): Promise<SyncQueueStatusSummar
     }
   }
 }
+
+export async function readOpenSyncQueueItems(limit = 10): Promise<SyncQueueItem[]> {
+  try {
+    const items = await readAllOfflineRecords<SyncQueueItem>(OFFLINE_STORE_NAMES.syncQueue)
+
+    return items
+      .filter(item => item.status === 'pending' || item.status === 'failed' || item.status === 'syncing')
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .slice(0, limit)
+  } catch (error) {
+    console.warn('[sync-queue] failed to read open items', error)
+    return []
+  }
+}
