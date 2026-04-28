@@ -8,6 +8,7 @@ import {
   Calendar,
   ChevronLeft,
   ClipboardList,
+  FileText,
   HardHat,
   ImageIcon,
   Package,
@@ -35,8 +36,9 @@ import { buildWorklogMediaStorageTarget, uploadToStorage } from '@/lib/storage/s
 import { buildPhotoSheetDraftFromMediaInfo, type PhotoSheetDraft } from '@/lib/photo-sheet-mapping'
 import { downloadPhotoSheetPdf } from '@/lib/photo-sheet-pdf'
 import { savePhotoSheetPdfToStorageAndCreateDocument } from '@/lib/photo-sheet-document'
-import { PreviewCenter } from '@/components/preview'
+import { PreviewCenter, DrawingMarkupMultiPagePreview } from '@/components/preview'
 import { PhotoSheetDraftViewer } from '@/components/photo-sheet'
+import { buildDrawingMarkupPreviewFromMediaInfo } from '@/lib/drawing-markup-preview-mapping'
 
 interface Site {
   id: string
@@ -223,124 +225,172 @@ function WorklogDetailView({
 }) {
   const totalWorkers = log.worker_array.reduce((sum, w) => sum + w.count, 0)
 
+  const [isDrawingPreviewOpen, setIsDrawingPreviewOpen] = useState(false)
+
+  // Safely parse media_info and build drawing preview document
+  const drawingPreviewDocument = useMemo(() => {
+    const mediaInfoCandidate = log.media_info as Partial<WorklogMediaInfo>
+    const attachments = Array.isArray(mediaInfoCandidate.attachments)
+      ? (mediaInfoCandidate.attachments as WorklogMediaInfo['attachments'])
+      : []
+
+    return buildDrawingMarkupPreviewFromMediaInfo({
+      siteId: log.site_id,
+      siteName: typeof log.site_info?.name === 'string' ? log.site_info.name : undefined,
+      workDate: log.work_date,
+      mediaInfo: { attachments },
+    })
+  }, [log])
+
   return (
-    <div className="space-y-4">
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex items-center gap-2 text-sm font-medium text-[var(--color-navy-light)] transition hover:text-[var(--color-navy)]"
-      >
-        <ChevronLeft className="h-4 w-4" strokeWidth={1.9} />
-        일지 목록으로
-      </button>
+    <>
+      <div className="space-y-4">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-2 text-sm font-medium text-[var(--color-navy-light)] transition hover:text-[var(--color-navy)]"
+        >
+          <ChevronLeft className="h-4 w-4" strokeWidth={1.9} />
+          일지 목록으로
+        </button>
 
-      <div className="rounded-2xl bg-white p-4 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-[var(--color-navy)]">
-            {format(new Date(log.work_date), 'yyyy년 MM월 dd일')}
-          </h2>
-          <StatusBadge status={log.status} />
-        </div>
-
-        {log.status === 'rejected' && log.rejection_reason && (
-          <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
-            반려 사유: {log.rejection_reason}
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-[var(--color-navy)]">
+              {format(new Date(log.work_date), 'yyyy년 MM월 dd일')}
+            </h2>
+            <StatusBadge status={log.status} />
           </div>
-        )}
-      </div>
 
-      <div className="rounded-2xl bg-white p-4 shadow-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <HardHat className="h-5 w-5 text-[var(--color-accent)]" strokeWidth={1.9} />
-          <h3 className="text-base font-semibold text-[var(--color-navy)]">출역 인원</h3>
-          <span className="ml-auto rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
-            {totalWorkers}명
-          </span>
+          {log.status === 'rejected' && log.rejection_reason && (
+            <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+              반려 사유: {log.rejection_reason}
+            </div>
+          )}
         </div>
 
-        {log.worker_array.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-tertiary)]">입력된 인원이 없습니다.</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {log.worker_array.map((worker, i) => (
-              <span
-                key={`${worker.name}-${i}`}
-                className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-2 text-sm text-blue-700"
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <HardHat className="h-5 w-5 text-[var(--color-accent)]" strokeWidth={1.9} />
+            <h3 className="text-base font-semibold text-[var(--color-navy)]">출역 인원</h3>
+            <span className="ml-auto rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+              {totalWorkers}명
+            </span>
+          </div>
+
+          {log.worker_array.length === 0 ? (
+            <p className="text-sm text-[var(--color-text-tertiary)]">입력된 인원이 없습니다.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {log.worker_array.map((worker, i) => (
+                <span
+                  key={`${worker.name}-${i}`}
+                  className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-2 text-sm text-blue-700"
+                >
+                  {worker.name} ({worker.count})
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <ClipboardList className="h-5 w-5 text-[var(--color-accent)]" strokeWidth={1.9} />
+            <h3 className="text-base font-semibold text-[var(--color-navy)]">작업 항목</h3>
+            <span className="ml-auto text-sm text-[var(--color-text-secondary)]">
+              {log.task_tags.length}개
+            </span>
+          </div>
+
+          {log.task_tags.length === 0 ? (
+            <p className="text-sm text-[var(--color-text-tertiary)]">선택된 작업 항목이 없습니다.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {log.task_tags.map(tag => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center rounded-full bg-slate-100 px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)]"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <Package className="h-5 w-5 text-[var(--color-accent)]" strokeWidth={1.9} />
+            <h3 className="text-base font-semibold text-[var(--color-navy)]">자재 투입</h3>
+            <span className="ml-auto text-sm text-[var(--color-text-secondary)]">
+              {log.material_items.length}건
+            </span>
+          </div>
+
+          {log.material_items.length === 0 ? (
+            <p className="text-sm text-[var(--color-text-tertiary)]">투입된 자재가 없습니다.</p>
+          ) : (
+            <div className="space-y-2">
+              {log.material_items.map((item, i) => (
+                <div
+                  key={`${item.name}-${i}`}
+                  className="flex items-center justify-between rounded-xl bg-[var(--color-bg)] px-4 py-3 text-sm"
+                >
+                  <span className="font-medium text-[var(--color-text)]">{item.name}</span>
+                  <span className="text-[var(--color-text-secondary)]">수량: {item.quantity}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <ImageIcon className="h-5 w-5 text-[var(--color-accent)]" strokeWidth={1.9} />
+            <h3 className="text-base font-semibold text-[var(--color-navy)]">사진 및 도면</h3>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-[var(--color-text-tertiary)]">
+              현장 상세 화면에서 사진 및 도면을 확인하세요.
+            </p>
+
+            {drawingPreviewDocument && (
+              <button
+                type="button"
+                onClick={() => setIsDrawingPreviewOpen(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent)] transition hover:bg-[var(--color-accent-light)]"
               >
-                {worker.name} ({worker.count})
-              </span>
-            ))}
+                <FileText className="h-4 w-4" strokeWidth={1.9} />
+                도면마킹 미리보기
+              </button>
+            )}
+          </div>
+        </div>
+
+        {log.approved_at && (
+          <div className="rounded-2xl bg-green-50 p-4 text-sm text-green-700 shadow-sm">
+            승인 완료: {format(new Date(log.approved_at), 'yyyy년 MM월 dd일 HH:mm')}
           </div>
         )}
       </div>
 
-      <div className="rounded-2xl bg-white p-4 shadow-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <ClipboardList className="h-5 w-5 text-[var(--color-accent)]" strokeWidth={1.9} />
-          <h3 className="text-base font-semibold text-[var(--color-navy)]">작업 항목</h3>
-          <span className="ml-auto text-sm text-[var(--color-text-secondary)]">
-            {log.task_tags.length}개
-          </span>
-        </div>
-
-        {log.task_tags.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-tertiary)]">선택된 작업 항목이 없습니다.</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {log.task_tags.map(tag => (
-              <span
-                key={tag}
-                className="inline-flex items-center rounded-full bg-slate-100 px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)]"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-2xl bg-white p-4 shadow-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <Package className="h-5 w-5 text-[var(--color-accent)]" strokeWidth={1.9} />
-          <h3 className="text-base font-semibold text-[var(--color-navy)]">자재 투입</h3>
-          <span className="ml-auto text-sm text-[var(--color-text-secondary)]">
-            {log.material_items.length}건
-          </span>
-        </div>
-
-        {log.material_items.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-tertiary)]">투입된 자재가 없습니다.</p>
-        ) : (
-          <div className="space-y-2">
-            {log.material_items.map((item, i) => (
-              <div
-                key={`${item.name}-${i}`}
-                className="flex items-center justify-between rounded-xl bg-[var(--color-bg)] px-4 py-3 text-sm"
-              >
-                <span className="font-medium text-[var(--color-text)]">{item.name}</span>
-                <span className="text-[var(--color-text-secondary)]">수량: {item.quantity}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-2xl bg-white p-4 shadow-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <ImageIcon className="h-5 w-5 text-[var(--color-accent)]" strokeWidth={1.9} />
-          <h3 className="text-base font-semibold text-[var(--color-navy)]">사진 및 도면</h3>
-        </div>
-        <p className="text-sm text-[var(--color-text-tertiary)]">
-          현장 상세 화면에서 사진 및 도면을 확인하세요.
-        </p>
-      </div>
-
-      {log.approved_at && (
-        <div className="rounded-2xl bg-green-50 p-4 text-sm text-green-700 shadow-sm">
-          승인 완료: {format(new Date(log.approved_at), 'yyyy년 MM월 dd일 HH:mm')}
-        </div>
+      {isDrawingPreviewOpen && drawingPreviewDocument && (
+        <PreviewCenter
+          mode="fullscreen"
+          contentType="report"
+          title="도면마킹 미리보기"
+          subtitle={drawingPreviewDocument.workDate}
+          showBack
+          onBack={() => setIsDrawingPreviewOpen(false)}
+          onClose={() => setIsDrawingPreviewOpen(false)}
+          dockMode="readonly"
+        >
+          <DrawingMarkupMultiPagePreview document={drawingPreviewDocument} />
+        </PreviewCenter>
       )}
-    </div>
+    </>
   )
 }
 
