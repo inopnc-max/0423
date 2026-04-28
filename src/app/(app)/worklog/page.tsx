@@ -1677,7 +1677,7 @@ function WorklogEditorView({
               )}
             </div>
 
-            <PhotoSheetDraftViewer draft={latestPhotoSheetDraft} />
+            <PhotoSheetDraftViewer draft={latestPhotoSheetDraft} variant="a4" />
           </div>
         </PreviewCenter>
       )}
