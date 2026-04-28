@@ -1100,12 +1100,12 @@ function WorklogEditorView({
   }, [scheduleDraftSave])
 
   async function handleSave(status: 'draft' | 'pending') {
-    if (!canPersistWorklog) {
+    if (!canPersistWorklog || !user?.userId) {
       setMessage({ type: 'error', text: worklogGuardMessage ?? '현장과 작업일자를 확인해주세요.' })
       return
     }
 
-    const draftUserId = user!.userId
+    const draftUserId = user.userId
     const draftSiteId = selectedSite
     const draftWorkDate = selectedDate
 
