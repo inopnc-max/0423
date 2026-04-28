@@ -307,7 +307,7 @@ export function DrawingMarkupMultiPagePreview({ document }: DrawingMarkupMultiPa
   const getImageUrl = useCallback(
     (page: DrawingMarkupPreviewPage): string | null | undefined => {
       if (page.storageBucket && page.storagePath) {
-        return signedUrls[page.id] ?? undefined
+        return signedUrls[page.id] ?? page.imageUrl
       }
       return page.imageUrl
     },
