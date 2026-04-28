@@ -5,9 +5,12 @@ import { ImageIcon } from 'lucide-react'
 import type { PhotoSheetDraft } from '@/lib/photo-sheet-mapping'
 import { createClient } from '@/lib/supabase/client'
 import { createSignedPreviewUrl } from '@/lib/storage/storage-helper'
+import { PhotoSheetA4Preview } from '@/components/preview/reports/PhotoSheetA4Preview'
 
 type PhotoSheetDraftViewerProps = {
   draft: PhotoSheetDraft
+  /** Display variant: 'list' (default) or 'a4' (A4 paper layout) */
+  variant?: 'list' | 'a4'
 }
 
 /**
@@ -15,20 +18,34 @@ type PhotoSheetDraftViewerProps = {
  *
  * Displays PhotoSheetDraft data with signed URL-based image rendering.
  * Uses Supabase browser client (not service role) for signed URL generation.
+ *
+ * Variants:
+ * - 'list' (default): vertical list with image cards
+ * - 'a4': A4 2x3 grid paper layout for print preview
  */
-export function PhotoSheetDraftViewer({ draft }: PhotoSheetDraftViewerProps) {
+export function PhotoSheetDraftViewer({ draft, variant = 'list' }: PhotoSheetDraftViewerProps) {
+  if (variant === 'a4') {
+    return <PhotoSheetA4Preview draft={draft} />
+  }
+
+  return <PhotoSheetListPreview draft={draft} />
+}
+
+/**
+ * PhotoSheetListPreview - List view for PhotoSheetDraft.
+ * All hooks are contained within this component to avoid hook-order issues.
+ */
+function PhotoSheetListPreview({ draft }: { draft: PhotoSheetDraft }) {
   const { title, siteId, workDate, items } = draft
 
   const [signedUrls, setSignedUrls] = useState<Record<string, string | null>>({})
   const [loadingItems, setLoadingItems] = useState<Set<string>>(new Set())
   const [failedItems, setFailedItems] = useState<Set<string>>(new Set())
 
-  // Use refs to track current state values in async callbacks
   const signedUrlsRef = useRef(signedUrls)
   const loadingItemsRef = useRef(loadingItems)
   const failedItemsRef = useRef(failedItems)
 
-  // Keep refs in sync with state (fallback for non-async updates)
   useEffect(() => {
     signedUrlsRef.current = signedUrls
   }, [signedUrls])
@@ -42,7 +59,6 @@ export function PhotoSheetDraftViewer({ draft }: PhotoSheetDraftViewerProps) {
   }, [failedItems])
 
   const generateSignedUrls = useCallback(async () => {
-    // Filter pending items (not yet processed)
     const pendingItems = items.filter(item =>
       item.storageBucket === 'photos' &&
       item.storagePath &&
@@ -51,18 +67,15 @@ export function PhotoSheetDraftViewer({ draft }: PhotoSheetDraftViewerProps) {
       !loadingItemsRef.current.has(item.id)
     )
 
-    // No pending items, skip
     if (pendingItems.length === 0) return
 
     const supabase = createClient()
 
     for (const item of pendingItems) {
-      // Double-check before processing (in case of race condition)
       if (signedUrlsRef.current[item.id]) continue
       if (failedItemsRef.current.has(item.id)) continue
       if (loadingItemsRef.current.has(item.id)) continue
 
-      // Immediately update ref to prevent duplicate requests
       const nextLoading = new Set(loadingItemsRef.current)
       nextLoading.add(item.id)
       loadingItemsRef.current = nextLoading
@@ -76,28 +89,24 @@ export function PhotoSheetDraftViewer({ draft }: PhotoSheetDraftViewerProps) {
           expiresIn: 3600,
         })
 
-        // Immediately update ref and state on success
         if (url) {
           signedUrlsRef.current = {
             ...signedUrlsRef.current,
             [item.id]: url,
           }
-          setSignedUrls(signedUrlsRef.current)
+          setSignedUrls({ ...signedUrlsRef.current })
         } else {
-          // Immediately update ref and state on failure
           const nextFailed = new Set(failedItemsRef.current)
           nextFailed.add(item.id)
           failedItemsRef.current = nextFailed
           setFailedItems(nextFailed)
         }
       } catch {
-        // Immediately update ref and state on error
         const nextFailed = new Set(failedItemsRef.current)
         nextFailed.add(item.id)
         failedItemsRef.current = nextFailed
         setFailedItems(nextFailed)
       } finally {
-        // Immediately remove from loading
         const finalLoading = new Set(loadingItemsRef.current)
         finalLoading.delete(item.id)
         loadingItemsRef.current = finalLoading
@@ -112,7 +121,6 @@ export function PhotoSheetDraftViewer({ draft }: PhotoSheetDraftViewerProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header info */}
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4">
         <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{title}</h2>
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--color-text-secondary)]">
@@ -122,7 +130,6 @@ export function PhotoSheetDraftViewer({ draft }: PhotoSheetDraftViewerProps) {
         </div>
       </div>
 
-      {/* Items list */}
       {items.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[var(--color-border)] p-8 text-center text-[var(--color-text-secondary)]">
           사진대지 항목이 없습니다.
@@ -141,7 +148,6 @@ export function PhotoSheetDraftViewer({ draft }: PhotoSheetDraftViewerProps) {
                 className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4"
               >
                 <div className="flex flex-col gap-2">
-                  {/* Image preview */}
                   {item.storageBucket === 'photos' && item.storagePath && (
                     <div className="mb-2">
                       {isLoading ? (
