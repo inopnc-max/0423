@@ -4,3 +4,10 @@ export { PreviewActionDock, type DockAction, type PreviewActionDockProps } from 
 export { ReportPreviewWorkspace } from './ReportPreviewWorkspace'
 export { type ReportPreviewKind, type ReportPreviewStatus, type ReportPreviewBaseProps } from './reports/report-preview-types'
 export { PhotoSheetA4Preview } from './reports/PhotoSheetA4Preview'
+export { DrawingMarkupMultiPagePreview } from './reports/DrawingMarkupMultiPagePreview'
+export type {
+  DrawingMarkupPreviewDocument,
+  DrawingMarkupPreviewPage,
+  DrawingMarkupMark,
+  DrawingMarkupPoint,
+} from './reports/drawing-markup-preview-types'
