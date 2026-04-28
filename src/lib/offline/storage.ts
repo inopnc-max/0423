@@ -7,7 +7,7 @@ export const OFFLINE_STORE_NAMES = {
   userUiState: 'user-ui-state',
 } as const
 
-type OfflineStoreName =
+export type OfflineStoreName =
   (typeof OFFLINE_STORE_NAMES)[keyof typeof OFFLINE_STORE_NAMES]
 
 function openOfflineDatabase(): Promise<IDBDatabase | null> {
