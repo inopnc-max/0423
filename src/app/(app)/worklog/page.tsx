@@ -38,6 +38,7 @@ import { downloadPhotoSheetPdf } from '@/lib/photo-sheet-pdf'
 import { savePhotoSheetPdfToStorageAndCreateDocument } from '@/lib/photo-sheet-document'
 import { PreviewCenter, DrawingMarkupMultiPagePreview } from '@/components/preview'
 import { PhotoSheetDraftViewer } from '@/components/photo-sheet'
+import { enqueueSyncQueueItem } from '@/lib/offline/sync-queue'
 import { buildDrawingMarkupPreviewFromMediaInfo } from '@/lib/drawing-markup-preview-mapping'
 
 interface Site {
@@ -1112,6 +1113,8 @@ function WorklogEditorView({
     setSaving(true)
     setMessage(null)
 
+    let payload: ReturnType<typeof buildWorklogPayload> = null
+
     try {
       let attachmentsForPayload = mediaAttachments
 
@@ -1135,7 +1138,7 @@ function WorklogEditorView({
         }
       }
 
-      const payload = buildWorklogPayload(status, attachmentsForPayload)
+      payload = buildWorklogPayload(status, attachmentsForPayload)
       if (!payload) return
 
       // Check if we have media attachments but no valid media_info
@@ -1221,10 +1224,34 @@ function WorklogEditorView({
       })
     } catch (error: unknown) {
       console.error('Failed to save worklog:', error)
-      setMessage({
-        type: 'error',
-        text: error instanceof Error ? error.message : '작업일지 저장 중 오류가 발생했습니다.',
-      })
+
+      if (payload) {
+        const enqueued = await enqueueSyncQueueItem({
+          entity: 'daily_logs',
+          action: existingLog?.id ? 'update' : 'insert',
+          siteId: payload.site_id,
+          localId: payload.id ?? `worklog:${payload.site_id}:${payload.work_date}:${user.userId}`,
+          remoteId: existingLog?.id,
+          payload,
+        })
+
+        if (enqueued) {
+          setMessage({
+            type: 'error',
+            text: '네트워크 문제로 서버 저장은 실패했지만, 오프라인 대기열에 저장했습니다. 온라인 복귀 후 동기화가 필요합니다.',
+          })
+        } else {
+          setMessage({
+            type: 'error',
+            text: '저장에 실패했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
+          })
+        }
+      } else {
+        setMessage({
+          type: 'error',
+          text: error instanceof Error ? error.message : '작업일지 저장 중 오류가 발생했습니다.',
+        })
+      }
     } finally {
       setSaving(false)
     }
