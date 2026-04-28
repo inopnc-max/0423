@@ -12,7 +12,7 @@ import {
   ConfirmSheetPdfTemplate,
   type ConfirmSheetDraft,
 } from '@/components/confirm-sheet'
-import { Eye, FileText, CheckCircle, ArrowLeft, RotateCcw, Save } from 'lucide-react'
+import { Eye, FileText, CheckCircle, ArrowLeft, RotateCcw, Save, Search, X, Building2, MapPin, ChevronRight } from 'lucide-react'
 
 interface Site {
   id: string
@@ -50,6 +50,139 @@ function createInitialDraft(): ConfirmSheetDraft {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }
+}
+
+// 콤보검색용 현장 선택 컴포넌트 (page.tsx 내부 구현)
+function SiteCombobox({
+  sites,
+  selectedId,
+  onSelect,
+}: {
+  sites: Site[]
+  selectedId: string
+  onSelect: (id: string) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const selected = sites.find(s => s.id === selectedId)
+
+  const filteredSites = useMemo(() => {
+    if (!query.trim()) return sites
+    const q = query.toLowerCase()
+    return sites.filter(
+      s =>
+        s.name.toLowerCase().includes(q) ||
+        s.company.toLowerCase().includes(q) ||
+        s.address?.toLowerCase().includes(q)
+    )
+  }, [sites, query])
+
+  useEffect(() => {
+    if (!open) setQuery('')
+  }, [open])
+
+  if (sites.length === 0) {
+    return (
+      <div className="rounded-2xl bg-[var(--color-accent-light)] p-4 text-center text-sm text-[var(--color-text-secondary)]">
+        접근 가능한 현장이 없습니다.
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex w-full items-center gap-3 rounded-2xl border-2 border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+      >
+        <Search className="h-5 w-5 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
+        {selected ? (
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-semibold text-[var(--color-text)]">{selected.name}</span>
+            <span className="block truncate text-sm text-[var(--color-text-secondary)]">
+              {selected.company}
+            </span>
+          </span>
+        ) : (
+          <span className="flex-1 text-[var(--color-text-tertiary)]">현장 검색...</span>
+        )}
+        <ChevronRight
+          className={`h-5 w-5 shrink-0 text-[var(--color-text-tertiary)] transition-transform ${open ? 'rotate-90' : ''}`}
+          strokeWidth={1.9}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-64 overflow-hidden rounded-2xl border-2 border-[var(--color-border)] bg-white shadow-lg">
+          <div className="sticky top-0 bg-white p-2">
+            <div className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2">
+              <Search className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
+              <input
+                autoFocus
+                type="text"
+                placeholder="현장명, 업체명, 주소 검색..."
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text)] placeholder-[var(--color-text-tertiary)] outline-none"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  className="rounded-full p-0.5 text-[var(--color-text-tertiary)] hover:bg-[var(--color-border)]"
+                >
+                  <X className="h-4 w-4" strokeWidth={1.9} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="max-h-48 overflow-y-auto">
+            {filteredSites.length === 0 ? (
+              <div className="p-4 text-center text-sm text-[var(--color-text-secondary)]">
+                검색 결과가 없습니다.
+              </div>
+            ) : (
+              filteredSites.map(site => (
+                <button
+                  key={site.id}
+                  type="button"
+                  onClick={() => {
+                    onSelect(site.id)
+                    setOpen(false)
+                    setQuery('')
+                  }}
+                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-[var(--color-accent-light)]"
+                >
+                  <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate font-semibold text-[var(--color-text)]">{site.name}</span>
+                    </div>
+                    <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                      {site.company}
+                    </div>
+                    {site.address && (
+                      <div className="mt-1 flex items-start gap-1 text-xs text-[var(--color-text-tertiary)]">
+                        <MapPin className="mt-0.5 h-3 w-3 shrink-0" strokeWidth={1.9} />
+                        <span className="line-clamp-1">{site.address}</span>
+                      </div>
+                    )}
+                  </div>
+                  {site.id === selectedId && (
+                    <span className="shrink-0 rounded-full bg-[var(--color-accent)] px-2 py-0.5 text-xs font-semibold text-white">
+                      선택됨
+                    </span>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function ConfirmSheetPage() {
@@ -341,7 +474,7 @@ export default function ConfirmSheetPage() {
 
   // 입력 모드
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pt-4">
       {/* 탭 전환 */}
       <div className="flex gap-2 mb-4">
         <button
@@ -368,22 +501,22 @@ export default function ConfirmSheetPage() {
         </button>
       </div>
 
-      {/* 현장/날짜 선택 */}
+      {/* 현장/날짜 선택 (단일 소스) */}
       <div className="ui-card p-4 space-y-3">
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text-sub)] mb-1.5">현장</label>
-          <select
-            value={selectedSiteId}
-            onChange={e => handleSiteSelect(e.target.value)}
-            className="w-full px-3 py-2.5 border rounded-lg bg-[var(--color-bg-surface)] text-sm"
-            style={{ borderColor: 'rgba(219, 227, 236, 1)' }}
-          >
-            <option value="">현장 선택</option>
-            {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
+          <label className="block text-sm font-medium text-[var(--color-text-sub)] mb-1.5">
+            현장 <span className="text-red-500">*</span>
+          </label>
+          <SiteCombobox
+            sites={sites}
+            selectedId={selectedSiteId}
+            onSelect={id => handleSiteSelect(id)}
+          />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text-sub)] mb-1.5">작업일</label>
+          <label className="block text-sm font-medium text-[var(--color-text-sub)] mb-1.5">
+            작업일 <span className="text-red-500">*</span>
+          </label>
           <input
             type="date"
             value={selectedDate}
@@ -403,7 +536,8 @@ export default function ConfirmSheetPage() {
         draft={draft}
         sites={sites}
         onDraftChange={handleDraftChange}
-        onSiteSelect={handleSiteSelect}
+        selectedSiteId={selectedSiteId}
+        selectedDate={selectedDate}
       />
 
       {/* 서명 패드 */}
