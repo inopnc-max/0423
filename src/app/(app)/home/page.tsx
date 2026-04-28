@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { format } from 'date-fns'
 import {
   Building2,
   CalendarDays,
@@ -21,28 +22,9 @@ import { useSelectedSite } from '@/contexts/selected-site-context'
 import { isPartner } from '@/lib/roles'
 import { ROUTES } from '@/lib/routes'
 import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
+import { CommonHomeDateRail } from '@/components/home/CommonHomeDateRail'
+import { getSelectedWorkDate, setSelectedWorkDate } from '@/lib/ui-state'
 import type { SiteSummary } from '@/contexts/selected-site-context'
-
-const QUICK_ACTIONS = [
-  {
-    href: ROUTES.worklog,
-    label: '일지 작성',
-    icon: ClipboardList,
-    colorClass: 'bg-blue-50 text-blue-600',
-  },
-  {
-    href: ROUTES.output,
-    label: '출역 확인',
-    icon: CalendarDays,
-    colorClass: 'bg-emerald-50 text-emerald-600',
-  },
-  {
-    href: ROUTES.site,
-    label: '현장 보기',
-    icon: Building2,
-    colorClass: 'bg-orange-50 text-orange-600',
-  },
-]
 
 function SiteCombobox({
   sites,
@@ -192,8 +174,49 @@ export default function HomePage() {
     refreshSelectedSite,
   } = useSelectedSite()
 
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const [selectedWorkDate, setSelectedWorkDateState] = useState<string>(today)
+
+  useEffect(() => {
+    const saved = getSelectedWorkDate()
+    if (saved) {
+      setSelectedWorkDateState(saved)
+    } else {
+      setSelectedWorkDateState(today)
+    }
+  }, [today])
+
+  const handleDateSelect = (date: string) => {
+    setSelectedWorkDateState(date)
+    setSelectedWorkDate(date)
+  }
+
   const isPartnerUser = isPartner(user?.role ?? '')
   const loading = authLoading || siteLoading
+
+  const QUICK_ACTIONS = [
+    {
+      href: `${ROUTES.worklog}${selectedSiteId ? `?site=${selectedSiteId}&date=${selectedWorkDate}` : `?date=${selectedWorkDate}`}`,
+      label: '일지 작성',
+      icon: ClipboardList,
+      colorClass: 'bg-blue-50 text-blue-600',
+      show: !isPartnerUser,
+    },
+    {
+      href: `${ROUTES.output}?date=${selectedWorkDate}`,
+      label: '출역 확인',
+      icon: CalendarDays,
+      colorClass: 'bg-emerald-50 text-emerald-600',
+      show: true,
+    },
+    {
+      href: ROUTES.site,
+      label: '현장 보기',
+      icon: Building2,
+      colorClass: 'bg-orange-50 text-orange-600',
+      show: true,
+    },
+  ]
 
   if (loading) {
     return (
@@ -239,6 +262,11 @@ export default function HomePage() {
           {error}
         </div>
       )}
+
+      <CommonHomeDateRail
+        selectedDate={selectedWorkDate}
+        onDateSelect={handleDateSelect}
+      />
 
       <section className="space-y-3">
         <div className="text-sm font-semibold text-[var(--color-navy)]">현장 선택</div>
@@ -288,7 +316,7 @@ export default function HomePage() {
             </Link>
             {!isPartnerUser && selectedSiteId && (
               <Link
-                href={`${ROUTES.worklog}?site=${selectedSiteId}`}
+                href={`${ROUTES.worklog}?site=${selectedSiteId}&date=${selectedWorkDate}`}
                 className="flex-1 rounded-full bg-[var(--color-navy)] px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-[var(--color-navy-hover)]"
               >
                 일지 작성
@@ -313,7 +341,7 @@ export default function HomePage() {
       </section>
 
       <section className="grid grid-cols-3 gap-3">
-        {QUICK_ACTIONS.filter(item => !isPartnerUser || item.href !== ROUTES.worklog).map(
+        {QUICK_ACTIONS.filter(item => item.show).map(
           ({ href, label, icon: Icon, colorClass }) => (
             <Link
               key={href}
@@ -381,7 +409,7 @@ export default function HomePage() {
       {!isPartnerUser && (
         <section>
           <Link
-            href={ROUTES.output}
+            href={`${ROUTES.output}?date=${selectedWorkDate}`}
             className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-[var(--color-navy)] to-[var(--color-navy-light)] p-5 text-white shadow-sm"
           >
             <div>

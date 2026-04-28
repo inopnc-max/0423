@@ -96,7 +96,7 @@ export function setSelectedSiteId(siteId: string | null): void {
   }
 }
 
-/* ─── UI State: selectedDate ─── */
+/* ─── UI State: selectedDate (alias: selectedWorkDate) ─── */
 
 export function getSelectedDate(): string | null {
   return safeGetItem(UI_STATE_KEYS.selectedDate)
@@ -108,6 +108,16 @@ export function setSelectedDate(date: string | null): void {
   } else {
     safeRemoveItem(UI_STATE_KEYS.selectedDate)
   }
+}
+
+/** Alias for selectedDate — same localStorage key, clearer app-wide naming */
+export function getSelectedWorkDate(): string | null {
+  return getSelectedDate()
+}
+
+/** Alias for selectedDate — same localStorage key, clearer app-wide naming */
+export function setSelectedWorkDate(date: string | null): void {
+  setSelectedDate(date)
 }
 
 /* ─── UI State: Recent Searches ─── */
