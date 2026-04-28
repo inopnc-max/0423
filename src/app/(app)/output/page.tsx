@@ -9,6 +9,7 @@ import { useSelectedSite } from '@/contexts/selected-site-context'
 import { createClient } from '@/lib/supabase/client'
 import { hideSalary } from '@/lib/roles'
 import { useMenuSearch } from '@/hooks'
+import { setSelectedWorkDate } from '@/lib/ui-state'
 
 interface DailyLog {
   id: string
@@ -527,8 +528,7 @@ export default function OutputPage() {
                           type="button"
                           className="ui-date-cell__button"
                           onClick={() => {
-                            // Minimal interaction for now (no bottom sheet in scope)
-                            alert(`${cell.dateKey}`)
+                            setSelectedWorkDate(cell.dateKey)
                           }}
                         >
                           <div className="ui-date-cell__day">{cell.day}</div>
