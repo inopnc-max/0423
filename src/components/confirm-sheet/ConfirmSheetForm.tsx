@@ -10,7 +10,8 @@ interface ConfirmSheetFormProps {
   draft: ConfirmSheetDraft
   sites: { id: string; name: string; company: string; address: string; manager: string }[]
   onDraftChange: (updates: Partial<ConfirmSheetDraft>) => void
-  onSiteSelect: (siteId: string) => void
+  selectedSiteId: string
+  selectedDate: string
 }
 
 /**
@@ -19,8 +20,11 @@ interface ConfirmSheetFormProps {
  * - 자주 쓰는 문구 quick insert
  * - 모바일 최적화
  */
-export function ConfirmSheetForm({ draft, sites, onDraftChange, onSiteSelect }: ConfirmSheetFormProps) {
+export function ConfirmSheetForm({ draft, sites, onDraftChange, selectedSiteId, selectedDate }: ConfirmSheetFormProps) {
   const today = format(new Date(), 'yyyy-MM-dd')
+
+  // 선택된 현장 정보 (page.tsx 단일 소스와 동기화)
+  const selectedSite = sites.find(s => s.id === selectedSiteId)
 
   // 작업내용 프리셋 선택
   const handlePresetSelect = (content: string) => {
@@ -32,21 +36,6 @@ export function ConfirmSheetForm({ draft, sites, onDraftChange, onSiteSelect }: 
     onDraftChange({ specialNotes: note })
   }
 
-  // 현장 선택 시 자동 정보 채움
-  const handleSiteChange = (siteId: string) => {
-    onSiteSelect(siteId)
-    const site = sites.find(s => s.id === siteId)
-    if (site) {
-      onDraftChange({
-        siteId: site.id,
-        siteName: site.name,
-        siteAddress: site.address,
-        siteManager: site.manager,
-        companyName: site.company,
-      })
-    }
-  }
-
   return (
     <div className="space-y-4">
       {/* 기본정보 섹션 */}
@@ -56,22 +45,31 @@ export function ConfirmSheetForm({ draft, sites, onDraftChange, onSiteSelect }: 
           <h3>기본정보</h3>
         </div>
 
-        {/* 현장 선택 */}
+        {/* 선택된 현장 표시 (단일 소스: page.tsx) */}
         <div>
           <label className="block text-sm font-medium text-[var(--color-text-sub)] mb-1.5">
-            현장명 <span className="text-red-500">*</span>
+            현장 <span className="text-red-500">*</span>
           </label>
-          <select
-            value={draft.siteId}
-            onChange={e => handleSiteChange(e.target.value)}
-            className="w-full px-3 py-2.5 border rounded-lg bg-[var(--form-surface)] text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent-ring)]"
-            style={{ borderColor: 'rgba(219, 227, 236, 1)' }}
-          >
-            <option value="">현장을 선택하세요</option>
-            {sites.map(site => (
-              <option key={site.id} value={site.id}>{site.name}</option>
-            ))}
-          </select>
+          <div className="w-full px-3 py-2.5 border rounded-lg bg-[var(--color-bg-soft)] text-sm text-[var(--color-text-main)]">
+            {selectedSite ? (
+              <div>
+                <span className="font-semibold">{selectedSite.name}</span>
+                <span className="text-[var(--color-text-secondary)] ml-2">{selectedSite.company}</span>
+              </div>
+            ) : (
+              <span className="text-[var(--color-text-tertiary)]">현장을 선택해주세요</span>
+            )}
+          </div>
+        </div>
+
+        {/* 작업일 표시 (단일 소스: page.tsx) */}
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text-sub)] mb-1.5">
+            작업일 <span className="text-red-500">*</span>
+          </label>
+          <div className="w-full px-3 py-2.5 border rounded-lg bg-[var(--color-bg-soft)] text-sm text-[var(--color-text-main)]">
+            {selectedDate ? format(new Date(selectedDate), 'yyyy년 M월 d일', { locale: ko }) : '-'}
+          </div>
         </div>
 
         {/* 업체 */}
@@ -123,19 +121,6 @@ export function ConfirmSheetForm({ draft, sites, onDraftChange, onSiteSelect }: 
               className="w-full px-2.5 py-2.5 border border-[var(--color-border)] rounded-lg bg-white text-sm"
             />
           </div>
-        </div>
-
-        {/* 작업일 */}
-        <div>
-          <label className="block text-sm font-medium text-[var(--color-text-sub)] mb-1.5">
-            작업일 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={draft.workDate}
-            onChange={e => onDraftChange({ workDate: e.target.value })}
-            className="w-full px-3 py-2.5 border border-[var(--form-border)] rounded-lg bg-[var(--form-surface)] text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent-ring)]"
-          />
         </div>
       </section>
 
