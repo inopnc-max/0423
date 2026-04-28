@@ -550,7 +550,11 @@ export default function OutputPage() {
                       >
                         <button
                           type="button"
-                          className={`ui-date-cell__button${cell.dateKey === selectedDate ? ' is-selected' : ''}`}
+                          className={`ui-date-cell__button${
+                            cell.dateKey === selectedDate
+                              ? ' is-selected ring-2 ring-[var(--color-accent)] ring-offset-2'
+                              : ''
+                          }`}
                           aria-pressed={cell.dateKey === selectedDate}
                           onClick={() => handleSelectCalendarDate(cell.dateKey)}
                         >
@@ -578,9 +582,11 @@ export default function OutputPage() {
 
         {viewMode === 'calendar' && selectedSiteId && (() => {
           const selectedLogs = logsByDate.get(selectedDate) ?? []
-          const selectedDateLabel = selectedDate
-            ? format(new Date(selectedDate), 'yyyy년 M월 d일 (EEE)', { locale: ko })
-            : ''
+          const parsedSelected = new Date(selectedDate)
+          const selectedDateLabel =
+            selectedDate && !Number.isNaN(parsedSelected.getTime())
+              ? format(parsedSelected, 'yyyy년 M월 d일 (EEE)', { locale: ko })
+              : ''
           const selectedTotalManDay = selectedLogs.reduce((sum, log) => sum + getLogTotalManDay(log), 0)
           const firstSelectedLog = selectedLogs[0]
           const selectedSiteName = firstSelectedLog?.site_info?.name ?? ''
