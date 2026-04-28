@@ -788,7 +788,16 @@ function WorklogEditorView({
     if (!user || !selectedSite || !selectedDate || !readyForPersistence) return
 
     async function loadWorklogState() {
+      const currentUserId = user.userId
+      const currentSiteId = selectedSite
+      const currentWorkDate = selectedDate
+
       async function restoreFromDraft(draft: Awaited<ReturnType<typeof loadWorklogDraft>> & { workerArray: unknown[]; taskTags: unknown[]; materialItems: unknown[] }) {
+        if (draft.siteId !== currentSiteId || draft.workDate !== currentWorkDate || draft.userId !== currentUserId) {
+          console.warn('[worklog] draft scope mismatch, skipping restore')
+          return
+        }
+
         setHasDraft(true)
         applyWorklogState({
           worker_array: draft.workerArray.map((w: { name: string; count: number }) => ({ name: w.name, count: w.count })),
@@ -845,7 +854,7 @@ function WorklogEditorView({
           applyWorklogState(serverData as WorkLogRecord)
         } else {
           // 2. Server에 없으면 IndexedDB Draft 로드
-          const draft = await loadWorklogDraft(user.userId, selectedSite, selectedDate)
+          const draft = await loadWorklogDraft(currentUserId, currentSiteId, currentWorkDate)
           if (draft) {
             await restoreFromDraft(draft)
           } else {
@@ -856,7 +865,7 @@ function WorklogEditorView({
       } catch {
         // 네트워크 오류 시 Draft fallback
         try {
-          const draft = await loadWorklogDraft(user.userId, selectedSite, selectedDate)
+          const draft = await loadWorklogDraft(currentUserId, currentSiteId, currentWorkDate)
           if (draft) {
             await restoreFromDraft(draft)
           } else {
@@ -1054,15 +1063,21 @@ function WorklogEditorView({
     if (!user || !selectedSite || !selectedDate) return
 
     autoSaveTimerRef.current = setTimeout(async () => {
+      if (!user || !selectedSite || !selectedDate) return
+
+      const draftUserId = user.userId
+      const draftSiteId = selectedSite
+      const draftWorkDate = selectedDate
+
       // 수정 중인 내용만 Draft로 저장 (server에 없는 경우만)
       // mediaAttachments 포함 시에도 저장 (blob은 이미 IndexedDB에 저장됨)
       if (!existingLog?.id && (workerArray.length > 0 || taskTags.length > 0 || materialItems.length > 0 || mediaAttachments.length > 0)) {
         // file과 previewUrl은 Draft에 저장하지 않음 (Blob은 IndexedDB blobs store에 이미 저장됨)
         const mediaDraftItems = mediaAttachments.map(({ file, previewUrl, ...meta }) => meta)
         await saveWorklogDraft({
-          userId: user.userId,
-          siteId: selectedSite,
-          workDate: selectedDate,
+          userId: draftUserId,
+          siteId: draftSiteId,
+          workDate: draftWorkDate,
           activeSection,
           workerArray: workerArray.map(w => ({ name: w.name, count: w.count })),
           taskTags,
@@ -1085,10 +1100,15 @@ function WorklogEditorView({
   }, [scheduleDraftSave])
 
   async function handleSave(status: 'draft' | 'pending') {
-    if (!canPersistWorklog) {
+    if (!canPersistWorklog || !user?.userId) {
       setMessage({ type: 'error', text: worklogGuardMessage ?? '현장과 작업일자를 확인해주세요.' })
       return
     }
+
+    const draftUserId = user.userId
+    const draftSiteId = selectedSite
+    const draftWorkDate = selectedDate
+
     setSaving(true)
     setMessage(null)
 
@@ -1161,7 +1181,7 @@ function WorklogEditorView({
         rejection_reason: null,
       })
 
-      await clearWorklogDraft(user.userId, selectedSite, selectedDate)
+      await clearWorklogDraft(draftUserId, draftSiteId, draftWorkDate)
       setHasDraft(false)
 
       // localBlob cleanup - blobs that have been uploaded to storage can be removed
