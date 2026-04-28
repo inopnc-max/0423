@@ -6,7 +6,7 @@
  */
 
 import type { WorklogMediaInfo } from './worklog-media'
-import type { DrawingMarkupPreviewDocument } from '@/components/preview'
+import type { DrawingMarkupPreviewDocument } from '@/components/preview/reports/drawing-markup-preview-types'
 
 interface BuildDrawingMarkupPreviewInput {
   siteId: string
