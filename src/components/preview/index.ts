@@ -7,6 +7,7 @@ export { PhotoSheetA4Preview } from './reports/PhotoSheetA4Preview'
 export { DrawingMarkupMultiPagePreview } from './reports/DrawingMarkupMultiPagePreview'
 export { PreviewProvider, usePreview } from './PreviewProvider'
 export { PreviewHost } from './PreviewHost'
+export { FilePreviewGateway } from './FilePreviewGateway'
 export type {
   PreviewConfig,
   PreviewContextValue,
