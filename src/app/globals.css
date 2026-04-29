@@ -1508,7 +1508,7 @@ select option {
 }
 
 .ui-bottom-nav__item.is-active {
-  background: transparent;
+  background: transparent !important;
   color: var(--color-primary-strong);
 }
 
