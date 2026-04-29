@@ -10,6 +10,7 @@ import {
   ConfirmSheetForm,
   ConfirmSheetSignaturePad,
   ConfirmSheetPdfTemplate,
+  ConfirmationA4PreviewWrapper,
   type ConfirmSheetDraft,
 } from '@/components/confirm-sheet'
 import { Eye, FileText, CheckCircle, ArrowLeft, RotateCcw, Save, Search, X, Building2, MapPin, ChevronRight } from 'lucide-react'
@@ -547,6 +548,16 @@ export default function ConfirmSheetPage() {
           onSignatureChange={handleSignatureChange}
         />
       </div>
+
+      {/* A4 미리보기 */}
+      <section aria-label="확인서 A4 미리보기">
+        <h2 className="mb-2 text-sm font-medium text-[var(--color-text-secondary)]">
+          입력 내용 실시간 미리보기
+        </h2>
+        <ConfirmationA4PreviewWrapper>
+          <ConfirmSheetPdfTemplate draft={draft} showPlaceholder={false} />
+        </ConfirmationA4PreviewWrapper>
+      </section>
 
       {/* 유효성 체크 */}
       {!isValid && (
