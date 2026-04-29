@@ -5,6 +5,14 @@ export { ReportPreviewWorkspace } from './ReportPreviewWorkspace'
 export { type ReportPreviewKind, type ReportPreviewStatus, type ReportPreviewBaseProps } from './reports/report-preview-types'
 export { PhotoSheetA4Preview } from './reports/PhotoSheetA4Preview'
 export { DrawingMarkupMultiPagePreview } from './reports/DrawingMarkupMultiPagePreview'
+export { PreviewProvider, usePreview } from './PreviewProvider'
+export { PreviewHost } from './PreviewHost'
+export type {
+  PreviewConfig,
+  PreviewContextValue,
+  PreviewDockMode,
+  PreviewStatus,
+} from './preview-types'
 export type {
   DrawingMarkupPreviewDocument,
   DrawingMarkupPreviewPage,

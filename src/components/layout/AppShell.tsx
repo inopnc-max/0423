@@ -9,6 +9,7 @@ import AppHeader, {
   type AppHeaderLeading,
 } from '@/components/layout/AppHeader'
 import BottomNav from '@/components/layout/BottomNav'
+import { PreviewHost, PreviewProvider } from '@/components/preview'
 import { useAuth } from '@/contexts/auth-context'
 import { useNotifications } from '@/contexts/notification-context'
 import { isAdmin } from '@/lib/roles'
@@ -192,50 +193,53 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const headerTitle = hideTitleRoutes.includes(pathname) ? '' : getRouteLabel(pathname)
 
   return (
-    <div className={`ui-app-shell min-h-screen bg-[var(--color-bg)] ${roleThemeClass}`}>
-      <AppHeader
-        title={headerTitle}
-        leading={leading}
-        actions={headerActions}
-        utilityActions={utilityActions}
-        status={
-          syncSummary.totalOpenCount > 0
-            ? {
-                label: `${syncSummary.totalOpenCount}건${hasFailedItems ? ' (실패 포함)' : ''}`,
-                title: '동기화 대기 항목이 있습니다',
-                icon: hasFailedItems ? AlertCircle : CloudOff,
-                tone: hasFailedItems ? 'danger' : 'warning',
-              }
-            : undefined
-        }
-      />
+    <PreviewProvider role={user.role}>
+      <div className={`ui-app-shell min-h-screen bg-[var(--color-bg)] ${roleThemeClass}`}>
+        <AppHeader
+          title={headerTitle}
+          leading={leading}
+          actions={headerActions}
+          utilityActions={utilityActions}
+          status={
+            syncSummary.totalOpenCount > 0
+              ? {
+                  label: `${syncSummary.totalOpenCount}건${hasFailedItems ? ' (실패 포함)' : ''}`,
+                  title: '동기화 대기 항목이 있습니다',
+                  icon: hasFailedItems ? AlertCircle : CloudOff,
+                  tone: hasFailedItems ? 'danger' : 'warning',
+                }
+              : undefined
+          }
+        />
 
-      <main
-        className="min-h-screen"
-        style={{
-          paddingBottom: `calc(var(--bottom-nav-height) + var(--safe-bottom) + 16px)`,
-        }}
-      >
-        <div className={`mx-auto w-full ${shellMaxWidth} ${shellPadding}`}>
-          {children}
-        </div>
-      </main>
+        <main
+          className="min-h-screen"
+          style={{
+            paddingBottom: `calc(var(--bottom-nav-height) + var(--safe-bottom) + 16px)`,
+          }}
+        >
+          <div className={`mx-auto w-full ${shellMaxWidth} ${shellPadding}`}>
+            {children}
+          </div>
+        </main>
 
-      {secondaryActions.length > 0 &&
-        secondaryActions.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            aria-label={label}
-            title={label}
-            className="fixed bottom-24 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-[var(--color-navy)] px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[var(--color-navy-hover)]"
-          >
-            <Icon className="h-[18px] w-[18px]" strokeWidth={1.9} />
-            <span>{label}</span>
-          </Link>
-        ))}
+        {secondaryActions.length > 0 &&
+          secondaryActions.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              aria-label={label}
+              title={label}
+              className="fixed bottom-24 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-[var(--color-navy)] px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[var(--color-navy-hover)]"
+            >
+              <Icon className="h-[18px] w-[18px]" strokeWidth={1.9} />
+              <span>{label}</span>
+            </Link>
+          ))}
 
-      <BottomNav items={bottomNavItems} pathname={pathname} />
-    </div>
+        <BottomNav items={bottomNavItems} pathname={pathname} />
+        <PreviewHost />
+      </div>
+    </PreviewProvider>
   )
 }
