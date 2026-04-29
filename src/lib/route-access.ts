@@ -36,6 +36,13 @@ export const ROUTE_ROLE_ACCESS: Record<string, readonly Role[]> = {
   // Admin sub-routes — site_manager can access worklogs and users only
   '/admin/worklogs': ['site_manager', 'admin'],
   '/admin/users': ['site_manager', 'admin'],
+  '/admin/sites': ['admin'],
+  '/admin/materials': ['admin'],
+  '/admin/payroll': ['admin'],
+  '/admin/documents': ['admin'],
+  '/admin/notifications': ['admin'],
+  '/admin/audit': ['admin'],
+  '/admin/csv-upload': ['admin'],
   // Production manager sub-routes — TODO: 실제 구현 시 라우트 정의 필요
   '/production': ['production_manager'],
   '/production/input': ['production_manager'],

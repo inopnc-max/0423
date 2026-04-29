@@ -1,6 +1,6 @@
 import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { ROUTES } from '@/lib/routes'
+import { ROUTES, canAccessRoute } from '@/lib/routes'
 import { getSupabasePublicConfig } from '@/lib/supabase/config'
 
 export async function middleware(request: NextRequest) {
@@ -36,7 +36,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(ROUTES.login, request.url))
   }
 
-  if (pathname.startsWith(ROUTES.admin)) {
+  const protectedPrefixes = [
+    ROUTES.admin,
+    '/production',
+    ROUTES.output,
+    ROUTES.worklog,
+    ROUTES.materials,
+    ROUTES.confirmSheet,
+    ROUTES.hqRequests,
+  ]
+
+  const shouldCheckRoleAccess = protectedPrefixes.some(
+    prefix => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  )
+
+  if (shouldCheckRoleAccess) {
     const { data } = await supabase.from('workers').select('role').eq('id', user.id).single()
 
     const resolvedRole =
@@ -46,7 +60,7 @@ export async function middleware(request: NextRequest) {
           ? user.user_metadata.role
           : ''
 
-    if (resolvedRole !== 'admin') {
+    if (!canAccessRoute(pathname, resolvedRole)) {
       return NextResponse.redirect(new URL(ROUTES.home, request.url))
     }
   }
