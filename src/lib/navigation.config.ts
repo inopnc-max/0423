@@ -145,7 +145,6 @@ export const BOTTOM_NAV_BY_ROLE: Record<Role, NavigationItem[]> = {
   ],
   partner: [
     NAV_HOME,
-    NAV_OUTPUT,
     NAV_SITE,
     NAV_DOCUMENTS,
     NAV_ALERTS,

@@ -15,9 +15,9 @@ import { isAdmin } from '@/lib/roles'
 import {
   ADMIN_ROUTES,
   ROUTES,
-  SECONDARY_APP_ACTIONS,
   getBottomNavItems,
   getHeaderActionItems,
+  getSecondaryActions,
   getRoleThemeClass,
   getHeaderBehavior,
   getRouteLabel,
@@ -99,9 +99,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const roleThemeClass = getRoleThemeClass(user.role)
 
   const bottomNavItems = getBottomNavItems(user.role)
-  const secondaryActions = SECONDARY_APP_ACTIONS.filter(item =>
-    user.role === 'worker' || user.role === 'site_manager' || user.role === 'production_manager' || user.role === 'admin'
-  )
+  const secondaryActions = getSecondaryActions(user.role)
 
   const handleBack = () => {
     const parent = getParentRoute(pathname)
