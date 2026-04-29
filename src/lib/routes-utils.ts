@@ -97,8 +97,8 @@ interface GetHeaderActionItemsOptions {
   role: Role | string
 }
 
-export function getHeaderActionItems(_options: GetHeaderActionItemsOptions): HeaderActionItem[] {
-  return [
+export function getHeaderActionItems(options: GetHeaderActionItemsOptions): HeaderActionItem[] {
+  const items: HeaderActionItem[] = [
     {
       id: 'search',
       label: '검색',
@@ -137,4 +137,12 @@ export function getHeaderActionItems(_options: GetHeaderActionItemsOptions): Hea
       mobilePriority: true,
     },
   ]
+
+  if (options.role === 'production_manager') {
+    return items.filter(
+      item => item.href !== ROUTES.confirmSheet && item.href !== ROUTES.hqRequests
+    )
+  }
+
+  return items
 }
