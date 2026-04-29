@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { Copy, MessageCircle, Send } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { createClient } from '@/lib/supabase/client'
-import { getKakaoChannelChatUrl } from '@/lib/kakao-channel'
 
 interface SiteOption {
   id: string
@@ -22,7 +21,22 @@ interface SubmittedRequest {
 }
 
 const CATEGORIES = ['일정', '자재', '문서', '인원', '안전', '기타'] as const
-const KAKAO_CHAT_URL = getKakaoChannelChatUrl()
+
+const RAW_KAKAO_CHANNEL_ID = process.env.NEXT_PUBLIC_KAKAO_CHANNEL_PUBLIC_ID?.trim() ?? ''
+const HAS_KAKAO_CHANNEL_ID = RAW_KAKAO_CHANNEL_ID.length > 0
+
+const KAKAO_CHANNEL_PUBLIC_ID = HAS_KAKAO_CHANNEL_ID
+  ? RAW_KAKAO_CHANNEL_ID.startsWith('_') ? RAW_KAKAO_CHANNEL_ID : `_${RAW_KAKAO_CHANNEL_ID}`
+  : ''
+
+const KAKAO_CHAT_URL =
+  process.env.NEXT_PUBLIC_KAKAO_CHANNEL_CHAT_URL ||
+  (HAS_KAKAO_CHANNEL_ID ? `https://pf.kakao.com/${KAKAO_CHANNEL_PUBLIC_ID}/chat` : '')
+
+const KAKAO_APP_SCHEME =
+  HAS_KAKAO_CHANNEL_ID
+    ? `kakaoplus://plusfriend/home?publicId=${KAKAO_CHANNEL_PUBLIC_ID}`
+    : ''
 
 function buildKakaoMessage(req: SubmittedRequest): string {
   return `[본사요청]
@@ -90,17 +104,36 @@ export default function HQRequestsPage() {
     if (!submittedRequest) return
     setOpeningKakao(true)
     try {
+      const text = buildKakaoMessage(submittedRequest)
       try {
-        await navigator.clipboard.writeText(buildKakaoMessage(submittedRequest))
+        await navigator.clipboard.writeText(text)
       } catch {
-        // Continue opening the channel even if clipboard access is blocked.
+        // Clipboard copy fails even if channel opens
       }
 
-      window.open(KAKAO_CHAT_URL, '_blank', 'noopener,noreferrer')
+      const isMobile = /Mobi|Android/i.test(navigator.userAgent)
+
+      if (isMobile) {
+        const timer = setTimeout(() => {
+          if (!document.hidden) {
+            window.location.href = KAKAO_CHAT_URL
+          }
+        }, 1500)
+
+        const visibilityHandler = () => {
+          clearTimeout(timer)
+          document.removeEventListener('visibilitychange', visibilityHandler)
+        }
+        document.addEventListener('visibilitychange', visibilityHandler)
+
+        window.location.href = KAKAO_APP_SCHEME
+      } else {
+        window.open(KAKAO_CHAT_URL, '_blank')
+      }
 
       setFeedback({
         type: 'success',
-        text: '카카오채널이 열리면 복사된 내용을 붙여넣어 전송해 주세요.',
+        text: '카카오채널이 열렸습니다. 복사된 내용을 붙여넣어 전송해 주세요.',
       })
     } catch {
       setFeedback({ type: 'error', text: '카카오채널을 열 수 없습니다.' })
