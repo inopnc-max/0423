@@ -1206,12 +1206,6 @@ select option {
 .ui-calendar__weekday.is-sun { color: #d59696; }
 .ui-calendar__weekday.is-sat { color: #6f8fd8; }
 
-.ui-date-cell {
-  position: relative;
-  min-height: var(--calendar-cell-height);
-  border-radius: 14px;
-}
-
 .ui-date-cell__button {
   width: 100%;
   min-height: var(--calendar-cell-height);
@@ -1613,8 +1607,7 @@ select option {
 .ui-app-shell .ui-toggle__item.is-active,
 .ui-app-shell .ui-month-mover__title,
 .ui-app-shell .ui-section-header__title,
-.ui-app-shell .ui-calendar__title,
-.ui-app-shell .ui-calendar-title {
+.ui-app-shell .ui-calendar__title {
   color: var(--active-role-color);
 }
 
@@ -1889,16 +1882,6 @@ select option {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-2);
-}
-
-.ui-calendar-title {
-  text-align: center;
-  font-family: var(--font-family-number);
-  font-size: var(--calendar-month-size);
-  font-weight: var(--font-weight-bold);
-  line-height: 1.1;
-  letter-spacing: -0.04em;
-  color: var(--active-role-color, var(--color-primary-strong));
 }
 
 .ui-calendar-grid {
