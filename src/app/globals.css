@@ -1638,6 +1638,38 @@ select option {
   color: var(--active-role-color);
 }
 
+/* Role theme active selector reinforcement */
+.ui-app-shell .ui-bottom-nav__item.is-active {
+  background: transparent !important;
+  color: var(--active-role-color);
+}
+
+.ui-app-shell .ui-bottom-nav__item:not(.is-disabled):hover {
+  background: transparent;
+  color: var(--active-role-color);
+}
+
+.ui-app-shell .ui-field-box.is-active {
+  background: var(--active-role-color-soft);
+  border-color: var(--active-role-color);
+}
+
+.ui-app-shell .ui-date-cell.is-selected .ui-date-cell__button {
+  background: var(--active-role-color-soft);
+  border-color: var(--active-role-color);
+  box-shadow: inset 0 0 0 2px var(--active-role-color);
+}
+
+.ui-app-shell .ui-date-cell.is-selected .ui-date-cell__day,
+.ui-app-shell .ui-date-cell.is-selected .ui-date-cell__meta {
+  color: var(--active-role-color);
+}
+
+.ui-app-shell .ui-toolbar-button:not(.ui-toolbar-button--primary):hover {
+  border-color: var(--active-role-color);
+  color: var(--active-role-color);
+}
+
 /* ─── 출역 보기 전환 토글 ─── */
 .ui-output-view-switch {
   display: flex;
