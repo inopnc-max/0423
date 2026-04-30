@@ -5,6 +5,7 @@ import { Copy, MessageCircle, Send, CheckCircle, XCircle, RefreshCw, FileText } 
 import { useAuth } from '@/contexts/auth-context'
 import { createClient } from '@/lib/supabase/client'
 import { isAdmin, isSiteManager } from '@/lib/roles'
+import { usePreview } from '@/components/preview'
 
 interface SiteOption {
   id: string
@@ -21,7 +22,7 @@ interface SubmittedRequest {
   createdAt: string
 }
 
-interface HQRequestItem {
+interface HQRequest {
   id: string
   user_id: string
   site_id: string | null
@@ -99,6 +100,7 @@ function getStatusLabel(status: string): { label: string; className: string } {
 export default function HQRequestsPage() {
   const { user } = useAuth()
   const supabase = createClient()
+  const { openPreview } = usePreview()
 
   const isAdminUser = user ? isAdmin(user.role) : false
   const isSiteManagerUser = user ? isSiteManager(user.role) : false
@@ -115,8 +117,12 @@ export default function HQRequestsPage() {
   const [copying, setCopying] = useState(false)
   const [openingKakao, setOpeningKakao] = useState(false)
 
-  // Admin list state
-  const [adminRequests, setAdminRequests] = useState<HQRequestItem[]>([])
+  // My requests state (all users)
+  const [requests, setRequests] = useState<HQRequest[]>([])
+  const [loadingRequests, setLoadingRequests] = useState(false)
+
+  // Admin list state (manager only)
+  const [adminRequests, setAdminRequests] = useState<HQRequest[]>([])
   const [adminFilter, setAdminFilter] = useState<FilterStatus>('open')
   const [adminLoading, setAdminLoading] = useState(false)
   const [adminProcessingId, setAdminProcessingId] = useState<string | null>(null)
@@ -136,6 +142,34 @@ export default function HQRequestsPage() {
     void fetchSites()
   }, [supabase, user])
 
+  // Fetch all requests (for preview)
+  const fetchMyRequests = useCallback(async () => {
+    if (!user) return
+
+    setLoadingRequests(true)
+    try {
+      const { data, error } = await supabase
+        .from('hq_requests')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (error) throw error
+
+      const siteMap = new Map(sites.map(s => [s.id, s.name]))
+      const requestsWithSiteName: HQRequest[] = (data || []).map(req => ({
+        ...req,
+        siteName: req.site_id ? siteMap.get(req.site_id) || null : null,
+      }))
+
+      setRequests(requestsWithSiteName)
+    } catch (error) {
+      console.error('Failed to load my requests:', error)
+    } finally {
+      setLoadingRequests(false)
+    }
+  }, [supabase, user, sites])
+
   // Admin: fetch all requests
   const fetchAdminRequests = useCallback(async () => {
     if (!user) return
@@ -151,7 +185,7 @@ export default function HQRequestsPage() {
       if (error) throw error
 
       const siteMap = new Map(sites.map(s => [s.id, s.name]))
-      const requestsWithSiteName: HQRequestItem[] = (data || []).map(req => ({
+      const requestsWithSiteName: HQRequest[] = (data || []).map(req => ({
         ...req,
         siteName: req.site_id ? siteMap.get(req.site_id) || null : null,
       }))
@@ -164,6 +198,14 @@ export default function HQRequestsPage() {
     }
   }, [supabase, user, sites])
 
+  // Fetch my requests when sites loaded
+  useEffect(() => {
+    if (user && sites.length > 0) {
+      void fetchMyRequests()
+    }
+  }, [user, sites, fetchMyRequests])
+
+  // Fetch admin requests for managers
   useEffect(() => {
     if (isManagerUser) {
       void fetchAdminRequests()
@@ -271,6 +313,69 @@ export default function HQRequestsPage() {
     }
   }, [submittedRequest])
 
+  const handlePreviewRequest = useCallback(
+    (request: HQRequest) => {
+      const statusInfo = getStatusLabel(request.status)
+      const siteDisplay = request.siteName || '현장 미선택'
+
+      openPreview({
+        title: `본사요청 · ${request.category}`,
+        subtitle: `${siteDisplay} · ${statusInfo.label} · ${formatDate(request.created_at)}`,
+        contentType: 'report',
+        dockMode: 'readonly',
+        showBack: false,
+        onClose: () => {},
+        children: (
+          <div className="p-4 space-y-4">
+            <div className="rounded-xl bg-gray-50 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-[var(--color-text-secondary)]">분류</span>
+                <span className="px-2 py-0.5 text-xs rounded-full bg-[var(--color-navy)] text-white">
+                  {request.category}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-[var(--color-text-secondary)]">현장</span>
+                <span className="text-sm text-[var(--color-text)]">{siteDisplay}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-[var(--color-text-secondary)]">상태</span>
+                <span className={`px-2 py-0.5 text-xs rounded-full ${statusInfo.className}`}>
+                  {statusInfo.label}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-[var(--color-text-secondary)]">접수일시</span>
+                <span className="text-sm text-[var(--color-text)]">
+                  {formatDate(request.created_at)}
+                </span>
+              </div>
+              {request.handled_at && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-[var(--color-text-secondary)]">처리일시</span>
+                  <span className="text-sm text-[var(--color-text)]">
+                    {formatDate(request.handled_at)}
+                  </span>
+                </div>
+              )}
+            </div>
+            {request.message && (
+              <div className="space-y-2">
+                <span className="text-sm font-medium text-[var(--color-text-secondary)]">요청 내용</span>
+                <div className="rounded-xl bg-white border border-[var(--color-border)] p-4">
+                  <p className="text-sm text-[var(--color-text)] whitespace-pre-wrap">
+                    {request.message}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        ),
+      })
+    },
+    [openPreview]
+  )
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!user) return
@@ -299,6 +404,22 @@ export default function HQRequestsPage() {
         })
 
       if (error) throw error
+
+      const newRequest: HQRequest = {
+        id: `local-${Date.now()}`,
+        user_id: user.userId,
+        site_id: siteId || null,
+        category,
+        message: composedMessage,
+        source: 'app',
+        status: 'open',
+        created_at: new Date().toISOString(),
+        handled_at: null,
+        handled_by: null,
+        siteName: siteName || null,
+      }
+
+      setRequests(prev => [newRequest, ...prev])
 
       setSubmittedRequest({
         id: `local-${Date.now()}`,
@@ -569,6 +690,76 @@ export default function HQRequestsPage() {
           <span>{submitting ? '전송 중...' : '본사요청 보내기'}</span>
         </button>
       </form>
+
+      {/* My Requests List */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-[var(--color-navy)]">내 요청 목록</h2>
+          <button
+            type="button"
+            onClick={() => void fetchMyRequests()}
+            className="text-sm text-[var(--color-accent)] hover:underline"
+          >
+            새로고침
+          </button>
+        </div>
+
+        {loadingRequests && (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-sm text-[var(--color-text-secondary)]">불러오는 중...</div>
+          </div>
+        )}
+
+        {!loadingRequests && requests.length === 0 && (
+          <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
+            <FileText className="mx-auto h-10 w-10 text-[var(--color-text-tertiary)]" />
+            <p className="mt-3 text-sm text-[var(--color-text-secondary)]">
+              등록된 요청이 없습니다.
+            </p>
+          </div>
+        )}
+
+        {!loadingRequests && requests.length > 0 && (
+          <div className="space-y-2">
+            {requests.map(request => {
+              const statusInfo = getStatusLabel(request.status)
+              return (
+                <button
+                  key={request.id}
+                  type="button"
+                  onClick={() => handlePreviewRequest(request)}
+                  className="w-full text-left rounded-2xl bg-white p-4 shadow-sm transition hover:shadow-md"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-navy)] bg-opacity-10">
+                      <FileText className="h-5 w-5 text-[var(--color-navy)]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 text-xs rounded-full bg-[var(--color-navy)] text-white">
+                          {request.category}
+                        </span>
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${statusInfo.className}`}>
+                          {statusInfo.label}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-sm font-medium text-[var(--color-text)] truncate">
+                        {request.message || '내용 없음'}
+                      </p>
+                      <div className="mt-1.5 flex items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
+                        {request.siteName && (
+                          <span className="truncate">{request.siteName}</span>
+                        )}
+                        <span>{formatDate(request.created_at)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
