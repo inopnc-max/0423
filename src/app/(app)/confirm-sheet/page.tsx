@@ -419,19 +419,20 @@ export default function ConfirmSheetPage() {
         .getPublicUrl(uploadData.path)
 
       const { data: docData, error: docError } = await supabase
-        .from('site_documents')
+        .from('documents')
         .insert({
           site_id: draft.siteId,
-          doc_type: 'confirmation',
+          category: '확인서',
           title: `${draft.siteName} 작업완료확인서 (${draft.workDate})`,
-          file_path: uploadData.path,
           file_url: publicUrl,
+          file_type: 'application/pdf',
           file_size: pdfBlob.size,
-          file_ext: 'pdf',
-          work_date: draft.workDate,
-          worklog_id: log?.id || null,
           uploaded_by: user?.userId,
-          badge: '완료',
+          storage_bucket: 'documents',
+          storage_path: uploadData.path,
+          source_type: 'confirm_sheet',
+          source_id: log?.id || null,
+          approval_status: 'approved',
         })
         .select('id')
         .single()
