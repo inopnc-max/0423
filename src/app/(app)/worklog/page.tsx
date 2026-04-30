@@ -40,6 +40,8 @@ import { usePreview, DrawingMarkupMultiPagePreview } from '@/components/preview'
 import { PhotoSheetDraftViewer } from '@/components/photo-sheet'
 import { enqueueSyncQueueItem } from '@/lib/offline/sync-queue'
 import { buildDrawingMarkupPreviewFromMediaInfo } from '@/lib/drawing-markup-preview-mapping'
+import { SiteCombobox } from '@/components/site/SiteCombobox'
+import { WorklogTimeline, type WorklogTimelineStep } from '@/components/worklog/WorklogTimeline'
 
 interface Site {
   id: string
@@ -1270,6 +1272,53 @@ function WorklogEditorView({
     media: { label: '현장 사진 및 도면', icon: ImageIcon },
   }
 
+  const siteOptions = sites.map(site => ({
+    ...site,
+    affiliation: '',
+    address: '',
+  }))
+
+  const timelineSteps: WorklogTimelineStep[] = [
+    {
+      id: 'workers',
+      label: '출역 확인',
+      status: activeSection === 'workers' ? 'active' : workerArray.length > 0 ? 'done' : 'idle',
+    },
+    {
+      id: 'tasks',
+      label: '작업내용 입력',
+      status: activeSection === 'tasks' ? 'active' : taskTags.length > 0 ? 'done' : 'idle',
+    },
+    {
+      id: 'materials',
+      label: '자재 입력',
+      status: activeSection === 'materials' ? 'active' : materialItems.length > 0 ? 'done' : 'idle',
+    },
+    {
+      id: 'media',
+      label: '사진 업로드',
+      status: activeSection === 'media' ? 'active' : mediaAttachments.length > 0 ? 'done' : 'idle',
+    },
+    {
+      id: 'draft',
+      label: '임시저장',
+      status: existingLog?.status === 'draft' ? 'done' : 'idle',
+      timestamp: existingLog?.status === 'draft' ? '저장됨' : null,
+    },
+    {
+      id: 'submit',
+      label: '승인요청',
+      status: existingLog?.status === 'pending' || existingLog?.status === 'approved' ? 'done' : 'idle',
+      timestamp: existingLog?.status === 'pending' ? '승인 대기' : existingLog?.status === 'approved' ? '승인완료' : null,
+    },
+    {
+      id: 'rejected',
+      label: '반려',
+      status: existingLog?.status === 'rejected' ? 'rejected' : 'idle',
+      timestamp: existingLog?.rejection_reason ?? null,
+    },
+  ]
+
   if (editorLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -1288,6 +1337,16 @@ function WorklogEditorView({
       </div>
 
       <div className="rounded-2xl bg-white p-4 shadow-sm">
+        <SiteCombobox
+          sites={siteOptions}
+          selectedId={selectedSite}
+          onSelect={nextSiteId => {
+            setSelectedSite(nextSiteId)
+            onSiteSelectSync?.(nextSiteId)
+            setActiveSection('workers')
+          }}
+          className="mb-3"
+        />
         <div className="grid gap-3 md:grid-cols-2">
           <label className="block">
             <span className="mb-1 flex items-center gap-2 text-sm font-medium text-[var(--color-text-secondary)]">
@@ -1344,6 +1403,15 @@ function WorklogEditorView({
         </div>
       ) : (
         <>
+          <WorklogTimeline
+            steps={timelineSteps}
+            onStepClick={id => {
+              if (id === 'workers' || id === 'tasks' || id === 'materials' || id === 'media') {
+                setActiveSection(id)
+              }
+            }}
+          />
+
           <div className="overflow-x-auto rounded-2xl bg-white p-4 shadow-sm">
             <div className="flex min-w-[480px] items-stretch gap-1">
               {SECTION_ORDER.map((section, index) => {

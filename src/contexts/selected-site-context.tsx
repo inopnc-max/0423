@@ -11,6 +11,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth-context'
 import { loadUserUiState } from '@/lib/user-ui-state'
+import { setSelectedSiteId as setLocalSelectedSiteId } from '@/lib/ui-state'
 import type { UserUiStateRecord } from '@/lib/user-ui-state'
 
 /* ─── Types ─── */
@@ -231,6 +232,7 @@ export function SelectedSiteProvider({
       }
 
       setSelectedSiteIdState(resolved)
+      setLocalSelectedSiteId(resolved)
     } catch (err) {
       console.error('[selected-site] initial load failed:', err)
       setError('현장 정보를 불러오지 못했습니다.')
@@ -249,6 +251,7 @@ export function SelectedSiteProvider({
       if (!user) return
 
       setSelectedSiteIdState(siteId)
+      setLocalSelectedSiteId(siteId)
 
       const next = buildUiStatePayload(uiState, user.userId, siteId)
       setUiState(next)
@@ -279,7 +282,9 @@ export function SelectedSiteProvider({
     setAccessibleSites(sites)
 
     if (selectedSiteId && !isAccessibleSite(selectedSiteId, sites)) {
-      setSelectedSiteIdState(sites[0]?.id ?? null)
+      const nextSiteId = sites[0]?.id ?? null
+      setSelectedSiteIdState(nextSiteId)
+      setLocalSelectedSiteId(nextSiteId)
     }
   }, [supabase, user, selectedSiteId])
 

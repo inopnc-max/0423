@@ -23,6 +23,8 @@ import { isPartner } from '@/lib/roles'
 import { ROUTES } from '@/lib/routes'
 import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
 import { CommonHomeDateRail } from '@/components/home/CommonHomeDateRail'
+import { RecentViewedDocuments } from '@/components/home/RecentViewedDocuments'
+import { SiteCombobox as SharedSiteCombobox } from '@/components/site/SiteCombobox'
 import { SiteManagerHomeSummary } from '@/components/site-manager/SiteManagerAttendancePanel'
 import { useSiteManagerDashboard } from '@/hooks/site-manager/useSiteManagerDashboard'
 import { getSelectedWorkDate, setSelectedWorkDate } from '@/lib/ui-state'
@@ -287,7 +289,7 @@ export default function HomePage() {
 
       <section className="space-y-3">
         <div className="text-sm font-semibold text-[var(--color-navy)]">현장 선택</div>
-        <SiteCombobox
+        <SharedSiteCombobox
           sites={accessibleSites}
           selectedId={selectedSiteId}
           onSelect={id => {
@@ -437,6 +439,8 @@ export default function HomePage() {
           </Link>
         </section>
       )}
+
+      <RecentViewedDocuments userId={user?.userId} siteId={selectedSiteId} />
     </div>
   )
 }

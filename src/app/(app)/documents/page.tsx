@@ -4,6 +4,12 @@ import { useEffect, useState, memo } from 'react'
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { useMenuSearch } from '@/hooks/useMenuSearch'
 import { usePreview } from '@/components/preview'
+import { RequiredDocumentProgressCard } from '@/components/documents/RequiredDocumentProgressCard'
+import { RequiredDocumentsPanel } from '@/components/documents/RequiredDocumentsPanel'
+import { RequiredDocumentUploadSheet } from '@/components/documents/RequiredDocumentUploadSheet'
+import { SiteCombobox } from '@/components/site/SiteCombobox'
+import { useRequiredDocuments } from '@/hooks/documents/useRequiredDocuments'
+import type { RequiredDocumentType } from '@/lib/documents/requiredDocuments'
 import { Search, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { createSignedPreviewUrl } from '@/lib/storage/storage-helper'
@@ -186,9 +192,17 @@ const LazyFilePreviewGateway = memo(function LazyFilePreviewGateway({
 })
 
 export default function DocumentsPage() {
-  const { selectedSiteId } = useSelectedSite()
+  const { selectedSiteId, accessibleSites, setSelectedSiteId } = useSelectedSite()
   const { user } = useAuth()
   const { openPreview } = usePreview()
+  const [uploadType, setUploadType] = useState<RequiredDocumentType | null>(null)
+  const {
+    summary: requiredDocumentSummary,
+    loading: requiredDocumentsLoading,
+    submitting: requiredDocumentSubmitting,
+    message: requiredDocumentMessage,
+    submit: submitRequiredDocument,
+  } = useRequiredDocuments(user?.userId)
   const [category, setCategory] = useState('전체')
   const [approvalFilter, setApprovalFilter] = useState('전체')
 
@@ -275,6 +289,51 @@ export default function DocumentsPage() {
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold text-[var(--color-navy)] mb-4">문서함</h1>
+
+      <SiteCombobox
+        sites={accessibleSites}
+        selectedId={selectedSiteId}
+        onSelect={id => {
+          void setSelectedSiteId(id)
+        }}
+        className="mb-4"
+      />
+
+      <RequiredDocumentProgressCard
+        summary={requiredDocumentSummary}
+        loading={requiredDocumentsLoading}
+      />
+
+      <div className="mb-4">
+        <RequiredDocumentsPanel
+          items={requiredDocumentSummary?.items ?? []}
+          loading={requiredDocumentsLoading}
+          onUpload={setUploadType}
+        />
+      </div>
+
+      {requiredDocumentMessage && (
+        <div className={`mb-4 rounded-xl px-4 py-3 text-sm ${
+          requiredDocumentMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+        }`}>
+          {requiredDocumentMessage.text}
+        </div>
+      )}
+
+      <RequiredDocumentUploadSheet
+        open={Boolean(uploadType)}
+        initialType={uploadType}
+        submitting={requiredDocumentSubmitting}
+        onClose={() => setUploadType(null)}
+        onSubmit={params => {
+          if (!selectedSiteId) return
+          void submitRequiredDocument({
+            siteId: selectedSiteId,
+            documentType: params.documentType,
+            file: params.file,
+          }).then(() => setUploadType(null))
+        }}
+      />
 
       {/* Search Input */}
       <div className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-white px-3 py-2 mb-4">

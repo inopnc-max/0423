@@ -12,6 +12,7 @@ import { hideSalary } from '@/lib/roles'
 import { useMenuSearch } from '@/hooks'
 import { getSelectedWorkDate, setSelectedWorkDate } from '@/lib/ui-state'
 import { useSearchParams } from 'next/navigation'
+import { SiteCombobox } from '@/components/site/SiteCombobox'
 import { SiteManagerAttendancePanel } from '@/components/site-manager/SiteManagerAttendancePanel'
 import { useSiteManagerDashboard } from '@/hooks/site-manager/useSiteManagerDashboard'
 
@@ -177,7 +178,7 @@ function getCalendarCells(year: number, month: number) {
 
 export default function OutputPage() {
   const { user } = useAuth()
-  const { selectedSiteId, selectedSite } = useSelectedSite()
+  const { selectedSiteId, selectedSite, accessibleSites, setSelectedSiteId } = useSelectedSite()
   const supabase = useMemo(() => createClient(), [])
   const searchParams = useSearchParams()
   const queryDate = searchParams.get('date')
@@ -354,6 +355,14 @@ export default function OutputPage() {
           출역 현황과 급여 요약을 역할별로 확인할 수 있습니다.
         </p>
       </div>
+
+      <SiteCombobox
+        sites={accessibleSites}
+        selectedId={selectedSiteId}
+        onSelect={id => {
+          void setSelectedSiteId(id)
+        }}
+      />
 
       {isSiteManagerUser && (
         <SiteManagerAttendancePanel

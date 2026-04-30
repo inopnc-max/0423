@@ -7,6 +7,13 @@ import { useMenuSearch } from '@/hooks/useMenuSearch'
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { ROUTES } from '@/lib/routes'
 import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
+import { SiteCombobox } from '@/components/site/SiteCombobox'
+import { SiteContactActions } from '@/components/site/SiteContactActions'
+import { ApprovedDailyLogList, DailyLogPreview } from '@/components/site/ApprovedDailyLogList'
+import { IssueReportList, IssueReportPreview } from '@/components/site/IssueReportList'
+import { usePreview } from '@/components/preview'
+import { useApprovedDailyLogs, useIssueReports } from '@/hooks/site/useSiteRecords'
+import { textValue, getIssueReportTitle, type ApprovedDailyLogRow, type IssueReportRow } from '@/lib/site/siteRecords'
 
 export default function SitePage() {
   const {
@@ -17,6 +24,9 @@ export default function SitePage() {
     error,
     setSelectedSiteId,
   } = useSelectedSite()
+  const { openPreview } = usePreview()
+  const { logs: approvedDailyLogs, loading: approvedDailyLogsLoading } = useApprovedDailyLogs(selectedSiteId)
+  const { reports: issueReports, loading: issueReportsLoading } = useIssueReports(selectedSiteId)
 
   const { query, setQuery, filteredSites } = useMenuSearch({ scope: 'site_select' })
 
@@ -29,6 +39,33 @@ export default function SitePage() {
       }),
     [filteredSites, selectedSiteId]
   )
+
+  function openDailyLogPreview(log: ApprovedDailyLogRow) {
+    openPreview({
+      title: '승인완료 작업일지',
+      subtitle: log.work_date ?? undefined,
+      mode: 'fullscreen',
+      contentType: 'report',
+      dockMode: 'readonly',
+      status: log.status === 'locked' ? 'locked' : 'approved',
+      onClose: () => {},
+      children: <DailyLogPreview log={log} />,
+    })
+  }
+
+  function openIssueReportPreview(report: IssueReportRow) {
+    const status = textValue(report.status, 'approved')
+    openPreview({
+      title: getIssueReportTitle(report),
+      subtitle: status,
+      mode: 'fullscreen',
+      contentType: 'report',
+      dockMode: 'readonly',
+      status: status === 'closed' ? 'locked' : 'approved',
+      onClose: () => {},
+      children: <IssueReportPreview report={report} />,
+    })
+  }
 
   if (loading) {
     return (
@@ -53,7 +90,16 @@ export default function SitePage() {
         </div>
       )}
 
+      <SiteCombobox
+        sites={accessibleSites}
+        selectedId={selectedSiteId}
+        onSelect={id => {
+          void setSelectedSiteId(id)
+        }}
+      />
+
       {selectedSite ? (
+        <>
         <section className="rounded-2xl bg-gradient-to-r from-[var(--color-accent-light)] to-white p-5 shadow-sm">
           <div className="mb-2 text-sm font-semibold text-[var(--color-accent)]">현재 선택 현장</div>
           <div className="flex items-start gap-3">
@@ -84,6 +130,20 @@ export default function SitePage() {
             </div>
           </div>
         </section>
+        <SiteContactActions site={selectedSite} />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ApprovedDailyLogList
+            logs={approvedDailyLogs}
+            loading={approvedDailyLogsLoading}
+            onPreview={openDailyLogPreview}
+          />
+          <IssueReportList
+            reports={issueReports}
+            loading={issueReportsLoading}
+            onPreview={openIssueReportPreview}
+          />
+        </div>
+        </>
       ) : (
         <section className="rounded-2xl border-2 border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-text-secondary)]">
           현장 목록에서 현장을 선택해주세요.
