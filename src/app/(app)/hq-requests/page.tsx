@@ -117,7 +117,7 @@ export default function HQRequestsPage() {
 
   // Admin list state
   const [adminRequests, setAdminRequests] = useState<HQRequestItem[]>([])
-  const [adminFilter, setAdminFilter] = useState<FilterStatus>('all')
+  const [adminFilter, setAdminFilter] = useState<FilterStatus>('open')
   const [adminLoading, setAdminLoading] = useState(false)
   const [adminProcessingId, setAdminProcessingId] = useState<string | null>(null)
 
@@ -165,10 +165,10 @@ export default function HQRequestsPage() {
   }, [supabase, user, sites])
 
   useEffect(() => {
-    if (isManagerUser && sites.length >= 0) {
+    if (isManagerUser) {
       void fetchAdminRequests()
     }
-  }, [isManagerUser, sites, fetchAdminRequests])
+  }, [isManagerUser, fetchAdminRequests])
 
   const filteredAdminRequests = adminRequests.filter(req => {
     if (adminFilter === 'all') return true
@@ -179,12 +179,13 @@ export default function HQRequestsPage() {
     if (!user) return
 
     setAdminProcessingId(requestId)
+    const handledAt = new Date().toISOString()
     try {
       const { error } = await supabase
         .from('hq_requests')
         .update({
           status: action,
-          handled_at: new Date().toISOString(),
+          handled_at: handledAt,
           handled_by: user.userId,
         })
         .eq('id', requestId)
@@ -194,7 +195,7 @@ export default function HQRequestsPage() {
       setAdminRequests(prev =>
         prev.map(req =>
           req.id === requestId
-            ? { ...req, status: action, handled_at: new Date().toISOString(), handled_by: user.userId }
+            ? { ...req, status: action, handled_at: handledAt, handled_by: user.userId }
             : req
         )
       )
