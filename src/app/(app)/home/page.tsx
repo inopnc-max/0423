@@ -25,6 +25,8 @@ import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
 import { CommonHomeDateRail } from '@/components/home/CommonHomeDateRail'
 import { RecentViewedDocuments } from '@/components/home/RecentViewedDocuments'
 import { SiteCombobox as SharedSiteCombobox } from '@/components/site/SiteCombobox'
+import { SiteManagerHomeSummary } from '@/components/site-manager/SiteManagerAttendancePanel'
+import { useSiteManagerDashboard } from '@/hooks/site-manager/useSiteManagerDashboard'
 import { getSelectedWorkDate, setSelectedWorkDate } from '@/lib/ui-state'
 import type { SiteSummary } from '@/contexts/selected-site-context'
 
@@ -194,7 +196,15 @@ export default function HomePage() {
   }
 
   const isPartnerUser = isPartner(user?.role ?? '')
+  const isSiteManagerUser = user?.role === 'site_manager'
   const loading = authLoading || siteLoading
+  const siteManagerDashboard = useSiteManagerDashboard({
+    managerId: isSiteManagerUser ? user?.userId : null,
+    managerName: user?.profile?.name,
+    siteId: isSiteManagerUser ? selectedSiteId : null,
+    siteName: selectedSite?.name,
+    workDate: selectedWorkDate,
+  })
 
   const QUICK_ACTIONS = [
     {
@@ -269,6 +279,13 @@ export default function HomePage() {
         selectedDate={selectedWorkDate}
         onDateSelect={handleDateSelect}
       />
+
+      {isSiteManagerUser && (
+        <SiteManagerHomeSummary
+          summary={siteManagerDashboard.summary}
+          loading={siteManagerDashboard.loading}
+        />
+      )}
 
       <section className="space-y-3">
         <div className="text-sm font-semibold text-[var(--color-navy)]">현장 선택</div>

@@ -13,6 +13,8 @@ import { useMenuSearch } from '@/hooks'
 import { getSelectedWorkDate, setSelectedWorkDate } from '@/lib/ui-state'
 import { useSearchParams } from 'next/navigation'
 import { SiteCombobox } from '@/components/site/SiteCombobox'
+import { SiteManagerAttendancePanel } from '@/components/site-manager/SiteManagerAttendancePanel'
+import { useSiteManagerDashboard } from '@/hooks/site-manager/useSiteManagerDashboard'
 
 interface DailyLog {
   id: string
@@ -176,7 +178,7 @@ function getCalendarCells(year: number, month: number) {
 
 export default function OutputPage() {
   const { user } = useAuth()
-  const { selectedSiteId, accessibleSites, setSelectedSiteId } = useSelectedSite()
+  const { selectedSiteId, selectedSite, accessibleSites, setSelectedSiteId } = useSelectedSite()
   const supabase = useMemo(() => createClient(), [])
   const searchParams = useSearchParams()
   const queryDate = searchParams.get('date')
@@ -192,6 +194,14 @@ export default function OutputPage() {
   })
 
   const isPartnerUser = user ? hideSalary(user.role) : false
+  const isSiteManagerUser = user?.role === 'site_manager'
+  const siteManagerDashboard = useSiteManagerDashboard({
+    managerId: isSiteManagerUser ? user?.userId : null,
+    managerName: user?.profile?.name,
+    siteId: isSiteManagerUser ? selectedSiteId : null,
+    siteName: selectedSite?.name,
+    workDate: selectedDate,
+  })
 
   const {
     query,
@@ -353,6 +363,20 @@ export default function OutputPage() {
           void setSelectedSiteId(id)
         }}
       />
+
+      {isSiteManagerUser && (
+        <SiteManagerAttendancePanel
+          workDate={selectedDate}
+          siteName={selectedSite?.name}
+          logs={siteManagerDashboard.logs}
+          workers={siteManagerDashboard.workers}
+          summary={siteManagerDashboard.summary}
+          loading={siteManagerDashboard.loading}
+          submitting={siteManagerDashboard.submitting}
+          message={siteManagerDashboard.message}
+          onSaveAttendance={siteManagerDashboard.saveAttendance}
+        />
+      )}
 
       {!isPartnerUser && (
         <section className="rounded-2xl bg-white p-4 shadow-sm">

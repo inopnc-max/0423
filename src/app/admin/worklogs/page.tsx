@@ -3,6 +3,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Building2, Calendar, CheckCircle, XCircle, Clock, Search, ChevronDown } from 'lucide-react'
+import { useAuth } from '@/contexts/auth-context'
+import { useSelectedSite } from '@/contexts/selected-site-context'
+import { ApprovalReviewTimeline, ApprovalSummary } from '@/components/site-manager/SiteManagerApprovalPanel'
+import { useSiteManagerDashboard } from '@/hooks/site-manager/useSiteManagerDashboard'
 
 type WorklogStatus = 'draft' | 'pending' | 'approved' | 'rejected'
 
@@ -39,6 +43,8 @@ const STATUS_CONFIG: Record<WorklogStatus, { label: string; color: string; bg: s
 }
 
 export default function AdminWorklogsPage() {
+  const { user } = useAuth()
+  const { selectedSiteId } = useSelectedSite()
   const [worklogs, setWorklogs] = useState<Worklog[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<WorklogStatus | 'all'>('pending')
@@ -50,6 +56,14 @@ export default function AdminWorklogsPage() {
   const [rejectReason, setRejectReason] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const supabase = createClient()
+  const today = new Date().toISOString().slice(0, 10)
+  const isSiteManagerUser = user?.role === 'site_manager'
+  const siteManagerDashboard = useSiteManagerDashboard({
+    managerId: isSiteManagerUser ? user?.userId : null,
+    managerName: user?.profile?.name,
+    siteId: isSiteManagerUser ? selectedSiteId : null,
+    workDate: today,
+  })
 
   useEffect(() => {
     Promise.all([
@@ -142,6 +156,29 @@ export default function AdminWorklogsPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-[var(--color-navy)] mb-6">일지 승인</h1>
+
+      {isSiteManagerUser && (
+        <>
+          {siteManagerDashboard.message && (
+            <div className={`mb-4 rounded-xl px-4 py-3 text-sm ${
+              siteManagerDashboard.message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+            }`}>
+              {siteManagerDashboard.message.text}
+            </div>
+          )}
+          <ApprovalSummary
+            summary={siteManagerDashboard.summary}
+            loading={siteManagerDashboard.loading}
+          />
+          <ApprovalReviewTimeline
+            logs={siteManagerDashboard.logs}
+            loading={siteManagerDashboard.loading}
+            submitting={siteManagerDashboard.submitting}
+            onApprove={siteManagerDashboard.approveLog}
+            onReject={siteManagerDashboard.rejectLog}
+          />
+        </>
+      )}
 
       {/* Status Tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
