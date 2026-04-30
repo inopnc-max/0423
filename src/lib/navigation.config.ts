@@ -103,21 +103,21 @@ const NAV_WORKERS: NavigationItem = {
 
 // 파트너 알림 (/notifications) — 기존 route 사용
 
-// 생산관리자 입력 (/production/input) — TODO: 실제 페이지 구현 필요
+// 생산관리자 입력 (/production/input) — placeholder route exists, 실제 기능 연결은 후속 PR
 const NAV_PROD_INPUT: NavigationItem = {
   href: '/production/input',
   label: '입력',
   icon: PenLine,
 }
 
-// 생산관리자 내역 (/production/logs) — TODO: 실제 페이지 구현 필요
+// 생산관리자 내역 (/production/logs) — placeholder route exists, 실제 기능 연결은 후속 PR
 const NAV_PROD_LOGS: NavigationItem = {
   href: '/production/logs',
   label: '내역',
   icon: List,
 }
 
-// 생산관리자 요약 (/production/summary) — TODO: 실제 페이지 구현 필요
+// 생산관리자 요약 (/production/summary) — placeholder route exists, 실제 기능 연결은 후속 PR
 const NAV_PROD_SUMMARY: NavigationItem = {
   href: '/production/summary',
   label: '요약',
