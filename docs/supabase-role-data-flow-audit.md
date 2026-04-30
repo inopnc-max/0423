@@ -72,8 +72,11 @@
 | `worker` | ✅ | ✅ | ✅ |
 | `partner` | ✅ | ✅ | ✅ |
 | `site_manager` | ✅ | ✅ | ✅ |
-| `production_manager` | ✅ | ❌ 없음 | **❌ 불일치** |
+| `production_manager` | ✅ | ✅ | ✅ |
 | `admin` | ✅ | ✅ | ✅ |
+
+> **2026-04-30 업데이트:** Production DB 직접 확인 결과, `workers_role_check` constraint에 `production_manager`가 이미 포함되어 있음이 확인됨.
+> Repo의 `001_initial.sql` migration에만 누락되어 있었으며, 이 drift를 정리하는 PR 생성 예정.
 
 #### 확인한 Route/Navigation/Middleware 구조
 
@@ -89,19 +92,40 @@
 
 ## 2. 확정된 문제
 
-### 2-1. `production_manager` role — Frontend/DB 불일치
+### 2-1. `production_manager` role — Frontend/DB 불일치 ~~(해결됨)~~
 
-**문제:**
+> **2026-04-30 UPDATE:** ~~이슈는 아직 남아있습니다. 아래 내용을 수정합니다.~~ → **Production DB 확인 결과 이미 해결됨.**
+> Production DB의 `workers_role_check` constraint에 `production_manager`가 포함되어 있음이 직접 확인됨.
+> Repo의 `001_initial.sql`에만 누락되어 있었으므로, migration 파일만 동기화하면 됨.
+
+**과거 이슈 (초기 감사 보고서):**
 - Frontend `src/lib/roles.ts`에서 `'production_manager'`를 정규 role로 정의
 - `src/lib/route-access.ts`에서 `/production/*` route를 `production_manager` 전용으로 보호
 - `src/lib/navigation.config.ts`에서 `production_manager` 전용 메뉴 제공
-- **하지만** Supabase `workers.role` CHECK constraint에는 `'production_manager'`가 없음
+- **하지만** 초기 감사 당시 Supabase `workers.role` CHECK constraint에 `'production_manager'`가 없음으로 기록됨
 
-**DB CHECK 현재 값:** `'worker' | 'partner' | 'site_manager' | 'admin'`
+**Production DB 실제 상태 (2026-04-30 확인):**
+```sql
+-- Production DB에서 직접 실행 결과
+CHECK ((role = ANY (ARRAY['worker', 'partner', 'site_manager', 'admin', 'production_manager'])))
+```
+✅ `production_manager` 이미 포함
 
-**영향:**
-- `production_manager` 사용자가 인증 후 `workers` 테이블에 INSERT/UPDATE 시 CHECK 위배 에러 발생
-- 현재 production에 해당 role 사용자가 있다면 **모든 인증 요청에서 에러 발생 가능**
+**workers.role 분포 (2026-04-30 확인):**
+
+| role | count |
+|------|-------|
+| admin | 1 |
+| partner | 1 |
+| site_manager | 1 |
+| worker | 7 |
+| production_manager | **0** |
+
+✅ 현재 `production_manager` 사용자 0명 — signup CHECK 위배 위험 없음
+
+**결론:**
+- ~~운영 DB 긴급 수정 필요 (추가 migration 생성)~~ → **필요 없음**
+- Repo migration drift 정리 필요 (`001_initial.sql` CHECK 동기화) → **이 PR에서 수행**
 
 ---
 
@@ -216,7 +240,7 @@ confirm-sheet/page.tsx:
 
 | # | 확인 항목 | 예상 결과 | 위험도 |
 |---|----------|----------|--------|
-| 1 | `workers` 테이블에 `role='production_manager'`인 사용자가 있는지 | 있으면 모든 인증에서 에러 발생 | 🔴 P0 |
+| ~~1~~ | ~~`workers` 테이블에 `role='production_manager'`인 사용자가 있는지~~ | ✅ ~~있으면 모든 인증에서 에러 발생~~ | ~~🔴 P0~~ → **✅ 확인됨 (0명, 위험 없음)** |
 | 2 | `site_documents` 테이블이 Dashboard에 존재하는지 | 미존재 시 confirm-sheet INSERT 에러 | 🔴 P0 |
 | 3 | `site_documents`에 현재 데이터가 있는지 | 데이터 있으면 migration 시 이전 필요 | 🟡 P1 |
 | 4 | `documents` 테이블의 legacy `file_url` only 레코드 수 | migration 007 SQL로 확인 가능 | 🟢 P2 |
@@ -232,7 +256,7 @@ confirm-sheet/page.tsx:
 
 | 문제 | 설명 |
 |------|------|
-| `production_manager` role 없음 | 해당 role 사용자가 있으면 DB INSERT/UPDATE 시 에러 |
+| `production_manager` role 없음 | ✅ ~~해당 role 사용자가 있으면 DB INSERT/UPDATE 시 에러~~ → **Production DB 확인 결과 해결됨** |
 | `site_documents` 미 migration | 테이블 미존재 시 confirm-sheet INSERT 시 runtime 에러 |
 
 ### P1 — 다음 migration 필요
@@ -263,23 +287,25 @@ confirm-sheet/page.tsx:
 
 ## 5. 다음 PR 제안
 
-### PR 1: production_manager role 정합성 migration
+### PR 1: production_manager role 정합성 migration ~~(진행 예정)~~ → **✅ 완료 (이 PR)**
 
-**브랜치명:** `fix/workers-role-production-manager`
+> **2026-04-30:** Production DB 확인 결과 이미 `production_manager`가 포함되어 있었음. Repo migration drift만 정리.
 
-** 목적:** Frontend-DB role 정합성 확보
+~~**브랜치명:** `fix/workers-role-production-manager`~~
 
-** 수정:**
+~~** 목적:** Frontend-DB role 정합성 확보~~
+
+~~** 수정:**
 - `supabase/migrations/009_add_production_manager_role.sql`
   ```sql
   ALTER TABLE workers DROP CONSTRAINT IF EXISTS workers_role_check;
   ALTER TABLE workers ADD CONSTRAINT workers_role_check
     CHECK (role IN ('worker', 'partner', 'site_manager', 'production_manager', 'admin'));
-  ```
+  ```~~
 
-** 위험도:** 🟡 중간 — 기존 production_manager 사용자가 없으면 무해
+~~** 위험도:** 🟡 중간 — 기존 production_manager 사용자가 없으면 무해~~
 
-** 선행 조건:** Dashboard에서 `workers.role='production_manager'` 사용자 유무 확인
+~~** 선행 조건:** Dashboard에서 `workers.role='production_manager'` 사용자 유무 확인~~ → ✅ **선행 조건 충족 (0명 확인됨)**
 
 ---
 
@@ -363,3 +389,4 @@ confirm-sheet/page.tsx:
 | 날짜 | 작성자 | 내용 |
 |------|--------|------|
 | 2026-04-30 | Claude Code | Initial audit report |
+| 2026-04-30 | Claude Code | PR fix/supabase-production-manager-schema-drift — Production DB 확인 결과 추가, 2-1/테이블/Risk/PR1 상태 업데이트 (production_manager 이미 Production DB에 포함, repo migration drift만 정리) |
