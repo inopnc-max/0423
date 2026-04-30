@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ROLE_LABELS } from '@/lib/roles'
 import type { Role } from '@/lib/roles'
+import { useAuth } from '@/contexts/auth-context'
+import { useSelectedSite } from '@/contexts/selected-site-context'
+import { useSiteManagerDashboard } from '@/hooks/site-manager/useSiteManagerDashboard'
+import { WorkerList, WorkerStatusSummary } from '@/components/site-manager/SiteManagerWorkerPanel'
 
 interface Worker {
   id: string
@@ -16,11 +20,21 @@ interface Worker {
 }
 
 export default function AdminUsersPage() {
+  const { user } = useAuth()
+  const { selectedSiteId } = useSelectedSite()
   const [workers, setWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('all')
   const supabase = createClient()
+  const today = new Date().toISOString().slice(0, 10)
+  const isSiteManagerUser = user?.role === 'site_manager'
+  const siteManagerDashboard = useSiteManagerDashboard({
+    managerId: isSiteManagerUser ? user?.userId : null,
+    managerName: user?.profile?.name,
+    siteId: isSiteManagerUser ? selectedSiteId : null,
+    workDate: today,
+  })
 
   useEffect(() => {
     async function fetchWorkers() {
@@ -62,6 +76,21 @@ export default function AdminUsersPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-[var(--color-navy)] mb-6">사용자 관리</h1>
+
+      {isSiteManagerUser && (
+        <>
+          <WorkerStatusSummary
+            workers={siteManagerDashboard.workers}
+            loading={siteManagerDashboard.loading}
+          />
+          <div className="mb-6">
+            <WorkerList
+              workers={siteManagerDashboard.workers}
+              loading={siteManagerDashboard.loading}
+            />
+          </div>
+        </>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
