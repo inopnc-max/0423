@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
-import { PreviewCenter } from '@/components/preview'
+import { usePreview } from '@/components/preview'
 import {
   ConfirmSheetForm,
   ConfirmSheetSignaturePad,
@@ -14,7 +14,7 @@ import {
   ConfirmationA4PreviewWrapper,
   type ConfirmSheetDraft,
 } from '@/components/confirm-sheet'
-import { Eye, FileText, CheckCircle, ArrowLeft, RotateCcw, Save, Search, X, Building2, MapPin, ChevronRight } from 'lucide-react'
+import { FileText, CheckCircle, ArrowLeft, RotateCcw, Save, Search, X, Building2, MapPin, ChevronRight } from 'lucide-react'
 
 interface Site {
   id: string
@@ -201,9 +201,10 @@ export default function ConfirmSheetPage() {
 
   // Draft 상태 (작업완료확인서 입력값)
   const [draft, setDraft] = useState<ConfirmSheetDraft>(createInitialDraft)
-  const [showPreview, setShowPreview] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [savedDocId, setSavedDocId] = useState<string | null>(null)
+
+  const { openPreview } = usePreview()
 
   // Sites fetch
   useEffect(() => {
@@ -452,28 +453,25 @@ export default function ConfirmSheetPage() {
   }, [draft, isValid, supabase, user?.userId, log?.id])
 
   // 탭 변경
-  const handleShowPreview = () => setShowPreview(true)
-  const handleShowForm = () => setShowPreview(false)
-
-  // 미리보기 모드
-  if (showPreview) {
-    return (
-      <PreviewCenter
-        title="미리보기"
-        subtitle={draft.siteName || '작업완료확인서'}
-        showBack={true}
-        onBack={handleShowForm}
-        dockMode="readonly"
-        onDownload={generatePDF}
-        dockDisabled={generating || !isValid}
-      >
+  const handleShowPreview = () => {
+    const canDownload = isValid && !generating
+    openPreview({
+      title: '미리보기',
+      subtitle: draft.siteName || '작업완료확인서',
+      mode: 'fullscreen',
+      contentType: 'report',
+      dockMode: 'readonly',
+      showBack: false,
+      onClose: () => {},
+      onDownload: canDownload ? generatePDF : undefined,
+      children: (
         <ConfirmSheetA4Preview
           draft={draft}
           siteName={draft.siteName}
           workDate={draft.workDate}
         />
-      </PreviewCenter>
-    )
+      ),
+    })
   }
 
   // 입력 모드
@@ -482,25 +480,17 @@ export default function ConfirmSheetPage() {
       {/* 탭 전환 */}
       <div className="flex gap-2 mb-4">
         <button
-          onClick={handleShowForm}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition ${
-            !showPreview
-              ? 'bg-[var(--color-primary-strong)] text-white'
-              : 'bg-[var(--color-bg-soft)] text-[var(--color-text-sub)]'
-          }`}
+          onClick={() => {}}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium bg-[var(--color-primary-strong)] text-white"
         >
           <FileText className="h-4 w-4" />
           입력
         </button>
         <button
           onClick={handleShowPreview}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition ${
-            showPreview
-              ? 'bg-[var(--color-primary-strong)] text-white'
-              : 'bg-[var(--color-bg-soft)] text-[var(--color-text-sub)]'
-          }`}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium bg-[var(--color-bg-soft)] text-[var(--color-text-sub)]"
         >
-          <Eye className="h-4 w-4" />
+          <FileText className="h-4 w-4" />
           미리보기
         </button>
       </div>
@@ -615,7 +605,6 @@ export default function ConfirmSheetPage() {
                   setDraft(createInitialDraft())
                   setSelectedSiteId('')
                   setLog(null)
-                  setShowPreview(false)
                 }}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] rounded-lg text-sm font-medium hover:bg-[var(--color-bg-highlight)] transition"
               >
