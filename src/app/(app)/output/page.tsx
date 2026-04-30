@@ -12,6 +12,7 @@ import { hideSalary } from '@/lib/roles'
 import { useMenuSearch } from '@/hooks'
 import { getSelectedWorkDate, setSelectedWorkDate } from '@/lib/ui-state'
 import { useSearchParams } from 'next/navigation'
+import { SiteCombobox } from '@/components/site/SiteCombobox'
 
 interface DailyLog {
   id: string
@@ -175,7 +176,7 @@ function getCalendarCells(year: number, month: number) {
 
 export default function OutputPage() {
   const { user } = useAuth()
-  const { selectedSiteId } = useSelectedSite()
+  const { selectedSiteId, accessibleSites, setSelectedSiteId } = useSelectedSite()
   const supabase = useMemo(() => createClient(), [])
   const searchParams = useSearchParams()
   const queryDate = searchParams.get('date')
@@ -344,6 +345,14 @@ export default function OutputPage() {
           출역 현황과 급여 요약을 역할별로 확인할 수 있습니다.
         </p>
       </div>
+
+      <SiteCombobox
+        sites={accessibleSites}
+        selectedId={selectedSiteId}
+        onSelect={id => {
+          void setSelectedSiteId(id)
+        }}
+      />
 
       {!isPartnerUser && (
         <section className="rounded-2xl bg-white p-4 shadow-sm">
