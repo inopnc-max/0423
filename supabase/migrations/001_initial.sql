@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS workers (
   email       TEXT UNIQUE NOT NULL,
   name        TEXT NOT NULL,
   company     TEXT NOT NULL DEFAULT '',
-  role        TEXT NOT NULL CHECK (role IN ('worker','partner','site_manager','admin')),
+  role        TEXT NOT NULL CHECK (role IN ('worker','partner','site_manager','admin','production_manager')),
   phone       TEXT,
   daily       INTEGER NOT NULL DEFAULT 150000,
   site_ids    UUID[] NOT NULL DEFAULT '{}',

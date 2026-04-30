@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { isPartner } from '@/lib/roles'
 import { ROUTES } from '@/lib/routes'
 import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
+import { FilePreviewGateway, usePreview } from '@/components/preview'
 
 interface SiteDetail {
   id: string
@@ -52,6 +53,7 @@ interface SiteDocument {
 export default function SiteDetailPage() {
   const params = useParams<{ id: string }>()
   const { user } = useAuth()
+  const { openPreview } = usePreview()
   const supabase = createClient()
 
   const [site, setSite] = useState<SiteDetail | null>(null)
@@ -134,6 +136,76 @@ export default function SiteDetailPage() {
 
   const isPartnerUser = isPartner(user?.role || '')
 
+  const openInNewTab = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  const getFileName = (path: string) => path.split('/').pop() || path
+
+  const getFileType = (path: string) => {
+    const extension = path.split('.').pop()?.toLowerCase()
+    if (!extension) return null
+    if (extension === 'pdf') return 'pdf'
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(extension)) {
+      return `image/${extension === 'jpg' ? 'jpeg' : extension}`
+    }
+    return extension
+  }
+
+  const openPhotoPreview = (photo: Photo) => {
+    if (!photo.preview_url) return
+    const title = getFileName(photo.preview_url)
+
+    openPreview({
+      title,
+      subtitle: site.name,
+      contentType: 'media',
+      dockMode: 'readonly',
+      onDownload: () => openInNewTab(photo.preview_url),
+      children: (
+        <div className="flex items-center justify-center py-4">
+          <img
+            src={photo.preview_url}
+            alt={title}
+            className="max-h-[calc(100dvh-200px)] max-w-full rounded-lg object-contain"
+          />
+        </div>
+      ),
+    })
+  }
+
+  const openFilePreview = (file: {
+    id: string
+    title: string
+    category: string
+    fileUrl: string
+  }) => {
+    if (!file.fileUrl) return
+
+    openPreview({
+      title: file.title,
+      subtitle: file.category,
+      contentType: 'file',
+      dockMode: 'readonly',
+      onDownload: () => openInNewTab(file.fileUrl),
+      children: (
+        <FilePreviewGateway
+          doc={{
+            id: file.id,
+            site_id: site.id,
+            title: file.title,
+            category: file.category,
+            file_url: file.fileUrl,
+            file_type: getFileType(file.fileUrl),
+            storage_bucket: null,
+            storage_path: null,
+          }}
+          onDownload={() => openInNewTab(file.fileUrl)}
+        />
+      ),
+    })
+  }
+
   return (
     <div className="space-y-4 p-4">
       <Link href={ROUTES.site} className="inline-flex items-center gap-2 text-sm font-medium text-[var(--color-accent)]">
@@ -203,6 +275,10 @@ export default function SiteDetailPage() {
                 href={photo.preview_url}
                 target="_blank"
                 rel="noreferrer"
+                onClick={event => {
+                  event.preventDefault()
+                  openPhotoPreview(photo)
+                }}
                 className="block overflow-hidden rounded-xl bg-[var(--color-bg)]"
               >
                 <img src={photo.thumbnail_url} alt="" className="aspect-square w-full object-cover" />
@@ -229,6 +305,16 @@ export default function SiteDetailPage() {
                   href={drawing.marked_path || drawing.original_path}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={event => {
+                    event.preventDefault()
+                    const fileUrl = drawing.marked_path || drawing.original_path
+                    openFilePreview({
+                      id: drawing.id,
+                      title: getFileName(drawing.original_path),
+                      category: '?꾨㈃',
+                      fileUrl,
+                    })
+                  }}
                   className="flex items-center justify-between rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)] transition hover:bg-[var(--color-bg)]"
                 >
                   <span className="truncate">{drawing.original_path.split('/').pop()}</span>
@@ -276,6 +362,15 @@ export default function SiteDetailPage() {
                 href={document.file_url}
                 target="_blank"
                 rel="noreferrer"
+                onClick={event => {
+                  event.preventDefault()
+                  openFilePreview({
+                    id: document.id,
+                    title: document.title,
+                    category: document.category,
+                    fileUrl: document.file_url,
+                  })
+                }}
                 className="flex items-center justify-between rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)] transition hover:bg-[var(--color-bg)]"
               >
                 <div className="min-w-0">
