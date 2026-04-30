@@ -345,80 +345,6 @@ export default function OutputPage() {
         </p>
       </div>
 
-      {!isPartnerUser && (
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-semibold text-[var(--color-navy)]">급여 현황</h2>
-          </div>
-
-          <div className="mb-3 flex gap-3">
-            <select
-              value={selectedYear}
-              onChange={event => setSelectedYear(Number(event.target.value))}
-              className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
-            >
-              {[2024, 2025, 2026].map(year => (
-                <option key={year} value={year}>
-                  {year}년
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedMonth}
-              onChange={event => setSelectedMonth(Number(event.target.value))}
-              className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
-            >
-              {Array.from({ length: 12 }, (_, index) => index + 1).map(month => (
-                <option key={month} value={month}>
-                  {month}월
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {salary ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl bg-blue-50 p-3">
-                <div className="text-xs text-blue-600">일당</div>
-                <div className="mt-1 text-lg font-bold text-blue-700">{salary.daily_rate.toLocaleString()}원</div>
-              </div>
-              <div className="rounded-xl bg-green-50 p-3">
-                <div className="text-xs text-green-600">총 공수</div>
-                <div className="mt-1 text-lg font-bold text-green-700">{salary.man}공수</div>
-              </div>
-              <div className="col-span-2 rounded-xl bg-[var(--color-navy)] p-3 text-white">
-                <div className="text-xs text-white/70">실수령액</div>
-                <div className="mt-1 text-xl font-bold">{salary.net_pay.toLocaleString()}원</div>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-xl bg-[var(--color-bg)] px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]">
-              등록된 급여 데이터가 없습니다.
-            </div>
-          )}
-        </section>
-      )}
-
-      <section className="rounded-2xl bg-white p-4 shadow-sm">
-        <h2 className="font-semibold text-[var(--color-navy)]">출역 요약</h2>
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-[var(--color-navy)]">{displayLogs.length}</div>
-            <div className="text-xs text-[var(--color-text-secondary)]">작업일</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-[var(--color-accent)]">{totalMan}</div>
-            <div className="text-xs text-[var(--color-text-secondary)]">총 인원</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {displayLogs.filter(log => log.status === 'approved').length}
-            </div>
-            <div className="text-xs text-[var(--color-text-secondary)]">승인완료</div>
-          </div>
-        </div>
-      </section>
-
       {/* Search Input */}
       <div className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-white px-3 py-2">
         <Search className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
@@ -467,6 +393,33 @@ export default function OutputPage() {
               전체보기
             </button>
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl bg-white p-4 shadow-sm">
+        <div className="flex gap-3">
+          <select
+            value={selectedYear}
+            onChange={event => setSelectedYear(Number(event.target.value))}
+            className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
+          >
+            {[2024, 2025, 2026].map(year => (
+              <option key={year} value={year}>
+                {year}년
+              </option>
+            ))}
+          </select>
+          <select
+            value={selectedMonth}
+            onChange={event => setSelectedMonth(Number(event.target.value))}
+            className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
+          >
+            {Array.from({ length: 12 }, (_, index) => index + 1).map(month => (
+              <option key={month} value={month}>
+                {month}월
+              </option>
+            ))}
+          </select>
         </div>
       </section>
 
@@ -691,6 +644,56 @@ export default function OutputPage() {
           </>
         )}
       </section>
+
+      {!isPartnerUser && (
+        <section className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-semibold text-[var(--color-navy)]">급여 현황</h2>
+          </div>
+
+          {salary ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-blue-50 p-3">
+                <div className="text-xs text-blue-600">일당</div>
+                <div className="mt-1 text-lg font-bold text-blue-700">{salary.daily_rate.toLocaleString()}원</div>
+              </div>
+              <div className="rounded-xl bg-green-50 p-3">
+                <div className="text-xs text-green-600">총 공수</div>
+                <div className="mt-1 text-lg font-bold text-green-700">{salary.man}공수</div>
+              </div>
+              <div className="col-span-2 rounded-xl bg-[var(--color-navy)] p-3 text-white">
+                <div className="text-xs text-white/70">실수령액</div>
+                <div className="mt-1 text-xl font-bold">{salary.net_pay.toLocaleString()}원</div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl bg-[var(--color-bg)] px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]">
+              등록된 급여 데이터가 없습니다.
+            </div>
+          )}
+        </section>
+      )}
+
+      <section className="rounded-2xl bg-white p-4 shadow-sm">
+        <h2 className="font-semibold text-[var(--color-navy)]">출역 요약</h2>
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-[var(--color-navy)]">{displayLogs.length}</div>
+            <div className="text-xs text-[var(--color-text-secondary)]">작업일</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-[var(--color-accent)]">{totalMan}</div>
+            <div className="text-xs text-[var(--color-text-secondary)]">총 인원</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">
+              {displayLogs.filter(log => log.status === 'approved').length}
+            </div>
+            <div className="text-xs text-[var(--color-text-secondary)]">승인완료</div>
+          </div>
+        </div>
+      </section>
+
     </div>
   )
 }
