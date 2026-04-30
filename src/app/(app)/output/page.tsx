@@ -548,7 +548,7 @@ export default function OutputPage() {
             : normalizeTaskSummary(firstSelectedLog?.task_tags)
 
           return (
-            <section className="rounded-2xl bg-white p-4 shadow-sm">
+            <section className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-[var(--color-navy)]">선택 날짜</h3>
