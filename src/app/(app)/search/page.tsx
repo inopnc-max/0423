@@ -22,6 +22,9 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth-context'
 import { isPartner } from '@/lib/roles'
 import { ROUTES } from '@/lib/routes'
+import { FilePreviewGateway, usePreview } from '@/components/preview'
+import type { MenuSearchPreviewPayload } from '@/lib/menu-search'
+import type { PreviewContentType } from '@/components/preview/preview-types'
 
 interface SearchResult {
   entity_type: 'site' | 'worker' | 'document' | 'worklog' | 'issue' | 'drawing'
@@ -29,6 +32,8 @@ interface SearchResult {
   title: string
   subtitle: string
   href: string
+  previewPayload?: MenuSearchPreviewPayload
+  preview_payload?: MenuSearchPreviewPayload
 }
 
 const QUICK_LINKS = [
@@ -43,6 +48,7 @@ const QUICK_LINKS = [
 
 export default function SearchPage() {
   const { user } = useAuth()
+  const { openPreview } = usePreview()
   const supabase = createClient()
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
@@ -136,8 +142,69 @@ export default function SearchPage() {
     }
 
     if (event.key === 'Enter' && results[selectedIndex]) {
-      window.location.href = results[selectedIndex].href
+      event.preventDefault()
+      handleResultOpen(results[selectedIndex])
     }
+  }
+
+  function getPreviewPayload(result: SearchResult): MenuSearchPreviewPayload | undefined {
+    return result.previewPayload ?? result.preview_payload
+  }
+
+  function getPreviewContentType(kind: MenuSearchPreviewPayload['kind']): PreviewContentType {
+    return kind === 'photo' ? 'media' : 'file'
+  }
+
+  function getPreviewMimeType(payload: MenuSearchPreviewPayload): string | null {
+    return payload.kind === 'document' ? payload.mimeType ?? null : null
+  }
+
+  function openResultFallback(result: SearchResult) {
+    window.location.href = result.href
+  }
+
+  function handleResultOpen(result: SearchResult) {
+    const payload = getPreviewPayload(result)
+
+    if (!payload || !payload.url) {
+      openResultFallback(result)
+      return
+    }
+
+    const handleDownload = () => {
+      window.open(payload.url, '_blank', 'noopener,noreferrer')
+    }
+
+    openPreview({
+      title: payload.title || result.title,
+      subtitle: result.subtitle,
+      mode: 'fullscreen',
+      contentType: getPreviewContentType(payload.kind),
+      dockMode: 'readonly',
+      showBack: false,
+      onDownload: handleDownload,
+      children: (
+        <FilePreviewGateway
+          doc={{
+            id: payload.sourceId ?? result.entity_id,
+            site_id: payload.siteId ?? '',
+            category: payload.kind,
+            title: payload.title || result.title,
+            file_url: payload.url,
+            file_type: getPreviewMimeType(payload),
+            storage_bucket: null,
+            storage_path: payload.storagePath ?? null,
+          }}
+          onDownload={handleDownload}
+        />
+      ),
+    })
+  }
+
+  function handleResultClick(event: React.MouseEvent<HTMLAnchorElement>, result: SearchResult) {
+    if (!getPreviewPayload(result)) return
+    event.preventDefault()
+    handleResultOpen(result)
   }
 
   return (
@@ -192,6 +259,7 @@ export default function SearchPage() {
               <Link
                 key={`${result.entity_type}-${result.entity_id}`}
                 href={result.href}
+                onClick={event => handleResultClick(event, result)}
                 className={`flex items-center gap-3 border-b border-[var(--color-border)] px-4 py-3 transition last:border-b-0 ${
                   index === selectedIndex ? 'bg-[var(--color-accent-light)]' : 'hover:bg-slate-50'
                 }`}
