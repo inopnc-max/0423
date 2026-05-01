@@ -11,8 +11,7 @@
  * - title (text)
  * - file_url (text, full public URL) — kept for existing documents UI compatibility
  * - file_type (text, nullable)
- * - required (boolean)
- * - uploaded_by (text, nullable)
+ * - uploaded_by (uuid, required)
  * - created_at (timestamptz)
  * - storage_bucket (text) — Storage bucket name, for signed URL transition
  * - storage_path (text) — Storage file path, for signed URL transition
@@ -67,18 +66,23 @@ function buildReportsFileUrl(storagePath: string): string {
  * @throws Error if a locked or approved document already exists
  *
  * @example
- * const result = await savePhotoSheetPdfToStorageAndCreateDocument({ draft })
+ * const result = await savePhotoSheetPdfToStorageAndCreateDocument({ draft, uploadedBy: userId })
  * // => { bucket: 'reports', path: 'site-123/2024-01-15/photo-sheet/...', fileUrl: '...', documentId: 'uuid' }
  */
 export async function savePhotoSheetPdfToStorageAndCreateDocument(input: {
   draft: PhotoSheetDraft
+  uploadedBy: string
 }): Promise<{
   bucket: 'reports'
   path: string
   fileUrl: string
   documentId: string
 }> {
-  const { draft } = input
+  const { draft, uploadedBy } = input
+  if (!uploadedBy) {
+    throw new Error('Photo sheet document uploader is required')
+  }
+
   const sourceId = buildPhotoSheetSourceId({
     siteId: draft.siteId,
     workDate: draft.workDate,
@@ -95,7 +99,7 @@ export async function savePhotoSheetPdfToStorageAndCreateDocument(input: {
   // Step 2: Check for existing locked/approved document by source_id (before upload)
   const { data: existingBySource, error: sourceQueryError } = await supabase
     .from('documents')
-    .select('id, approval_status, locked_at')
+    .select('id, approval_status, locked_at, uploaded_by')
     .eq('source_type', 'photo_sheet')
     .eq('source_id', sourceId)
     .limit(1)
@@ -143,6 +147,38 @@ export async function savePhotoSheetPdfToStorageAndCreateDocument(input: {
     throw new Error('Failed to generate public URL for photo sheet PDF')
   }
 
+  const existingSourceDoc = existingBySource?.[0]
+  if (existingSourceDoc && existingSourceDoc.uploaded_by === uploadedBy) {
+    const { data: updatedDoc, error: updateError } = await supabase
+      .from('documents')
+      .update({
+        site_id: draft.siteId,
+        category: '사진대지',
+        title: draft.title,
+        file_url: fileUrl,
+        file_type: 'application/pdf',
+        uploaded_by: uploadedBy,
+        storage_bucket: bucket,
+        storage_path: path,
+        source_type: 'photo_sheet',
+        source_id: sourceId,
+      })
+      .eq('id', existingSourceDoc.id)
+      .select('id')
+      .single()
+
+    if (updateError) {
+      throw new Error(`Failed to update document record: ${updateError.message}`)
+    }
+
+    return {
+      bucket,
+      path,
+      fileUrl,
+      documentId: updatedDoc.id,
+    }
+  }
+
   // Step 6: Return existing document ID if found by legacy URL (after upload, not locked/approved)
   if (expectedFileUrl && fileUrl !== expectedFileUrl) {
     const { data: existingByUrl, error: urlQueryError } = await supabase
@@ -180,8 +216,7 @@ export async function savePhotoSheetPdfToStorageAndCreateDocument(input: {
       title: draft.title,
       file_url: fileUrl,
       file_type: 'application/pdf',
-      required: false,
-      uploaded_by: null,
+      uploaded_by: uploadedBy,
       storage_bucket: bucket,
       storage_path: path,
       source_type: 'photo_sheet',
