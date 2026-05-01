@@ -2,6 +2,45 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type ProductionEntryType = '생산' | '판매' | '자체사용' | '운송비'
 
+export interface ProductionEntrySaveInput {
+  workDate: string
+  productionType: ProductionEntryType
+  productName: string
+  quantity: number
+  unit?: string
+  amount?: number
+  siteId?: string | null
+  memo?: string | null
+}
+
+export async function saveProductionEntry(
+  supabase: SupabaseClient,
+  input: ProductionEntrySaveInput
+): Promise<{ id: string }> {
+  const payload = {
+    work_date: input.workDate,
+    production_type: input.productionType,
+    product_name: input.productName,
+    quantity: input.quantity,
+    unit: input.unit ?? '개',
+    amount: input.amount ?? 0,
+    site_id: input.siteId ?? null,
+    memo: input.memo ?? null,
+  }
+
+  const { data, error } = await supabase
+    .from('production_entries')
+    .insert(payload)
+    .select('id')
+    .single()
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return { id: data.id }
+}
+
 export interface ProductionDashboardSummary {
   totalEntries: number
   productionQuantity: number

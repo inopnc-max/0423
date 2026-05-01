@@ -4,9 +4,16 @@ import { ClipboardList } from 'lucide-react'
 import { ProductionEntryDraftForm } from '@/components/production/ProductionEntryDraftForm'
 import { ProductionRecentEntries } from '@/components/production/ProductionRecentEntries'
 import { useProductionDashboard } from '@/hooks/production/useProductionDashboard'
+import { createClient } from '@/lib/supabase/client'
+import { saveProductionEntry, type ProductionEntrySaveInput } from '@/lib/production/productionRecords'
 
 export default function ProductionInputPage() {
-  const { records, loading, error } = useProductionDashboard()
+  const { records, loading, error, reload, saveEntry } = useProductionDashboard()
+
+  const handleSave = async (input: ProductionEntrySaveInput) => {
+    await saveEntry(createClient(), input)
+    await reload()
+  }
 
   return (
     <div className="space-y-4 pb-6">
@@ -22,7 +29,7 @@ export default function ProductionInputPage() {
             </p>
             <h1 className="mt-1 text-2xl font-bold text-[var(--color-text)]">생산 입력</h1>
             <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
-              생산 실적과 판매, 자체사용, 운송비 입력 구조를 정리합니다. 저장 연결 전에도 기준 데이터와 최근 내역을 확인할 수 있습니다.
+              생산 실적과 판매, 자체사용, 운송비 입력을 저장합니다. 저장 후 최근 내역과 요약이 자동으로 갱신됩니다.
             </p>
           </div>
         </div>
@@ -38,6 +45,7 @@ export default function ProductionInputPage() {
         sites={records?.sites ?? []}
         products={records?.products ?? []}
         clients={records?.clients ?? []}
+        onSave={handleSave}
       />
 
       <ProductionRecentEntries entries={records?.recentEntries ?? []} loading={loading} />
