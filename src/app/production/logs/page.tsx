@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { History, ListFilter } from 'lucide-react'
 import { ProductionRecentEntries } from '@/components/production/ProductionRecentEntries'
+import { ProductionEntryEditModal } from '@/components/production/ProductionEntryEditModal'
 import { useProductionDashboard } from '@/hooks/production/useProductionDashboard'
-import type { ProductionEntryType } from '@/lib/production/productionRecords'
+import type { ProductionEntryType, ProductionRecentEntry, ProductionEntryUpdateInput } from '@/lib/production/productionRecords'
+import { updateProductionEntry, deleteProductionEntry } from '@/lib/production/productionRecords'
+import { createClient } from '@/lib/supabase/client'
 
 const fieldClassName =
   'mt-2 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-primary)]'
@@ -30,9 +33,13 @@ function getDefaultDateRange(): { startDate: string; endDate: string } {
 }
 
 export default function ProductionLogsPage() {
-  const { records, loading, error } = useProductionDashboard()
+  const { records, loading, error, reload } = useProductionDashboard()
   const { startDate, endDate, setStartDate, setEndDate } = useStateFilterDates()
   const [selectedType, setSelectedType] = useState<ProductionEntryType | ''>('')
+  const [editingEntry, setEditingEntry] = useState<ProductionRecentEntry | null>(null)
+  const [deletingEntry, setDeletingEntry] = useState<ProductionRecentEntry | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const filteredEntries = useMemo(() => {
     if (!records?.recentEntries) return []
@@ -48,6 +55,39 @@ export default function ProductionLogsPage() {
       return withinDateRange && matchesType
     })
   }, [records?.recentEntries, startDate, endDate, selectedType])
+
+  const handleEdit = useCallback((entry: ProductionRecentEntry) => {
+    setEditingEntry(entry)
+    setActionError(null)
+  }, [])
+
+  const handleDelete = useCallback((entry: ProductionRecentEntry) => {
+    setDeletingEntry(entry)
+    setConfirmDeleteId(entry.id)
+    setActionError(null)
+  }, [])
+
+  const handleSave = useCallback(async (_id: string, input: ProductionEntryUpdateInput) => {
+    try {
+      await updateProductionEntry(createClient(), _id, input)
+      await reload()
+    } catch (err) {
+      throw err
+    }
+  }, [reload])
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deletingEntry) return
+    try {
+      await deleteProductionEntry(createClient(), deletingEntry.id)
+      setDeletingEntry(null)
+      setConfirmDeleteId(null)
+      await reload()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : '삭제에 실패했습니다.')
+      setConfirmDeleteId(null)
+    }
+  }, [deletingEntry, reload])
 
   return (
     <div className="space-y-4 pb-6">
@@ -123,7 +163,62 @@ export default function ProductionLogsPage() {
         </div>
       </section>
 
-      <ProductionRecentEntries entries={filteredEntries} loading={loading} />
+      {actionError && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {actionError}
+        </div>
+      )}
+
+      <ProductionRecentEntries
+        entries={filteredEntries}
+        loading={loading}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
+
+      {editingEntry && records && (
+        <ProductionEntryEditModal
+          entry={editingEntry}
+          sites={records.sites}
+          products={records.products}
+          onSave={handleSave}
+          onDelete={async (id) => {
+            setEditingEntry(null)
+            await deleteProductionEntry(createClient(), id)
+            await reload()
+          }}
+          onClose={() => setEditingEntry(null)}
+        />
+      )}
+
+      {deletingEntry && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={e => { if (e.target === e.currentTarget) { setDeletingEntry(null); setConfirmDeleteId(null) } }}
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-xl">
+            <h3 className="text-base font-semibold text-[var(--color-text)]">삭제 확인</h3>
+            <p className="mt-3 text-sm text-[var(--color-text-secondary)]">
+              다음 내역을 삭제하시겠습니까?<br />
+              <span className="font-semibold text-[var(--color-text)]">{deletingEntry.productName}</span> ({deletingEntry.workDate})
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                onClick={() => { setDeletingEntry(null); setConfirmDeleteId(null) }}
+                className="rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg)]"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

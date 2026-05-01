@@ -13,6 +13,61 @@ export interface ProductionEntrySaveInput {
   memo?: string | null
 }
 
+export interface ProductionEntryUpdateInput {
+  workDate: string
+  productionType: ProductionEntryType
+  productName: string
+  quantity: number
+  unit?: string
+  amount?: number
+  siteId?: string | null
+  memo?: string | null
+}
+
+export async function updateProductionEntry(
+  supabase: SupabaseClient,
+  id: string,
+  input: ProductionEntryUpdateInput
+): Promise<{ id: string }> {
+  const payload = {
+    work_date: input.workDate,
+    production_type: input.productionType,
+    product_name: input.productName,
+    quantity: input.quantity,
+    unit: input.unit ?? '개',
+    amount: input.amount ?? 0,
+    site_id: input.siteId ?? null,
+    memo: input.memo ?? null,
+  }
+
+  const { data, error } = await supabase
+    .from('production_entries')
+    .update(payload)
+    .eq('id', id)
+    .select('id')
+    .single()
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return { id: data.id }
+}
+
+export async function deleteProductionEntry(
+  supabase: SupabaseClient,
+  id: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('production_entries')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
+
 export async function saveProductionEntry(
   supabase: SupabaseClient,
   input: ProductionEntrySaveInput
