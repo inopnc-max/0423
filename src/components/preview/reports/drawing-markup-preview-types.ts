@@ -3,50 +3,21 @@
  *
  * These types define the input data structure for DrawingMarkupMultiPagePreview.
  * They are NOT the database schema - only renderer input types.
+ *
+ * Primitive mark types (DrawingMarkupMark, DrawingMarkupPoint, etc.)
+ * are shared via @/lib/types/drawing-markup to avoid component -> lib imports.
  */
 
-/**
- * A point with normalized coordinates (0 to 1).
- */
-export type DrawingMarkupPoint = {
-  x: number
-  y: number
-}
+// Re-export primitives from shared location
+export type {
+  DrawingMarkupPoint,
+  DrawingMarkupBrushStroke,
+  DrawingMarkupPolygonArea,
+  DrawingMarkupMark,
+} from '@/lib/types/drawing-markup'
 
-/**
- * A brush stroke mark consisting of connected points.
- */
-export type DrawingMarkupBrushStroke = {
-  type: 'brush'
-  /** Array of points forming the stroke path */
-  points: DrawingMarkupPoint[]
-  /** Stroke width in normalized units (default: 0.01) */
-  width?: number
-  /** Stroke color as CSS color string (default: '#dc2626') */
-  color?: string
-}
-
-/**
- * A polygon area mark with fill and stroke.
- */
-export type DrawingMarkupPolygonArea = {
-  type: 'polygon-area'
-  /** Array of points forming the polygon vertices */
-  points: DrawingMarkupPoint[]
-  /** Stroke width in normalized units (default: 0.005) */
-  lineWidth?: number
-  /** Stroke color as CSS color string (default: '#dc2626') */
-  strokeColor?: string
-  /** Fill color as CSS color string (default: 'rgba(220, 38, 38, 0.2)') */
-  fillColor?: string
-}
-
-/**
- * Union type for all supported mark types.
- */
-export type DrawingMarkupMark =
-  | DrawingMarkupBrushStroke
-  | DrawingMarkupPolygonArea
+// Import for local use in page/document types
+import type { DrawingMarkupMark } from '@/lib/types/drawing-markup'
 
 /**
  * A single page in a drawing markup document.

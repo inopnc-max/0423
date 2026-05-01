@@ -2,7 +2,7 @@
  * Worklog media attachment types and helpers.
  */
 
-import type { DrawingMarkupMark } from '@/components/preview/reports/drawing-markup-preview-types'
+import type { DrawingMarkupMark } from '@/lib/types/drawing-markup'
 
 export type WorklogMediaKind = 'photo' | 'drawing' | 'other'
 
