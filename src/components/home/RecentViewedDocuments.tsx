@@ -5,6 +5,7 @@ import { FileText, ImageIcon, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { createSignedPreviewUrl } from '@/lib/storage/storage-helper'
 import { usePreview } from '@/components/preview'
+import { isPartnerVisibleDocument as isPartnerSafeDocument } from '@/lib/documents/partnerDocuments'
 
 interface RecentDocument {
   id: string
@@ -15,7 +16,9 @@ interface RecentDocument {
   file_type: string | null
   storage_bucket: string | null
   storage_path: string | null
+  source_type: string | null
   approval_status: string | null
+  locked_at: string | null
   created_at: string
   viewed_at?: string | null
   sites?: { name?: string | null } | null
@@ -101,7 +104,7 @@ export function RecentViewedDocuments({
       if (!partnerMode) {
         const fromViews = await supabase
           .from('document_view_events')
-          .select('viewed_at, documents(id, site_id, title, category, file_url, file_type, storage_bucket, storage_path, approval_status, created_at, sites(name))')
+          .select('viewed_at, documents(id, site_id, title, category, file_url, file_type, storage_bucket, storage_path, source_type, approval_status, locked_at, created_at, sites(name))')
           .eq('user_id', userId)
           .order('viewed_at', { ascending: false })
           .limit(5)
@@ -118,7 +121,7 @@ export function RecentViewedDocuments({
 
       let fallbackQuery = supabase
         .from('documents')
-        .select('id, site_id, title, category, file_url, file_type, storage_bucket, storage_path, approval_status, created_at, sites(name)')
+        .select('id, site_id, title, category, file_url, file_type, storage_bucket, storage_path, source_type, approval_status, locked_at, created_at, sites(name)')
         .order('created_at', { ascending: false })
         .limit(5)
 
@@ -127,11 +130,33 @@ export function RecentViewedDocuments({
       }
 
       const fallback = await fallbackQuery
+      let fallbackData = fallback.data as RecentDocument[] | null
+
+      if (partnerMode) {
+        let lockedQuery = supabase
+          .from('documents')
+          .select('id, site_id, title, category, file_url, file_type, storage_bucket, storage_path, source_type, approval_status, locked_at, created_at, sites(name)')
+          .not('locked_at', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        if (siteId) {
+          lockedQuery = lockedQuery.eq('site_id', siteId)
+        }
+
+        const locked = await lockedQuery
+        if (!locked.error && locked.data?.length) {
+          const byId = new Map<string, RecentDocument>()
+          for (const row of fallbackData ?? []) byId.set(row.id, row)
+          for (const row of locked.data as RecentDocument[]) byId.set(row.id, row)
+          fallbackData = Array.from(byId.values())
+        }
+      }
 
       if (!cancelled) {
-        const rows = ((fallback.data as RecentDocument[] | null) ?? [])
+        const rows = (fallbackData ?? [])
           .filter(doc => !siteId || doc.site_id === siteId)
-          .filter(doc => !partnerMode || isPartnerVisibleDocument(doc))
+          .filter(doc => !partnerMode || isPartnerSafeDocument(doc))
         setDocuments(rows)
         setLoading(false)
       }

@@ -5,6 +5,7 @@ import { useSelectedSite } from '@/contexts/selected-site-context'
 import { useAuth } from '@/contexts/auth-context'
 import { createClient } from '@/lib/supabase/client'
 import { isPartner } from '@/lib/roles'
+import { isPartnerVisibleDocument } from '@/lib/documents/partnerDocuments'
 import type {
   MenuSearchResult,
   MenuSearchOptions,
@@ -236,6 +237,31 @@ export function useMenuSearch(options: MenuSearchOptions): UseMenuSearchReturn {
         }
 
         const { data, error: dbError } = await dbQuery
+        let mergedData = data
+
+        if (!dbError && isPartner(user?.role || '')) {
+          let lockedQuery = supabase
+            .from('documents')
+            .select('id, site_id, category, title, file_url, file_type, created_at, storage_bucket, storage_path, source_type, source_id, approval_status, locked_at')
+            .eq('site_id', selectedSiteId)
+            .not('locked_at', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(50)
+
+          if (q.length > 0) {
+            lockedQuery = lockedQuery.or(
+              `title.ilike.%${q}%,category.ilike.%${q}%,file_type.ilike.%${q}%`
+            )
+          }
+
+          const locked = await lockedQuery
+          if (!locked.error && locked.data?.length) {
+            const byId = new Map<string, DocumentRow>()
+            for (const row of ((data as DocumentRow[] | null) ?? [])) byId.set(row.id, row)
+            for (const row of (locked.data as DocumentRow[])) byId.set(row.id, row)
+            mergedData = Array.from(byId.values())
+          }
+        }
 
         if (cancelled) return
 
@@ -243,7 +269,8 @@ export function useMenuSearch(options: MenuSearchOptions): UseMenuSearchReturn {
           setError('문서를 불러오지 못했습니다.')
           setDocumentResults([])
         } else {
-          setDocumentResults((data as DocumentRow[]) ?? [])
+          const rows = (mergedData as DocumentRow[]) ?? []
+          setDocumentResults(isPartner(user?.role || '') ? rows.filter(isPartnerVisibleDocument) : rows)
         }
       } catch {
         if (!cancelled) {

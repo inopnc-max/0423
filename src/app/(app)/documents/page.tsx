@@ -7,6 +7,7 @@ import { usePreview } from '@/components/preview'
 import { RequiredDocumentProgressCard } from '@/components/documents/RequiredDocumentProgressCard'
 import { RequiredDocumentsPanel } from '@/components/documents/RequiredDocumentsPanel'
 import { RequiredDocumentUploadSheet } from '@/components/documents/RequiredDocumentUploadSheet'
+import { PartnerDocumentOverview } from '@/components/partner/PartnerDocumentOverview'
 import { SiteCombobox } from '@/components/site/SiteCombobox'
 import { useRequiredDocuments } from '@/hooks/documents/useRequiredDocuments'
 import type { RequiredDocumentType } from '@/lib/documents/requiredDocuments'
@@ -15,6 +16,13 @@ import { createClient } from '@/lib/supabase/client'
 import { createSignedPreviewUrl } from '@/lib/storage/storage-helper'
 import { useAuth } from '@/contexts/auth-context'
 import { isPartner } from '@/lib/roles'
+import {
+  filterPartnerDocumentsByView,
+  getPartnerDocumentKindLabel,
+  getPartnerDocumentStatusLabel,
+  isPartnerVisibleDocument as isPartnerSafeDocument,
+  type PartnerDocumentView,
+} from '@/lib/documents/partnerDocuments'
 
 const CATEGORIES = ['전체', '일지보고서', '사진대지', '도면마킹', '안전서류', '견적서', '시공계획서', '장비계획서', '기타서류', '확인서']
 const APPROVAL_FILTERS = ['전체', '승인완료', '승인대기', '반려']
@@ -210,6 +218,7 @@ export default function DocumentsPage() {
   } = useRequiredDocuments(isPartner(user?.role || '') ? null : user?.userId)
   const [category, setCategory] = useState('전체')
   const [approvalFilter, setApprovalFilter] = useState('전체')
+  const [partnerView, setPartnerView] = useState<PartnerDocumentView>('all')
   const isPartnerUser = user ? isPartner(user.role) : false
 
   const {
@@ -226,7 +235,7 @@ export default function DocumentsPage() {
   const displayed = (() => {
     let docs = filteredDocuments
     if (isPartnerUser) {
-      docs = docs.filter(isPartnerVisibleDocument)
+      docs = filterPartnerDocumentsByView(docs.filter(isPartnerSafeDocument), partnerView)
     }
 
     if (category !== '전체') {
@@ -340,10 +349,18 @@ export default function DocumentsPage() {
         </>
       )}
 
-      {isPartnerUser && (
+      {false && isPartnerUser && (
         <div className="mb-4 rounded-2xl bg-white p-4 text-sm text-[var(--color-text-secondary)] shadow-sm">
           파트너 계정은 승인완료 문서만 열람할 수 있습니다.
         </div>
+      )}
+
+      {isPartnerUser && (
+        <PartnerDocumentOverview
+          documents={filteredDocuments.filter(isPartnerSafeDocument)}
+          activeView={partnerView}
+          onViewChange={setPartnerView}
+        />
       )}
 
       {/* Search Input */}
@@ -458,6 +475,16 @@ export default function DocumentsPage() {
                           : 'bg-yellow-100 text-yellow-700'
                       }`}>
                         {getApprovalStatusLabel(doc)}
+                      </span>
+                    )}
+                    {isPartnerUser && (
+                      <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded font-medium">
+                        {getPartnerDocumentKindLabel(doc)}
+                      </span>
+                    )}
+                    {isPartnerUser && (
+                      <span className="px-2 py-0.5 bg-green-50 text-green-700 text-xs rounded font-medium">
+                        {getPartnerDocumentStatusLabel(doc)}
                       </span>
                     )}
                     <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">

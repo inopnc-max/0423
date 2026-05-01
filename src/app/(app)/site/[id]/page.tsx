@@ -10,6 +10,7 @@ import { isPartner } from '@/lib/roles'
 import { ROUTES } from '@/lib/routes'
 import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
 import { FilePreviewGateway, usePreview } from '@/components/preview'
+import { isPartnerVisibleDocument } from '@/lib/documents/partnerDocuments'
 
 interface SiteDetail {
   id: string
@@ -83,7 +84,7 @@ export default function SiteDetailPage() {
             .neq('category', '안전서류')
         }
 
-        const [siteResponse, photosResponse, drawingsResponse, issuesResponse, documentsResponse] =
+        const [siteResponse, photosResponse, drawingsResponse, issuesResponse, documentsResponse, lockedDocumentsResponse] =
           await Promise.all([
             supabase.from('sites').select('*').eq('id', params.id).single(),
             partnerUser
@@ -113,6 +114,15 @@ export default function SiteDetailPage() {
             documentsQuery
               .order('created_at', { ascending: false })
               .limit(5),
+            partnerUser
+              ? supabase
+                  .from('documents')
+                  .select('id, title, category, file_url, approval_status, locked_at, source_type')
+                  .eq('site_id', params.id)
+                  .not('locked_at', 'is', null)
+                  .order('created_at', { ascending: false })
+                  .limit(5)
+              : Promise.resolve({ data: [] }),
           ])
 
         if (siteResponse.data) setSite(siteResponse.data)
@@ -120,9 +130,13 @@ export default function SiteDetailPage() {
         if (drawingsResponse.data) setDrawings(partnerUser ? [] : drawingsResponse.data)
         if (issuesResponse.data) setIssues(partnerUser ? [] : issuesResponse.data)
         if (documentsResponse.data) {
-          const rows = documentsResponse.data as SiteDocument[]
+          const byId = new Map<string, SiteDocument>()
+          for (const row of documentsResponse.data as SiteDocument[]) byId.set(row.id, row)
+          for (const row of ((lockedDocumentsResponse.data as SiteDocument[] | undefined) ?? [])) byId.set(row.id, row)
+          const rows = Array.from(byId.values())
           setDocuments(rows.filter(document => {
             if (!isPartner(user?.role || '')) return true
+            if (!isPartnerVisibleDocument(document)) return false
             if (document.category === '안전서류' || document.source_type === 'worker_required_document') return false
             return document.approval_status === 'approved' || Boolean(document.locked_at)
           }))

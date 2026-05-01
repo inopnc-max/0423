@@ -13,6 +13,7 @@ import { ROUTES } from '@/lib/routes'
 import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
 import { RecentViewedDocuments } from '@/components/home/RecentViewedDocuments'
 import { SiteCombobox } from '@/components/site/SiteCombobox'
+import { PartnerRecentReports } from '@/components/partner/PartnerRecentReports'
 import type { SiteSummary } from '@/contexts/selected-site-context'
 
 interface PartnerReadonlyPortalProps {
@@ -160,6 +161,8 @@ export function PartnerReadonlyPortal({
         siteId={selectedSiteId}
         partnerMode
       />
+
+      <PartnerRecentReports siteId={selectedSiteId} />
     </div>
   )
 }
