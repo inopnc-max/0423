@@ -5,6 +5,10 @@ export { ReportPreviewWorkspace } from './ReportPreviewWorkspace'
 export { type ReportPreviewKind, type ReportPreviewStatus, type ReportPreviewBaseProps } from './reports/report-preview-types'
 export { PhotoSheetA4Preview } from './reports/PhotoSheetA4Preview'
 export { DrawingMarkupMultiPagePreview } from './reports/DrawingMarkupMultiPagePreview'
+export { WorklogReportPreview } from './reports/WorklogReportPreview'
+export { SalaryStatementPreview } from './reports/SalaryStatementPreview'
+export { ConfirmationFormPreview } from './reports/ConfirmationFormPreview'
+export { IssueReportPreview } from './reports/IssueReportPreview'
 export { PreviewProvider, usePreview } from './PreviewProvider'
 export { PreviewHost } from './PreviewHost'
 export { FilePreviewGateway } from './FilePreviewGateway'
@@ -20,3 +24,10 @@ export type {
   DrawingMarkupMark,
   DrawingMarkupPoint,
 } from './reports/drawing-markup-preview-types'
+export type {
+  WorklogReportDocument,
+  SalaryStatementDocument,
+  ConfirmationFormDocument,
+  IssueReportDocument,
+  ReportDocument,
+} from './reports/report-document-types'

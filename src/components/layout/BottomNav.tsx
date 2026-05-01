@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
 import { getBottomNavItems, isNavigationRouteActive, type NavigationItem } from '@/lib/routes'
+import { useBottomNavNotices } from '@/hooks/useBottomNavNotices'
 
 interface BottomNavProps {
   items?: NavigationItem[]
@@ -13,6 +14,7 @@ interface BottomNavProps {
 export default function BottomNav({ items, pathname }: BottomNavProps) {
   const currentPathname = pathname ?? usePathname()
   const { user } = useAuth()
+  const { totalUnread, loading: noticesLoading } = useBottomNavNotices()
 
   const navItems = items ?? getBottomNavItems(user?.role ?? 'worker')
 
@@ -26,6 +28,8 @@ export default function BottomNav({ items, pathname }: BottomNavProps) {
     >
       {navItems.map(({ href, label, icon: Icon }) => {
         const active = isNavigationRouteActive(currentPathname, href)
+        const isNotifications = href === '/notifications'
+        const showBadge = isNotifications && totalUnread > 0 && !noticesLoading
 
         return (
           <Link
@@ -36,8 +40,16 @@ export default function BottomNav({ items, pathname }: BottomNavProps) {
             title={label}
             className={`ui-bottom-nav__item${active ? ' is-active' : ''}`}
           >
-            <span className="ui-nav-icon">
+            <span className="ui-nav-icon relative">
               <Icon />
+              {showBadge && (
+                <span
+                  className="ui-bottom-nav__notice-dot absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white"
+                  aria-hidden="true"
+                >
+                  {totalUnread > 99 ? '99+' : totalUnread}
+                </span>
+              )}
             </span>
             <span className="ui-bottom-nav__item-label">{label}</span>
           </Link>
