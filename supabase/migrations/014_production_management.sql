@@ -38,6 +38,25 @@ CREATE TABLE IF NOT EXISTS product_units (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ── production_clients 테이블 ──────────────────────────────────
+-- 거래처 마스터
+
+CREATE TABLE IF NOT EXISTS production_clients (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code           TEXT UNIQUE,
+  name           TEXT NOT NULL,
+  contact_name   TEXT,
+  contact_phone  TEXT,
+  address        TEXT,
+  notes          TEXT,
+  active        BOOLEAN NOT NULL DEFAULT true,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_production_clients_active
+  ON production_clients (active, name);
+
 -- ── production_batches 테이블 ────────────────────────────────────
 -- 생산 배치 (기존 production_entries의 생산 관련 데이터 이동용)
 
@@ -173,25 +192,6 @@ CREATE TABLE IF NOT EXISTS production_inventory_snapshots (
 CREATE INDEX IF NOT EXISTS idx_production_inventory_snapshots_month
   ON production_inventory_snapshots (snapshot_month DESC);
 
--- ── production_clients 테이블 ──────────────────────────────────
--- 거래처 마스터
-
-CREATE TABLE IF NOT EXISTS production_clients (
-  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  code           TEXT UNIQUE,
-  name           TEXT NOT NULL,
-  contact_name   TEXT,
-  contact_phone  TEXT,
-  address        TEXT,
-  notes          TEXT,
-  active        BOOLEAN NOT NULL DEFAULT true,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_production_clients_active
-  ON production_clients (active, name);
-
 -- ── production_settings 테이블 ──────────────────────────────────
 -- 생산설정 (안전재고, 기본 단가 등)
 
@@ -206,11 +206,11 @@ CREATE TABLE IF NOT EXISTS production_settings (
 
 COMMENT ON TABLE products                      IS '제품 마스터 - 제품코드, 제품명, 단위, 단가, 안전재고';
 COMMENT ON TABLE product_units                IS '제품 단위 마스터';
+COMMENT ON TABLE production_clients           IS '거래처 마스터';
 COMMENT ON TABLE production_batches           IS '생산 배치 - 생산량 기록';
 COMMENT ON TABLE production_sales             IS '매출 - 판매 내역';
 COMMENT ON TABLE production_self_use          IS '자체사용 - 사내 사용 내역';
 COMMENT ON TABLE production_transport_costs   IS '운송비 - 운송비 내역';
 COMMENT ON TABLE production_stock_movements  IS '재고 이동 원장 - 모든 입출고 기록 (재고 계산의 기준)';
 COMMENT ON TABLE production_inventory_snapshots IS '재고 스냅샷 - 월말 재고 기록';
-COMMENT ON TABLE production_clients           IS '거래처 마스터';
 COMMENT ON TABLE production_settings          IS '생산설정 - 안전재고, 기본 단가 등 키-값 설정';
