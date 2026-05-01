@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { ImageIcon } from 'lucide-react'
+import { ImageIcon, Ruler, Calculator, FileText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { createSignedPreviewUrl } from '@/lib/storage/storage-helper'
 import { ReportPreviewWorkspace } from '../ReportPreviewWorkspace'
@@ -11,12 +11,17 @@ import type {
   DrawingMarkupMark,
   DrawingMarkupPoint,
 } from './drawing-markup-preview-types'
+import {
+  calculateAllPolygonAreas,
+  calculatePolygonArea,
+} from './drawing-markup-preview-types'
 
 interface DrawingMarkupMultiPagePreviewProps {
   document: DrawingMarkupPreviewDocument
 }
 
 const VIEW_BOX_SIZE = 1000
+const LABEL_FONT_SIZE = 24
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value))
@@ -75,8 +80,25 @@ function normalizeMarks(marks?: DrawingMarkupMark[]): DrawingMarkupMark[] {
   })
 }
 
+function calculateCentroid(points: DrawingMarkupPoint[]): { x: number; y: number } {
+  const validPoints = points.filter(isValidPoint)
+  if (validPoints.length === 0) return { x: 0.5, y: 0.5 }
+
+  let cx = 0
+  let cy = 0
+  for (const p of validPoints) {
+    cx += p.x
+    cy += p.y
+  }
+  return {
+    x: cx / validPoints.length,
+    y: cy / validPoints.length,
+  }
+}
+
 function MarkupOverlay({ marks }: { marks: DrawingMarkupMark[] }) {
   const normalizedMarks = normalizeMarks(marks)
+  const polygonAreas = calculateAllPolygonAreas(normalizedMarks)
 
   if (normalizedMarks.length === 0) return null
 
@@ -111,15 +133,33 @@ function MarkupOverlay({ marks }: { marks: DrawingMarkupMark[] }) {
           if (!points) return null
 
           const lineWidth = Math.max(1, Math.round((mark.lineWidth ?? 0.005) * VIEW_BOX_SIZE))
+          const areaCalc = polygonAreas.get(index)
 
           return (
-            <polygon
-              key={`polygon-${index}`}
-              points={points}
-              fill={mark.fillColor ?? 'rgba(220, 38, 38, 0.2)'}
-              stroke={mark.strokeColor ?? '#dc2626'}
-              strokeWidth={lineWidth}
-            />
+            <g key={`polygon-${index}`}>
+              <polygon
+                points={points}
+                fill={mark.fillColor ?? 'rgba(220, 38, 38, 0.2)'}
+                stroke={mark.strokeColor ?? '#dc2626'}
+                strokeWidth={lineWidth}
+              />
+              {areaCalc && areaCalc.isValid && (
+                <text
+                  x={clamp01(calculateCentroid(mark.points).x) * VIEW_BOX_SIZE}
+                  y={clamp01(calculateCentroid(mark.points).y) * VIEW_BOX_SIZE}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={LABEL_FONT_SIZE}
+                  fontWeight="bold"
+                  fill={mark.strokeColor ?? '#dc2626'}
+                  stroke="white"
+                  strokeWidth={3}
+                  paintOrder="stroke"
+                >
+                  {areaCalc.displayLabel}
+                </text>
+              )}
+            </g>
           )
         }
 
@@ -146,6 +186,15 @@ function PageCard({
 }) {
   const imageUrl = getImageUrl(page)
   const hasMarks = (page.marks?.length ?? 0) > 0
+  const polygonMarks = page.marks?.filter(m => m.type === 'polygon-area') ?? []
+  const polygonCount = polygonMarks.length
+
+  const areaSummary = hasMarks && polygonCount > 0 ? (
+    <span className="flex items-center gap-1 rounded bg-red-50 px-1.5 py-0.5 text-[9px] text-red-600">
+      <Ruler className="h-3 w-3" />
+      면적 {polygonCount}건
+    </span>
+  ) : null
 
   return (
     <div className="flex flex-col gap-2">
@@ -195,6 +244,7 @@ function PageCard({
 
         <div className="flex h-6 items-center justify-between border-t border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 text-[10px] text-[var(--color-text-tertiary)]">
           <span>{page.workDate ?? ''}</span>
+          {areaSummary}
           {!hasMarks && imageUrl && (
             <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[9px] text-slate-500">마킹 없음</span>
           )}
