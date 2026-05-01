@@ -211,7 +211,7 @@ export async function getProductionDashboardRecords(
 
   return {
     summary,
-    recentEntries: entries.slice(0, 8).map(mapRecentEntry),
+    recentEntries: entries.map(mapRecentEntry),
     sites,
     products,
     clients,
