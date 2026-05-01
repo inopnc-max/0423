@@ -23,7 +23,7 @@ interface FormValues {
   workDate: string
   entryType: ProductionEntryType
   siteId: string
-  productName: string
+  productId: string
   quantity: string
   amount: string
   memo: string
@@ -43,7 +43,7 @@ export function ProductionEntryDraftForm({
     workDate: today,
     entryType: '생산',
     siteId: '',
-    productName: '',
+    productId: '',
     quantity: '',
     amount: '',
     memo: '',
@@ -62,7 +62,7 @@ export function ProductionEntryDraftForm({
   const validate = useCallback((): string | null => {
     if (!values.workDate) return '작업일을 선택해주세요.'
     if (!values.entryType) return '구분을 선택해주세요.'
-    if (!values.productName) return '품목을 입력해주세요.'
+    if (values.entryType !== '운송비' && !values.productId) return '품목을 선택해주세요.'
     const qty = Number(values.quantity)
     if (!values.quantity || isNaN(qty) || qty <= 0) return '수량은 0보다 큰 숫자로 입력해주세요.'
     return null
@@ -81,10 +81,13 @@ export function ProductionEntryDraftForm({
     setSaving(true)
 
     try {
+      const selectedProduct = products.find(p => p.id === values.productId)
+
       const input: ProductionEntrySaveInput = {
         workDate: values.workDate,
         productionType: values.entryType,
-        productName: values.productName,
+        productId: selectedProduct?.id ?? null,
+        productName: selectedProduct?.name ?? '',
         quantity: Number(values.quantity),
         unit: '개',
         amount: values.amount ? Number(values.amount) : undefined,
@@ -100,7 +103,7 @@ export function ProductionEntryDraftForm({
         workDate: today,
         entryType: '생산',
         siteId: '',
-        productName: '',
+        productId: '',
         quantity: '',
         amount: '',
         memo: '',
@@ -139,22 +142,22 @@ export function ProductionEntryDraftForm({
             />
           </label>
 
-          <label className={labelClassName}>
-            구분
-            <select
-              className={fieldClassName}
-              value={values.entryType}
-              onChange={e => {
-                handleChange('entryType', e.target.value as ProductionEntryType)
-                handleChange('productName', '')
-              }}
-            >
-              <option value="생산">생산</option>
-              <option value="판매">판매</option>
-              <option value="자체사용">자체사용</option>
-              <option value="운송비">운송비</option>
-            </select>
-          </label>
+              <label className={labelClassName}>
+                구분
+                <select
+                  className={fieldClassName}
+                  value={values.entryType}
+                  onChange={e => {
+                    handleChange('entryType', e.target.value as ProductionEntryType)
+                    handleChange('productId', '')
+                  }}
+                >
+                  <option value="생산">생산</option>
+                  <option value="판매">판매</option>
+                  <option value="자체사용">자체사용</option>
+                  <option value="운송비">운송비</option>
+                </select>
+              </label>
 
           <label className={labelClassName}>
             현장
@@ -170,29 +173,29 @@ export function ProductionEntryDraftForm({
             </select>
           </label>
 
-          <label className={labelClassName}>
-            {values.entryType === '판매' ? '거래처' : '품목'}
-            {values.entryType === '판매' ? (
-              <input
-                type="text"
-                className={fieldClassName}
-                placeholder="거래처명을 입력해주세요"
-                value={values.productName}
-                onChange={e => handleChange('productName', e.target.value)}
-              />
-            ) : (
-              <select
-                className={fieldClassName}
-                value={values.productName}
-                onChange={e => handleChange('productName', e.target.value)}
-              >
-                <option value="">품목 선택</option>
-                {selectedProducts.map(p => (
-                  <option key={p.id} value={p.name}>{p.name}</option>
-                ))}
-              </select>
-            )}
-          </label>
+              <label className={labelClassName}>
+                {values.entryType === '판매' ? '거래처' : '품목'}
+                {values.entryType === '판매' ? (
+                  <input
+                    type="text"
+                    className={fieldClassName}
+                    placeholder="거래처명을 입력해주세요"
+                    value={values.productId}
+                    onChange={e => handleChange('productId', e.target.value)}
+                  />
+                ) : (
+                  <select
+                    className={fieldClassName}
+                    value={values.productId}
+                    onChange={e => handleChange('productId', e.target.value)}
+                  >
+                    <option value="">품목 선택</option>
+                    {selectedProducts.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                )}
+              </label>
 
           <label className={labelClassName}>
             수량
