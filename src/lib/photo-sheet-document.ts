@@ -162,6 +162,11 @@ export async function savePhotoSheetPdfToStorageAndCreateDocument(input: {
         storage_path: path,
         source_type: 'photo_sheet',
         source_id: sourceId,
+        approval_status: 'pending',
+        approved_at: null,
+        approved_by: null,
+        locked_at: null,
+        locked_by: null,
       })
       .eq('id', existingSourceDoc.id)
       .select('id')
@@ -221,6 +226,11 @@ export async function savePhotoSheetPdfToStorageAndCreateDocument(input: {
       storage_path: path,
       source_type: 'photo_sheet',
       source_id: sourceId,
+      approval_status: 'pending',
+      approved_at: null,
+      approved_by: null,
+      locked_at: null,
+      locked_by: null,
     })
     .select('id')
     .single()

@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useAuth } from '@/contexts/auth-context'
 import { createClient } from '@/lib/supabase/client'
+import { approvePhotoSheetDocumentAndLock } from '@/lib/photo-sheet-approval'
 import { createSignedPreviewUrl } from '@/lib/storage/storage-helper'
-import { FileText, Download, Trash2, Search, ExternalLink } from 'lucide-react'
+import { CheckCircle, Download, ExternalLink, FileText, Search, Trash2 } from 'lucide-react'
 
 const CATEGORIES = [
   '전체', '일지보고서', '사진대지', '도면마킹', '안전서류', '견적서',
@@ -67,6 +69,7 @@ function hasResolvableDocumentUrl(doc: Document): boolean {
 }
 
 export default function AdminDocumentsPage() {
+  const { user } = useAuth()
   const [docs, setDocs] = useState<Document[]>([])
   const [sites, setSites] = useState<Site[]>([])
   const [loading, setLoading] = useState(true)
@@ -145,7 +148,7 @@ export default function AdminDocumentsPage() {
     setLoading(true)
     const [{ data, error }, { data: sitesData }] = await Promise.all([
       supabase.from('documents').select(`
-        id, site_id, category, title, file_url, file_type, required, uploaded_by, created_at,
+        id, site_id, category, title, file_url, file_type, uploaded_by, created_at,
         storage_bucket, storage_path, source_type, source_id,
         approval_status, approved_at, approved_by, locked_at, locked_by,
         site:sites(name),
@@ -166,7 +169,7 @@ export default function AdminDocumentsPage() {
           title: doc.title,
           file_url: doc.file_url,
           file_type: doc.file_type,
-          required: doc.required,
+          required: false,
           uploaded_by: doc.uploaded_by,
           created_at: doc.created_at,
           storage_bucket: doc.storage_bucket,
@@ -218,27 +221,15 @@ export default function AdminDocumentsPage() {
   const handleApprovePhotoSheetDocument = useCallback(async (doc: Document) => {
     if (!isPhotoSheetDocument(doc)) return
     if (doc.approval_status === 'approved' || doc.locked_at) return
+    if (!user?.userId) return
 
     setApprovingDocId(doc.id)
 
     try {
-      const now = new Date().toISOString()
-
-      const { error } = await supabase
-        .from('documents')
-        .update({
-          approval_status: 'approved',
-          approved_at: now,
-          approved_by: null,
-          locked_at: now,
-          locked_by: null,
-        })
-        .eq('id', doc.id)
-
-      if (error) {
-        console.error('[admin/documents] failed to approve photo sheet document:', error)
-        return
-      }
+      const result = await approvePhotoSheetDocumentAndLock({
+        documentId: doc.id,
+        actorId: user.userId,
+      })
 
       setDocs(prev =>
         prev.map(item =>
@@ -246,18 +237,20 @@ export default function AdminDocumentsPage() {
             ? {
                 ...item,
                 approval_status: 'approved',
-                approved_at: now,
-                approved_by: null,
-                locked_at: now,
-                locked_by: null,
+                approved_at: result.approvedAt,
+                approved_by: result.actorId,
+                locked_at: result.approvedAt,
+                locked_by: result.actorId,
               }
             : item
         )
       )
+    } catch (error) {
+      console.error('[admin/documents] failed to approve photo sheet document:', error)
     } finally {
       setApprovingDocId(null)
     }
-  }, [supabase])
+  }, [user?.userId])
 
   const filtered = docs.filter(d => {
     if (categoryFilter !== '전체' && d.category !== categoryFilter) return false
@@ -438,9 +431,7 @@ export default function AdminDocumentsPage() {
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                               </svg>
                             ) : (
-                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
+                              <CheckCircle className="h-4 w-4" strokeWidth={2} />
                             )}
                           </button>
                         )}
