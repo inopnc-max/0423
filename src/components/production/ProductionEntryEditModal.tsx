@@ -114,7 +114,7 @@ export function ProductionEntryEditModal({
         workDate: values.workDate,
         productionType: values.entryType,
         productId: selectedProduct?.id ?? null,
-        productName: selectedProduct?.name ?? values.productId,
+        productName: selectedProduct?.name ?? entry.productName,
         quantity: Number(values.quantity),
         unit: entry.unit || '개',
         amount: values.amount ? Number(values.amount) : undefined,
