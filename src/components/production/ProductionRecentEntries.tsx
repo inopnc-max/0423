@@ -1,4 +1,4 @@
-import { Clock3, PackageOpen } from 'lucide-react'
+import { Clock3, PackageOpen, Pencil, Trash2 } from 'lucide-react'
 import type { ProductionRecentEntry } from '@/lib/production/productionRecords'
 
 function formatQuantity(entry: ProductionRecentEntry): string {
@@ -14,9 +14,13 @@ function formatAmount(value: number): string {
 export function ProductionRecentEntries({
   entries,
   loading = false,
+  onEdit,
+  onDelete,
 }: {
   entries: ProductionRecentEntry[]
   loading?: boolean
+  onEdit?: (entry: ProductionRecentEntry) => void
+  onDelete?: (entry: ProductionRecentEntry) => void
 }) {
   return (
     <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-sm">
@@ -55,6 +59,28 @@ export function ProductionRecentEntries({
                   {entry.type} · {formatAmount(entry.amount)}
                 </span>
               </span>
+              {(onEdit || onDelete) && (
+                <div className="flex items-center gap-1">
+                  {onEdit && (
+                    <button
+                      onClick={() => onEdit(entry)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg)] hover:text-[var(--active-role-color)]"
+                      title="수정"
+                    >
+                      <Pencil className="h-3.5 w-3.5" strokeWidth={1.9} />
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      onClick={() => onDelete(entry)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-secondary)] transition hover:bg-red-50 hover:text-red-500"
+                      title="삭제"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" strokeWidth={1.9} />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ))
         )}
