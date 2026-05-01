@@ -38,6 +38,11 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     async function fetchWorkers() {
+      if (isSiteManagerUser) {
+        setLoading(false)
+        return
+      }
+
       try {
         const { data, error } = await supabase
           .from('workers')
@@ -55,7 +60,7 @@ export default function AdminUsersPage() {
     }
 
     fetchWorkers()
-  }, [supabase])
+  }, [isSiteManagerUser, supabase])
 
   const filteredWorkers = workers.filter(w => {
     const matchesSearch = search === '' ||
@@ -71,6 +76,24 @@ export default function AdminUsersPage() {
     partner: 'bg-green-100 text-green-700',
     site_manager: 'bg-yellow-100 text-yellow-700',
     admin: 'bg-purple-100 text-purple-700',
+  }
+
+  if (isSiteManagerUser) {
+    return (
+      <div>
+        <h1 className="text-2xl font-bold text-[var(--color-navy)] mb-6">사용자 관리</h1>
+        <WorkerStatusSummary
+          workers={siteManagerDashboard.workers}
+          loading={siteManagerDashboard.loading}
+        />
+        <div className="mb-6">
+          <WorkerList
+            workers={siteManagerDashboard.workers}
+            loading={siteManagerDashboard.loading}
+          />
+        </div>
+      </div>
+    )
   }
 
   return (
