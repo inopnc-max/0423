@@ -30,14 +30,14 @@ import {
 } from '@/lib/ui-state'
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { useMenuSearch } from '@/hooks'
-import { type WorklogMediaAttachment, type WorklogMediaInfo, createWorklogMediaAttachment, buildWorklogMediaInfo } from '@/lib/worklog-media'
+import { type WorklogMediaAttachment, type WorklogMediaInfo, type WorklogMediaPhotoStatus, createWorklogMediaAttachment, buildWorklogMediaInfo } from '@/lib/worklog-media'
 import { deleteLocalBlob, getLocalBlob, saveLocalBlob } from '@/lib/offline/blob-store'
 import { buildWorklogMediaStorageTarget, uploadToStorage } from '@/lib/storage/storage-helper'
 import { buildPhotoSheetDraftFromMediaInfo, type PhotoSheetDraft } from '@/lib/photo-sheet-mapping'
 import { downloadPhotoSheetPdf } from '@/lib/photo-sheet-pdf'
 import { savePhotoSheetPdfToStorageAndCreateDocument } from '@/lib/photo-sheet-document'
 import { usePreview, DrawingMarkupMultiPagePreview } from '@/components/preview'
-import { PhotoSheetDraftViewer } from '@/components/photo-sheet'
+import { PhotoSheetDraftViewer, PhotoSheetWizard } from '@/components/photo-sheet'
 import { enqueueSyncQueueItem } from '@/lib/offline/sync-queue'
 import { buildDrawingMarkupPreviewFromMediaInfo } from '@/lib/drawing-markup-preview-mapping'
 import { SiteCombobox } from '@/components/site/SiteCombobox'
@@ -680,6 +680,25 @@ function WorklogEditorView({
   }
   const [mediaAttachments, setMediaAttachments] = useState<LocalMediaAttachment[]>([])
 
+  function updatePhotoSheetAttachment(
+    id: string,
+    patch: { photoStatus?: WorklogMediaPhotoStatus; displayStatus?: string }
+  ) {
+    setActiveSection('media')
+    setMediaAttachments(prev =>
+      prev.map(attachment =>
+        attachment.id === id
+          ? { ...attachment, ...patch }
+          : attachment
+      )
+    )
+    setLatestPhotoSheetDraft(null)
+    latestPhotoSheetDraftRef.current = null
+    setSavedPhotoSheetDocumentId(null)
+    setPhotoSheetFinalMessage(null)
+    setPhotoSheetLockedMessage(null)
+  }
+
   const applyWorklogState = useCallback(
     (record: Pick<WorkLogRecord, 'worker_array' | 'task_tags' | 'material_items'>) => {
       setWorkerArray(record.worker_array || [])
@@ -952,6 +971,8 @@ function WorklogEditorView({
             file,
             previewUrl: URL.createObjectURL(file),
             localBlobId,
+            photoStatus: meta.kind === 'photo' ? 'after_repair' : undefined,
+            displayStatus: meta.kind === 'photo' ? '보수후' : undefined,
           })
         } catch {
           setMessage({ type: 'error', text: `파일 저장 실패: ${file.name}` })
@@ -1731,6 +1752,11 @@ function WorklogEditorView({
                     ))}
                   </div>
                 )}
+
+                <PhotoSheetWizard
+                  attachments={mediaAttachments}
+                  onUpdatePhoto={updatePhotoSheetAttachment}
+                />
               </div>
             )}
           </div>
