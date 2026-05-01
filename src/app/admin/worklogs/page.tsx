@@ -66,6 +66,11 @@ export default function AdminWorklogsPage() {
   })
 
   useEffect(() => {
+    if (isSiteManagerUser) {
+      setLoading(false)
+      return
+    }
+
     Promise.all([
       supabase.from('daily_logs').select(`
         id, site_id, work_date, user_id, status, rejection_reason,
@@ -104,7 +109,7 @@ export default function AdminWorklogsPage() {
       if (!workersRes.error && workersRes.data) setWorkers(workersRes.data)
       setLoading(false)
     })
-  }, [supabase])
+  }, [isSiteManagerUser, supabase])
 
   const handleApprove = useCallback(async (id: string) => {
     setActionLoading(id)
@@ -152,6 +157,32 @@ export default function AdminWorklogsPage() {
 
   const counts: Record<WorklogStatus, number> = { draft: 0, pending: 0, approved: 0, rejected: 0 }
   worklogs.forEach(w => { counts[w.status]++ })
+
+  if (isSiteManagerUser) {
+    return (
+      <div>
+        <h1 className="text-2xl font-bold text-[var(--color-navy)] mb-6">작업일지 승인</h1>
+        {siteManagerDashboard.message && (
+          <div className={`mb-4 rounded-xl px-4 py-3 text-sm ${
+            siteManagerDashboard.message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+          }`}>
+            {siteManagerDashboard.message.text}
+          </div>
+        )}
+        <ApprovalSummary
+          summary={siteManagerDashboard.summary}
+          loading={siteManagerDashboard.loading}
+        />
+        <ApprovalReviewTimeline
+          logs={siteManagerDashboard.logs}
+          loading={siteManagerDashboard.loading}
+          submitting={siteManagerDashboard.submitting}
+          onApprove={siteManagerDashboard.approveLog}
+          onReject={siteManagerDashboard.rejectLog}
+        />
+      </div>
+    )
+  }
 
   return (
     <div>

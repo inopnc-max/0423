@@ -39,6 +39,8 @@ export async function middleware(request: NextRequest) {
   const protectedPrefixes = [
     ROUTES.admin,
     '/production',
+    ROUTES.site,
+    ROUTES.documents,
     ROUTES.output,
     ROUTES.worklog,
     ROUTES.materials,
