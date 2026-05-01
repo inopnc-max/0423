@@ -6,7 +6,7 @@ import { ProductionRecentEntries } from '@/components/production/ProductionRecen
 import { ProductionEntryEditModal } from '@/components/production/ProductionEntryEditModal'
 import { useProductionDashboard } from '@/hooks/production/useProductionDashboard'
 import type { ProductionEntryType, ProductionRecentEntry, ProductionEntryUpdateInput } from '@/lib/production/productionRecords'
-import { updateProductionEntry, deleteProductionEntry } from '@/lib/production/productionRecords'
+import { deleteProductionEntry } from '@/lib/production/productionRecords'
 import { createClient } from '@/lib/supabase/client'
 
 const fieldClassName =
@@ -33,7 +33,7 @@ function getDefaultDateRange(): { startDate: string; endDate: string } {
 }
 
 export default function ProductionLogsPage() {
-  const { records, loading, error, reload } = useProductionDashboard()
+  const { records, loading, error, reload, updateEntry, currentUserId } = useProductionDashboard()
   const { startDate, endDate, setStartDate, setEndDate } = useStateFilterDates()
   const [selectedType, setSelectedType] = useState<ProductionEntryType | ''>('')
   const [editingEntry, setEditingEntry] = useState<ProductionRecentEntry | null>(null)
@@ -69,12 +69,12 @@ export default function ProductionLogsPage() {
 
   const handleSave = useCallback(async (_id: string, input: ProductionEntryUpdateInput) => {
     try {
-      await updateProductionEntry(createClient(), _id, input)
+      await updateEntry(_id, input)
       await reload()
     } catch (err) {
       throw err
     }
-  }, [reload])
+  }, [updateEntry, reload])
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingEntry) return
@@ -176,11 +176,12 @@ export default function ProductionLogsPage() {
         onDelete={handleDelete}
       />
 
-      {editingEntry && records && (
+      {editingEntry && records && currentUserId && (
         <ProductionEntryEditModal
           entry={editingEntry}
           sites={records.sites}
           products={records.products}
+          currentUserId={currentUserId}
           onSave={handleSave}
           onDelete={async (id) => {
             setEditingEntry(null)

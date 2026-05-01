@@ -28,6 +28,7 @@ interface ProductionEntryEditModalProps {
   entry: ProductionRecentEntry
   sites: ProductionReferenceOption[]
   products: ProductionReferenceOption[]
+  currentUserId: string
   onSave: (id: string, input: ProductionEntryUpdateInput) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onClose: () => void
@@ -37,6 +38,7 @@ export function ProductionEntryEditModal({
   entry,
   sites,
   products,
+  currentUserId,
   onSave,
   onDelete,
   onClose,
@@ -108,6 +110,7 @@ export function ProductionEntryEditModal({
         amount: values.amount ? Number(values.amount) : undefined,
         siteId: values.siteId || null,
         memo: values.memo || null,
+        createdBy: currentUserId,
       }
 
       await onSave(entry.id, input)
@@ -118,7 +121,7 @@ export function ProductionEntryEditModal({
     } finally {
       setSaving(false)
     }
-  }, [validate, values, entry, onSave, onClose])
+  }, [validate, values, entry, onSave, onClose, currentUserId])
 
   const handleDelete = useCallback(async () => {
     if (!confirmDelete) {

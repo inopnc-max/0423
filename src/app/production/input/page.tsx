@@ -4,14 +4,13 @@ import { ClipboardList } from 'lucide-react'
 import { ProductionEntryDraftForm } from '@/components/production/ProductionEntryDraftForm'
 import { ProductionRecentEntries } from '@/components/production/ProductionRecentEntries'
 import { useProductionDashboard } from '@/hooks/production/useProductionDashboard'
-import { createClient } from '@/lib/supabase/client'
-import { saveProductionEntry, type ProductionEntrySaveInput } from '@/lib/production/productionRecords'
+import { type ProductionEntrySaveInput } from '@/lib/production/productionRecords'
 
 export default function ProductionInputPage() {
-  const { records, loading, error, reload, saveEntry } = useProductionDashboard()
+  const { records, loading, error, reload, saveEntry, currentUserId } = useProductionDashboard()
 
   const handleSave = async (input: ProductionEntrySaveInput) => {
-    await saveEntry(createClient(), input)
+    await saveEntry(input)
     await reload()
   }
 
@@ -41,12 +40,15 @@ export default function ProductionInputPage() {
         </div>
       )}
 
-      <ProductionEntryDraftForm
-        sites={records?.sites ?? []}
-        products={records?.products ?? []}
-        clients={records?.clients ?? []}
-        onSave={handleSave}
-      />
+      {currentUserId && (
+        <ProductionEntryDraftForm
+          sites={records?.sites ?? []}
+          products={records?.products ?? []}
+          clients={records?.clients ?? []}
+          currentUserId={currentUserId}
+          onSave={handleSave}
+        />
+      )}
 
       <ProductionRecentEntries entries={records?.recentEntries ?? []} loading={loading} />
     </div>

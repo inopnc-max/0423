@@ -4,8 +4,11 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   getProductionDashboardRecords,
   saveProductionEntry,
+  updateProductionEntry,
+  deleteProductionEntry,
   type ProductionDashboardRecords,
   type ProductionEntrySaveInput,
+  type ProductionEntryUpdateInput,
 } from '@/lib/production/productionRecords'
 import { createClient } from '@/lib/supabase/client'
 
@@ -13,6 +16,7 @@ export function useProductionDashboard() {
   const [records, setRecords] = useState<ProductionDashboardRecords | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -32,7 +36,47 @@ export function useProductionDashboard() {
 
   useEffect(() => {
     void reload()
+    createClient().auth.getUser().then(({ data }) => {
+      if (data.user) setCurrentUserId(data.user.id)
+    }).catch(() => {})
   }, [reload])
 
-  return { records, loading, error, reload, saveEntry: saveProductionEntry }
+  const saveEntry = useCallback(async (input: ProductionEntrySaveInput) => {
+    const userId = currentUserId
+    if (!userId) {
+      const { data } = await createClient().auth.getUser()
+      if (!data.user) throw new Error('User not authenticated')
+      setCurrentUserId(data.user.id)
+      await saveProductionEntry(createClient(), { ...input, createdBy: data.user.id })
+      return
+    }
+    await saveProductionEntry(createClient(), { ...input, createdBy: userId })
+  }, [currentUserId])
+
+  const updateEntry = useCallback(async (id: string, input: ProductionEntryUpdateInput) => {
+    const userId = currentUserId
+    if (!userId) {
+      const { data } = await createClient().auth.getUser()
+      if (!data.user) throw new Error('User not authenticated')
+      setCurrentUserId(data.user.id)
+      await updateProductionEntry(createClient(), id, { ...input, createdBy: data.user.id })
+      return
+    }
+    await updateProductionEntry(createClient(), id, { ...input, createdBy: userId })
+  }, [currentUserId])
+
+  const deleteEntry = useCallback(async (id: string) => {
+    await deleteProductionEntry(createClient(), id)
+  }, [])
+
+  return {
+    records,
+    loading,
+    error,
+    reload,
+    currentUserId,
+    saveEntry,
+    updateEntry,
+    deleteEntry,
+  }
 }
