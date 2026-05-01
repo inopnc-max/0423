@@ -8,6 +8,7 @@ import {
   Calendar,
   ChevronLeft,
   ClipboardList,
+  Edit3,
   FileText,
   HardHat,
   ImageIcon,
@@ -37,12 +38,14 @@ import { buildPhotoSheetDraftFromMediaInfo, type PhotoSheetDraft } from '@/lib/p
 import { downloadPhotoSheetPdf } from '@/lib/photo-sheet-pdf'
 import { savePhotoSheetPdfToStorageAndCreateDocument } from '@/lib/photo-sheet-document'
 import { usePreview, DrawingMarkupMultiPagePreview } from '@/components/preview'
+import { WorklogDrawingMarkupPreviewEditor } from '@/components/drawing-markup'
 import { PhotoSheetDraftViewer, PhotoSheetWizard } from '@/components/photo-sheet'
 import { enqueueSyncQueueItem } from '@/lib/offline/sync-queue'
 import { buildDrawingMarkupPreviewFromMediaInfo } from '@/lib/drawing-markup-preview-mapping'
 import { downloadDrawingMarkupCsv, downloadDrawingMarkupPdf } from '@/lib/drawing-markup-export'
 import { SiteCombobox } from '@/components/site/SiteCombobox'
 import { WorklogTimeline, type WorklogTimelineStep } from '@/components/worklog/WorklogTimeline'
+import type { DrawingMarkupMark } from '@/lib/types/drawing-markup'
 
 interface Site {
   id: string
@@ -688,6 +691,7 @@ function WorklogEditorView({
     file?: File
   }
   const [mediaAttachments, setMediaAttachments] = useState<LocalMediaAttachment[]>([])
+  const [previewDrawingMarks, setPreviewDrawingMarks] = useState<Record<string, DrawingMarkupMark[]>>({})
 
   function updatePhotoSheetAttachment(
     id: string,
@@ -995,6 +999,12 @@ function WorklogEditorView({
   }
 
   function removeMediaAttachment(id: string) {
+    setPreviewDrawingMarks(prev => {
+      if (!prev[id]) return prev
+      return Object.fromEntries(
+        Object.entries(prev).filter(([attachmentId]) => attachmentId !== id)
+      )
+    })
     setMediaAttachments(prev => {
       const target = prev.find(a => a.id === id)
       if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl)
@@ -1004,6 +1014,38 @@ function WorklogEditorView({
         })
       }
       return prev.filter(a => a.id !== id)
+    })
+  }
+
+  function openDrawingMarkupPreviewEditor(attachment: LocalMediaAttachment, pageNo: number) {
+    const initialMarks = previewDrawingMarks[attachment.id] ?? attachment.marks ?? []
+    const canUseImagePreview = attachment.mimeType.startsWith('image/')
+    const isReadOnly = existingLog?.status === 'approved'
+
+    openPreview({
+      title: '도면마킹 미리보기 편집',
+      subtitle: attachment.name,
+      mode: 'fullscreen',
+      contentType: 'report',
+      dockMode: 'edit',
+      showBack: false,
+      onClose: () => {},
+      children: (
+        <WorklogDrawingMarkupPreviewEditor
+          pageNo={pageNo}
+          imageUrl={canUseImagePreview ? attachment.previewUrl ?? attachment.imageUrl ?? null : null}
+          imageAlt={attachment.name}
+          initialMarks={initialMarks}
+          readOnly={isReadOnly}
+          disabled={saving || mediaUploading}
+          onPreviewMarksChange={marks => {
+            setPreviewDrawingMarks(prev => ({
+              ...prev,
+              [attachment.id]: marks,
+            }))
+          }}
+        />
+      ),
     })
   }
 
@@ -1712,7 +1754,7 @@ function WorklogEditorView({
                   <p className="text-center text-sm text-[var(--color-text-tertiary)]">첨부된 파일이 없습니다.</p>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    {mediaAttachments.map(attachment => (
+                    {mediaAttachments.map((attachment, index) => (
                       <div
                         key={attachment.id}
                         className="flex items-center gap-3 rounded-2xl border-2 border-[var(--color-border)] bg-white px-4 py-3"
@@ -1745,6 +1787,18 @@ function WorklogEditorView({
                             {attachment.kind === 'photo' ? '사진' : attachment.kind === 'drawing' ? '도면' : '기타'}
                           </span>
                         </div>
+
+                        {attachment.kind === 'drawing' && (
+                          <button
+                            type="button"
+                            onClick={() => openDrawingMarkupPreviewEditor(attachment, index + 1)}
+                            className="shrink-0 rounded-full p-2 text-[var(--color-accent)] transition hover:bg-[var(--color-accent-light)]"
+                            aria-label={`${attachment.name} 도면마킹 미리보기 편집`}
+                            title="도면마킹 미리보기 편집"
+                          >
+                            <Edit3 className="h-5 w-5" strokeWidth={1.9} />
+                          </button>
+                        )}
 
                         {/* 삭제 버튼 */}
                         <button
