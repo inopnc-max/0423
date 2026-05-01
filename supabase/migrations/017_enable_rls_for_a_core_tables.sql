@@ -161,7 +161,7 @@ CREATE POLICY "worker_required_documents_select" ON worker_required_documents
     auth.uid() IS NOT NULL
     AND (
       auth.is_admin()
-      OR worker_id = auth.uid()
+      OR user_id = auth.uid()
     )
   );
 
@@ -172,7 +172,7 @@ CREATE POLICY "worker_required_documents_insert" ON worker_required_documents
     auth.uid() IS NOT NULL
     AND (
       auth.is_admin()
-      OR worker_id = auth.uid()
+      OR user_id = auth.uid()
     )
   );
 
@@ -181,7 +181,7 @@ CREATE POLICY "worker_required_documents_update" ON worker_required_documents
   FOR UPDATE
   USING (
     auth.is_admin()
-    OR worker_id = auth.uid()
+    OR user_id = auth.uid()
   );
 
 -- ── nav_update_events ─────────────────────────────────────────
@@ -223,7 +223,7 @@ CREATE POLICY "document_view_events_select" ON document_view_events
     auth.uid() IS NOT NULL
     AND (
       auth.is_admin()
-      OR viewed_by = auth.uid()
+      OR user_id = auth.uid()
     )
   );
 
@@ -232,7 +232,7 @@ CREATE POLICY "document_view_events_insert" ON document_view_events
   FOR INSERT
   WITH CHECK (
     auth.uid() IS NOT NULL
-    AND viewed_by = auth.uid()
+    AND user_id = auth.uid()
   );
 
 -- ============================================================
@@ -251,7 +251,7 @@ CREATE POLICY "confirmation_forms_select" ON confirmation_forms
     AND (
       auth.is_admin()
       OR auth.is_site_manager()
-      OR created_by = auth.uid()
+      OR user_id = auth.uid()
     )
   );
 
@@ -272,7 +272,7 @@ CREATE POLICY "confirmation_forms_update" ON confirmation_forms
   USING (
     auth.is_admin()
     OR auth.is_site_manager()
-    OR created_by = auth.uid()
+    OR user_id = auth.uid()
   );
 
 -- ── confirmation_form_snapshots ───────────────────────────────
@@ -287,7 +287,7 @@ CREATE POLICY "confirmation_form_snapshots_select" ON confirmation_form_snapshot
     AND (
       auth.is_admin()
       OR auth.is_site_manager()
-      OR created_by = auth.uid()
+      OR generated_by = auth.uid()
     )
   );
 
@@ -314,7 +314,7 @@ CREATE POLICY "salary_statements_select" ON salary_statements
     AND (
       auth.is_admin()
       OR auth.is_site_manager()
-      OR worker_id = auth.uid()
+      OR user_id = auth.uid()
     )
   );
 
