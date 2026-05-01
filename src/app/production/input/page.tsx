@@ -46,7 +46,6 @@ export default function ProductionInputPage() {
         products={records?.products ?? []}
         clients={records?.clients ?? []}
         onSave={handleSave}
-        onSaveSuccess={reload}
       />
 
       <ProductionRecentEntries entries={records?.recentEntries ?? []} loading={loading} />
