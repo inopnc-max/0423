@@ -18,7 +18,7 @@ interface FormValues {
   workDate: string
   entryType: ProductionEntryType
   siteId: string
-  productName: string
+  productId: string
   quantity: string
   amount: string
   memo: string
@@ -47,7 +47,7 @@ export function ProductionEntryEditModal({
     workDate: entry.workDate,
     entryType: entry.type as ProductionEntryType,
     siteId: '',
-    productName: entry.productName,
+    productId: '',
     quantity: String(entry.quantity),
     amount: String(entry.amount),
     memo: entry.memo ?? '',
@@ -67,6 +67,13 @@ export function ProductionEntryEditModal({
   }, [sites, entry.siteName])
 
   useEffect(() => {
+    const matchedProduct = products.find(p => p.name === entry.productName)
+    if (matchedProduct) {
+      setValues(prev => ({ ...prev, productId: matchedProduct.id }))
+    }
+  }, [products, entry.productName])
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
@@ -83,7 +90,7 @@ export function ProductionEntryEditModal({
   const validate = useCallback((): string | null => {
     if (!values.workDate) return '작업일을 선택해주세요.'
     if (!values.entryType) return '구분을 선택해주세요.'
-    if (!values.productName) return '품목을 입력해주세요.'
+    if (values.entryType !== '운송비' && !values.productId) return '품목을 선택해주세요.'
     const qty = Number(values.quantity)
     if (!values.quantity || isNaN(qty) || qty <= 0) return '수량은 0보다 큰 숫자로 입력해주세요.'
     return null
@@ -101,10 +108,13 @@ export function ProductionEntryEditModal({
     setSaving(true)
 
     try {
+      const selectedProduct = products.find(p => p.id === values.productId)
+
       const input: ProductionEntryUpdateInput = {
         workDate: values.workDate,
         productionType: values.entryType,
-        productName: values.productName,
+        productId: selectedProduct?.id ?? null,
+        productName: selectedProduct?.name ?? entry.productName,
         quantity: Number(values.quantity),
         unit: entry.unit || '개',
         amount: values.amount ? Number(values.amount) : undefined,
@@ -121,7 +131,7 @@ export function ProductionEntryEditModal({
     } finally {
       setSaving(false)
     }
-  }, [validate, values, entry, onSave, onClose, currentUserId])
+  }, [validate, values, products, entry, onSave, onClose, currentUserId])
 
   const handleDelete = useCallback(async () => {
     if (!confirmDelete) {
@@ -185,7 +195,7 @@ export function ProductionEntryEditModal({
                   value={values.entryType}
                   onChange={e => {
                     handleChange('entryType', e.target.value as ProductionEntryType)
-                    handleChange('productName', '')
+                    handleChange('productId', '')
                   }}
                 >
                   <option value="생산">생산</option>
@@ -210,27 +220,17 @@ export function ProductionEntryEditModal({
               </label>
 
               <label className={labelClassName}>
-                {values.entryType === '판매' ? '거래처' : '품목'}
-                {values.entryType === '판매' ? (
-                  <input
-                    type="text"
-                    className={fieldClassName}
-                    placeholder="거래처명을 입력해주세요"
-                    value={values.productName}
-                    onChange={e => handleChange('productName', e.target.value)}
-                  />
-                ) : (
-                  <select
-                    className={fieldClassName}
-                    value={values.productName}
-                    onChange={e => handleChange('productName', e.target.value)}
-                  >
-                    <option value="">품목 선택</option>
-                    {selectedProducts.map(p => (
-                      <option key={p.id} value={p.name}>{p.name}</option>
-                    ))}
-                  </select>
-                )}
+                품목
+                <select
+                  className={fieldClassName}
+                  value={values.productId}
+                  onChange={e => handleChange('productId', e.target.value)}
+                >
+                  <option value="">품목 선택</option>
+                  {selectedProducts.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
               </label>
 
               <label className={labelClassName}>

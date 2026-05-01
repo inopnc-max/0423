@@ -11,26 +11,11 @@ function getStockMovementType(type: ProductionEntryType): StockMovementType | nu
   return null
 }
 
-async function getProductIdByName(
-  supabase: SupabaseClient,
-  productName: string
-): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('products')
-    .select('id')
-    .eq('name', productName)
-    .eq('active', true)
-    .single()
-
-  if (error || !data) return null
-  return data.id
-}
-
 async function recordStockMovement(
   supabase: SupabaseClient,
   entryId: string,
   productionType: ProductionEntryType,
-  productName: string,
+  productId: string | null | undefined,
   quantity: number,
   workDate: string,
   siteId: string | null | undefined,
@@ -40,9 +25,8 @@ async function recordStockMovement(
   const movementType = getStockMovementType(productionType)
   if (!movementType) return
 
-  const productId = await getProductIdByName(supabase, productName)
   if (!productId) {
-    console.warn(`[productionRecords] Product not found: ${productName}`)
+    console.warn(`[productionRecords] Product ID not provided for stock movement: entry=${entryId}, type=${productionType}`)
     return
   }
 
@@ -68,7 +52,7 @@ async function upsertStockMovement(
   supabase: SupabaseClient,
   entryId: string,
   productionType: ProductionEntryType,
-  productName: string,
+  productId: string | null | undefined,
   quantity: number,
   workDate: string,
   siteId: string | null | undefined,
@@ -82,9 +66,9 @@ async function upsertStockMovement(
     return
   }
 
-  const productId = await getProductIdByName(supabase, productName)
   if (!productId) {
-    console.warn(`[productionRecords] Product not found: ${productName}`)
+    console.warn(`[productionRecords] Product ID not provided for stock movement upsert: entry=${entryId}, type=${productionType}`)
+    await reverseStockMovement(supabase, entryId)
     return
   }
 
@@ -123,6 +107,7 @@ async function reverseStockMovement(
 export interface ProductionEntrySaveInput {
   workDate: string
   productionType: ProductionEntryType
+  productId?: string | null
   productName: string
   quantity: number
   unit?: string
@@ -135,6 +120,7 @@ export interface ProductionEntrySaveInput {
 export interface ProductionEntryUpdateInput {
   workDate: string
   productionType: ProductionEntryType
+  productId?: string | null
   productName: string
   quantity: number
   unit?: string
@@ -175,7 +161,7 @@ export async function updateProductionEntry(
     supabase,
     id,
     input.productionType,
-    input.productName,
+    input.productId,
     input.quantity,
     input.workDate,
     input.siteId,
@@ -232,7 +218,7 @@ export async function saveProductionEntry(
     supabase,
     data.id,
     input.productionType,
-    input.productName,
+    input.productId,
     input.quantity,
     input.workDate,
     input.siteId,
