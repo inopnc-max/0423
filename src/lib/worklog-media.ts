@@ -2,6 +2,8 @@
  * Worklog media attachment types and helpers.
  */
 
+import type { DrawingMarkupMark } from '@/components/preview/reports/drawing-markup-preview-types'
+
 export type WorklogMediaKind = 'photo' | 'drawing' | 'other'
 
 export type WorklogMediaBucket = 'photos' | 'drawings' | 'documents'
@@ -20,6 +22,10 @@ export type WorklogMediaAttachment = {
   localBlobId?: string
   photoStatus?: WorklogMediaPhotoStatus
   displayStatus?: string
+  /** Markup marks (only for 'drawing' kind) */
+  marks?: DrawingMarkupMark[]
+  /** Direct image URL fallback (only for 'drawing' kind) */
+  imageUrl?: string | null
   createdAt: string
 }
 
@@ -31,8 +37,14 @@ export type WorklogMediaInfoItem = {
   size: number
   storageBucket: WorklogMediaBucket
   storagePath: string
+  /** Photo status (only for 'photo' kind) */
   photoStatus?: WorklogMediaPhotoStatus
+  /** Display status text (only for 'photo' kind) */
   displayStatus?: string
+  /** Markup marks (only for 'drawing' kind) */
+  marks?: DrawingMarkupMark[]
+  /** Direct image URL fallback (only for 'drawing' kind, overrides signed URL) */
+  imageUrl?: string | null
   createdAt: string
 }
 
@@ -77,6 +89,15 @@ export function buildWorklogMediaInfo(attachments: WorklogMediaAttachment[]): Wo
     if (attachment.kind === 'photo') {
       item.photoStatus = attachment.photoStatus ?? 'after_repair'
       item.displayStatus = attachment.displayStatus ?? '보수후'
+    }
+
+    if (attachment.kind === 'drawing') {
+      if (attachment.marks && attachment.marks.length > 0) {
+        item.marks = attachment.marks
+      }
+      if (attachment.imageUrl) {
+        item.imageUrl = attachment.imageUrl
+      }
     }
 
     items.push(item)

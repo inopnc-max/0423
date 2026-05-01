@@ -20,8 +20,8 @@ interface BuildDrawingMarkupPreviewInput {
  * Filter drawing attachments from media_info and convert to DrawingMarkupPreviewDocument.
  * Returns null when no drawing attachments exist.
  *
- * marks are always empty because no markup saving structure exists in media_info yet.
- * imageUrl is not included since server-saved media_info only contains storage references.
+ * marks are sourced from WorklogMediaInfoItem.marks (optional DrawingMarkupMark[]).
+ * imageUrl is sourced from WorklogMediaInfoItem.imageUrl as a signed URL fallback.
  */
 export function buildDrawingMarkupPreviewFromMediaInfo(
   input: BuildDrawingMarkupPreviewInput
@@ -53,7 +53,8 @@ export function buildDrawingMarkupPreviewFromMediaInfo(
       storagePath: item.storagePath,
       workDate: input.workDate,
       sourceLabel: '작업일지 첨부',
-      marks: [],
+      marks: item.marks ?? [],
+      imageUrl: item.imageUrl,
     })),
   }
 }
