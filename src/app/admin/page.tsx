@@ -1,17 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Bell, Boxes, ClipboardCheck, Map, Upload, Users, Wallet } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { AdminApprovalOverview } from '@/components/admin/AdminApprovalOverview'
+import { AdminDocumentControlPanel } from '@/components/admin/AdminDocumentControlPanel'
+import { AdminSummaryCards } from '@/components/admin/AdminSummaryCards'
+import { AdminUserRoleOverview } from '@/components/admin/AdminUserRoleOverview'
+import { useAdminDashboard } from '@/hooks/admin/useAdminDashboard'
 import { ADMIN_ROUTES } from '@/lib/routes'
-
-interface DashboardStats {
-  totalUsers: number
-  totalSites: number
-  pendingLogs: number
-  draftLogs: number
-}
 
 const QUICK_ACTIONS = [
   { href: ADMIN_ROUTES.users, label: '사용자/권한', icon: Users, colorClass: 'bg-blue-50 text-blue-600' },
@@ -23,79 +19,40 @@ const QUICK_ACTIONS = [
 ]
 
 export default function AdminDashboardPage() {
-  const supabase = createClient()
-  const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState<DashboardStats>({
-    totalUsers: 0,
-    totalSites: 0,
-    pendingLogs: 0,
-    draftLogs: 0,
-  })
-
-  useEffect(() => {
-    async function fetchStats() {
-      try {
-        const [usersResponse, sitesResponse, pendingLogsResponse, draftLogsResponse] = await Promise.all([
-          supabase.from('workers').select('id', { count: 'exact', head: true }),
-          supabase.from('sites').select('id', { count: 'exact', head: true }),
-          supabase.from('daily_logs').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-          supabase.from('daily_logs').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
-        ])
-
-        setStats({
-          totalUsers: usersResponse.count || 0,
-          totalSites: sitesResponse.count || 0,
-          pendingLogs: pendingLogsResponse.count || 0,
-          draftLogs: draftLogsResponse.count || 0,
-        })
-      } catch (error) {
-        console.error('Failed to fetch admin stats:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    void fetchStats()
-  }, [supabase])
+  const { records, loading, error } = useAdminDashboard()
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-navy)]">관리자 대시보드</h1>
         <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-          사용자, 현장, 승인, 자재, 출역 데이터를 한 곳에서 관리할 수 있습니다.
+          사용자, 현장, 승인, 문서 통제 상태를 한 화면에서 확인합니다.
         </p>
       </div>
 
       {loading ? (
         <div className="flex h-64 items-center justify-center rounded-2xl bg-white shadow-sm">
-          <div className="text-[var(--color-text-secondary)]">로딩 중...</div>
+          <div className="text-[var(--color-text-secondary)]">관리자 정보를 불러오는 중입니다.</div>
+        </div>
+      ) : error || !records ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+          {error ?? '관리자 대시보드 정보를 표시할 수 없습니다.'}
         </div>
       ) : (
         <>
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Link href={ADMIN_ROUTES.users} className="stat-card">
-              <div className="stat-card__value">{stats.totalUsers}</div>
-              <div className="stat-card__label">전체 사용자</div>
-            </Link>
-            <Link href={ADMIN_ROUTES.sites} className="stat-card">
-              <div className="stat-card__value">{stats.totalSites}</div>
-              <div className="stat-card__label">전체 현장</div>
-            </Link>
-            <Link href={ADMIN_ROUTES.worklogs} className="stat-card">
-              <div className="stat-card__value">{stats.pendingLogs}</div>
-              <div className="stat-card__label">승인 대기</div>
-            </Link>
-            <Link href={ADMIN_ROUTES.worklogs} className="stat-card">
-              <div className="stat-card__value">{stats.draftLogs}</div>
-              <div className="stat-card__label">임시 저장</div>
-            </Link>
+          <AdminSummaryCards summary={records.summary} />
+
+          <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+            <AdminApprovalOverview summary={records.summary} queue={records.approvalQueue} />
+            <AdminUserRoleOverview roles={records.roleCounts} />
           </section>
 
-          <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+            <AdminDocumentControlPanel summary={records.summary} />
+
             <div className="rounded-2xl bg-white p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-[var(--color-navy)]">빠른 작업</h2>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {QUICK_ACTIONS.map(({ href, label, icon: Icon, colorClass }) => (
                   <Link
                     key={href}
@@ -110,29 +67,14 @@ export default function AdminDashboardPage() {
                 ))}
               </div>
             </div>
-
-            <div className="rounded-2xl bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-semibold text-[var(--color-navy)]">운영 메모</h2>
-              <div className="mt-4 space-y-3 text-sm text-[var(--color-text-secondary)]">
-                <div className="rounded-xl bg-[var(--color-bg)] px-4 py-3">
-                  CSV 대량 작업은 업로드 로그와 함께 운영하는 방향으로 정리했습니다.
-                </div>
-                <div className="rounded-xl bg-[var(--color-bg)] px-4 py-3">
-                  일지 승인, 출역/급여, 감사로그는 공식 메뉴 구조에 맞춰 진입점을 열어두었습니다.
-                </div>
-                <div className="rounded-xl bg-[var(--color-bg)] px-4 py-3">
-                  실제 데이터 운영은 Supabase 스키마 캐시와 마이그레이션 반영이 선행되어야 합니다.
-                </div>
-              </div>
-            </div>
           </section>
 
           <section className="rounded-2xl bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-[var(--color-navy)]">확장 준비 상태</h2>
+                <h2 className="text-lg font-semibold text-[var(--color-navy)]">역할별 회귀 방지 메모</h2>
                 <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                  v10 기준으로 관리자 메뉴 구조를 먼저 고정하고, 세부 기능은 각 라우트에서 이어서 확장할 수 있게 정리했습니다.
+                  Admin 대시보드는 관리자 콘솔 내부만 보강하며 worker, site_manager, partner, production_manager 화면 구조를 변경하지 않습니다.
                 </p>
               </div>
               <Boxes className="h-6 w-6 text-[var(--color-accent)]" strokeWidth={1.9} />
