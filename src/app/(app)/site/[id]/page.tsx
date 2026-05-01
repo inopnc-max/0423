@@ -48,6 +48,9 @@ interface SiteDocument {
   title: string
   category: string
   file_url: string
+  approval_status: string | null
+  locked_at: string | null
+  source_type: string | null
 }
 
 export default function SiteDetailPage() {
@@ -68,40 +71,62 @@ export default function SiteDetailPage() {
 
     async function fetchSiteDetail() {
       try {
+        const partnerUser = isPartner(user?.role || '')
+        let documentsQuery = supabase
+          .from('documents')
+          .select('id, title, category, file_url, approval_status, locked_at, source_type')
+          .eq('site_id', params.id)
+
+        if (partnerUser) {
+          documentsQuery = documentsQuery
+            .eq('approval_status', 'approved')
+            .neq('category', '안전서류')
+        }
+
         const [siteResponse, photosResponse, drawingsResponse, issuesResponse, documentsResponse] =
           await Promise.all([
             supabase.from('sites').select('*').eq('id', params.id).single(),
-            supabase
-              .from('photos')
-              .select('id, thumbnail_url, preview_url')
-              .eq('site_id', params.id)
-              .order('created_at', { ascending: false })
-              .limit(9),
-            supabase
-              .from('drawings')
-              .select('id, original_path, marked_path')
-              .eq('site_id', params.id)
-              .order('created_at', { ascending: false })
-              .limit(6),
-            supabase
-              .from('issues')
-              .select('id, title, status')
-              .eq('site_id', params.id)
-              .order('updated_at', { ascending: false })
-              .limit(5),
-            supabase
-              .from('documents')
-              .select('id, title, category, file_url')
-              .eq('site_id', params.id)
+            partnerUser
+              ? Promise.resolve({ data: [] })
+              : supabase
+                  .from('photos')
+                  .select('id, thumbnail_url, preview_url')
+                  .eq('site_id', params.id)
+                  .order('created_at', { ascending: false })
+                  .limit(9),
+            partnerUser
+              ? Promise.resolve({ data: [] })
+              : supabase
+                  .from('drawings')
+                  .select('id, original_path, marked_path')
+                  .eq('site_id', params.id)
+                  .order('created_at', { ascending: false })
+                  .limit(6),
+            partnerUser
+              ? Promise.resolve({ data: [] })
+              : supabase
+                  .from('issues')
+                  .select('id, title, status')
+                  .eq('site_id', params.id)
+                  .order('updated_at', { ascending: false })
+                  .limit(5),
+            documentsQuery
               .order('created_at', { ascending: false })
               .limit(5),
           ])
 
         if (siteResponse.data) setSite(siteResponse.data)
-        if (photosResponse.data) setPhotos(photosResponse.data)
-        if (drawingsResponse.data) setDrawings(drawingsResponse.data)
-        if (issuesResponse.data) setIssues(issuesResponse.data)
-        if (documentsResponse.data) setDocuments(documentsResponse.data)
+        if (photosResponse.data) setPhotos(partnerUser ? [] : photosResponse.data)
+        if (drawingsResponse.data) setDrawings(partnerUser ? [] : drawingsResponse.data)
+        if (issuesResponse.data) setIssues(partnerUser ? [] : issuesResponse.data)
+        if (documentsResponse.data) {
+          const rows = documentsResponse.data as SiteDocument[]
+          setDocuments(rows.filter(document => {
+            if (!isPartner(user?.role || '')) return true
+            if (document.category === '안전서류' || document.source_type === 'worker_required_document') return false
+            return document.approval_status === 'approved' || Boolean(document.locked_at)
+          }))
+        }
       } catch (error) {
         console.error('Failed to fetch site detail:', error)
       } finally {

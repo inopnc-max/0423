@@ -21,6 +21,11 @@ interface RecentDocument {
   sites?: { name?: string | null } | null
 }
 
+function isPartnerVisibleDocument(doc: RecentDocument) {
+  if (doc.category === '안전서류') return false
+  return doc.approval_status === 'approved'
+}
+
 function isImage(type: string | null) {
   return !!type && (type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp'].some(ext => type.toLowerCase().includes(ext)))
 }
@@ -72,7 +77,15 @@ function DocumentPreview({ doc }: { doc: RecentDocument }) {
   return <iframe src={url} title={doc.title} className="h-[calc(100dvh-200px)] w-full border-0" />
 }
 
-export function RecentViewedDocuments({ userId, siteId }: { userId?: string | null; siteId?: string | null }) {
+export function RecentViewedDocuments({
+  userId,
+  siteId,
+  partnerMode = false,
+}: {
+  userId?: string | null
+  siteId?: string | null
+  partnerMode?: boolean
+}) {
   const { openPreview } = usePreview()
   const [documents, setDocuments] = useState<RecentDocument[]>([])
   const [loading, setLoading] = useState(false)
@@ -85,30 +98,40 @@ export function RecentViewedDocuments({ userId, siteId }: { userId?: string | nu
       setLoading(true)
       const supabase = createClient()
 
-      const fromViews = await supabase
-        .from('document_view_events')
-        .select('viewed_at, documents(id, site_id, title, category, file_url, file_type, storage_bucket, storage_path, approval_status, created_at, sites(name))')
-        .eq('user_id', userId)
-        .order('viewed_at', { ascending: false })
-        .limit(5)
+      if (!partnerMode) {
+        const fromViews = await supabase
+          .from('document_view_events')
+          .select('viewed_at, documents(id, site_id, title, category, file_url, file_type, storage_bucket, storage_path, approval_status, created_at, sites(name))')
+          .eq('user_id', userId)
+          .order('viewed_at', { ascending: false })
+          .limit(5)
 
-      if (!cancelled && !fromViews.error && fromViews.data?.length) {
-        const rows = fromViews.data
-          .map(row => ({ ...(row.documents as unknown as RecentDocument), viewed_at: row.viewed_at as string }))
-          .filter(doc => !siteId || doc.site_id === siteId)
-        setDocuments(rows)
-        setLoading(false)
-        return
+        if (!cancelled && !fromViews.error && fromViews.data?.length) {
+          const rows = fromViews.data
+            .map(row => ({ ...(row.documents as unknown as RecentDocument), viewed_at: row.viewed_at as string }))
+            .filter(doc => !siteId || doc.site_id === siteId)
+          setDocuments(rows)
+          setLoading(false)
+          return
+        }
       }
 
-      const fallback = await supabase
+      let fallbackQuery = supabase
         .from('documents')
         .select('id, site_id, title, category, file_url, file_type, storage_bucket, storage_path, approval_status, created_at, sites(name)')
         .order('created_at', { ascending: false })
         .limit(5)
 
+      if (partnerMode) {
+        fallbackQuery = fallbackQuery.eq('approval_status', 'approved').neq('category', '안전서류')
+      }
+
+      const fallback = await fallbackQuery
+
       if (!cancelled) {
-        const rows = ((fallback.data as RecentDocument[] | null) ?? []).filter(doc => !siteId || doc.site_id === siteId)
+        const rows = ((fallback.data as RecentDocument[] | null) ?? [])
+          .filter(doc => !siteId || doc.site_id === siteId)
+          .filter(doc => !partnerMode || isPartnerVisibleDocument(doc))
         setDocuments(rows)
         setLoading(false)
       }
@@ -118,7 +141,7 @@ export function RecentViewedDocuments({ userId, siteId }: { userId?: string | nu
     return () => {
       cancelled = true
     }
-  }, [siteId, userId])
+  }, [partnerMode, siteId, userId])
 
   async function registerView(doc: RecentDocument) {
     if (!userId) return

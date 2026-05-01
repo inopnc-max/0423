@@ -39,6 +39,11 @@ function isPhotoSheetDocument(doc: DocumentRow): boolean {
   return doc.source_type === 'photo_sheet' || doc.category === '사진대지'
 }
 
+function isPartnerVisibleDocument(doc: DocumentRow): boolean {
+  if (doc.category === '안전서류' || doc.source_type === 'worker_required_document') return false
+  return doc.approval_status === 'approved' || Boolean(doc.locked_at)
+}
+
 function getApprovalStatusLabel(doc: DocumentRow): string | null {
   if (!isPhotoSheetDocument(doc)) return null
   if (doc.approval_status === 'approved' || doc.locked_at) return '승인완료'
@@ -202,9 +207,10 @@ export default function DocumentsPage() {
     submitting: requiredDocumentSubmitting,
     message: requiredDocumentMessage,
     submit: submitRequiredDocument,
-  } = useRequiredDocuments(user?.userId)
+  } = useRequiredDocuments(isPartner(user?.role || '') ? null : user?.userId)
   const [category, setCategory] = useState('전체')
   const [approvalFilter, setApprovalFilter] = useState('전체')
+  const isPartnerUser = user ? isPartner(user.role) : false
 
   const {
     query,
@@ -218,14 +224,9 @@ export default function DocumentsPage() {
   /* ─── Category + approval + partner filter ─── */
 
   const displayed = (() => {
-    const isPartnerUser = user ? isPartner(user.role) : false
-
     let docs = filteredDocuments
     if (isPartnerUser) {
-      docs = docs.filter(doc => {
-        if (!isPhotoSheetDocument(doc)) return true
-        return doc.approval_status === 'approved' || doc.locked_at
-      })
+      docs = docs.filter(isPartnerVisibleDocument)
     }
 
     if (category !== '전체') {
@@ -299,41 +300,51 @@ export default function DocumentsPage() {
         className="mb-4"
       />
 
-      <RequiredDocumentProgressCard
-        summary={requiredDocumentSummary}
-        loading={requiredDocumentsLoading}
-      />
+      {!isPartnerUser && (
+        <>
+          <RequiredDocumentProgressCard
+            summary={requiredDocumentSummary}
+            loading={requiredDocumentsLoading}
+          />
 
-      <div className="mb-4">
-        <RequiredDocumentsPanel
-          items={requiredDocumentSummary?.items ?? []}
-          loading={requiredDocumentsLoading}
-          onUpload={setUploadType}
-        />
-      </div>
+          <div className="mb-4">
+            <RequiredDocumentsPanel
+              items={requiredDocumentSummary?.items ?? []}
+              loading={requiredDocumentsLoading}
+              onUpload={setUploadType}
+            />
+          </div>
 
-      {requiredDocumentMessage && (
-        <div className={`mb-4 rounded-xl px-4 py-3 text-sm ${
-          requiredDocumentMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-        }`}>
-          {requiredDocumentMessage.text}
-        </div>
+          {requiredDocumentMessage && (
+            <div className={`mb-4 rounded-xl px-4 py-3 text-sm ${
+              requiredDocumentMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+            }`}>
+              {requiredDocumentMessage.text}
+            </div>
+          )}
+
+          <RequiredDocumentUploadSheet
+            open={Boolean(uploadType)}
+            initialType={uploadType}
+            submitting={requiredDocumentSubmitting}
+            onClose={() => setUploadType(null)}
+            onSubmit={params => {
+              if (!selectedSiteId) return
+              void submitRequiredDocument({
+                siteId: selectedSiteId,
+                documentType: params.documentType,
+                file: params.file,
+              }).then(() => setUploadType(null))
+            }}
+          />
+        </>
       )}
 
-      <RequiredDocumentUploadSheet
-        open={Boolean(uploadType)}
-        initialType={uploadType}
-        submitting={requiredDocumentSubmitting}
-        onClose={() => setUploadType(null)}
-        onSubmit={params => {
-          if (!selectedSiteId) return
-          void submitRequiredDocument({
-            siteId: selectedSiteId,
-            documentType: params.documentType,
-            file: params.file,
-          }).then(() => setUploadType(null))
-        }}
-      />
+      {isPartnerUser && (
+        <div className="mb-4 rounded-2xl bg-white p-4 text-sm text-[var(--color-text-secondary)] shadow-sm">
+          파트너 계정은 승인완료 문서만 열람할 수 있습니다.
+        </div>
+      )}
 
       {/* Search Input */}
       <div className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-white px-3 py-2 mb-4">

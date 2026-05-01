@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSelectedSite } from '@/contexts/selected-site-context'
+import { useAuth } from '@/contexts/auth-context'
 import { createClient } from '@/lib/supabase/client'
+import { isPartner } from '@/lib/roles'
 import type {
   MenuSearchResult,
   MenuSearchOptions,
@@ -166,6 +168,7 @@ export function useMenuSearch(options: MenuSearchOptions): UseMenuSearchReturn {
   const { scope, selectedSiteId: overrideSiteId } = options
 
   const { accessibleSites, selectedSiteId: contextSelectedSiteId } = useSelectedSite()
+  const { user } = useAuth()
   const selectedSiteId = overrideSiteId ?? contextSelectedSiteId
   const [query, setQueryState] = useState('')
   const [loading, setLoading] = useState(false)
@@ -228,6 +231,10 @@ export function useMenuSearch(options: MenuSearchOptions): UseMenuSearchReturn {
           )
         }
 
+        if (isPartner(user?.role || '')) {
+          dbQuery = dbQuery.eq('approval_status', 'approved').neq('category', '안전서류')
+        }
+
         const { data, error: dbError } = await dbQuery
 
         if (cancelled) return
@@ -252,7 +259,7 @@ export function useMenuSearch(options: MenuSearchOptions): UseMenuSearchReturn {
     return () => {
       cancelled = true
     }
-  }, [scope, selectedSiteId, query, options.minQueryLength, supabase])
+  }, [scope, selectedSiteId, query, options.minQueryLength, supabase, user?.role])
 
   /* ─── Worklog search — async Supabase query ─── */
 

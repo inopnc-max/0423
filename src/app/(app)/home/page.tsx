@@ -440,7 +440,11 @@ export default function HomePage() {
         </section>
       )}
 
-      <RecentViewedDocuments userId={user?.userId} siteId={selectedSiteId} />
+      <RecentViewedDocuments
+        userId={user?.userId}
+        siteId={selectedSiteId}
+        partnerMode={isPartnerUser}
+      />
     </div>
   )
 }
