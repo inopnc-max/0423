@@ -64,6 +64,44 @@ function buildPolygonPoints(points: DrawingMarkupPoint[]): string {
     .join(' ')
 }
 
+function hasValidSegment(mark: { start?: unknown; end?: unknown }): boolean {
+  return isValidPoint(mark.start) && isValidPoint(mark.end)
+}
+
+function getLineWidth(value: number | undefined, fallback: number): number {
+  return Math.max(1, Math.round((value ?? fallback) * VIEW_BOX_SIZE))
+}
+
+function getBoxFromPoints(start: DrawingMarkupPoint, end: DrawingMarkupPoint) {
+  const startPoint = toViewBoxPoint(start)
+  const endPoint = toViewBoxPoint(end)
+  const x = Math.min(startPoint.x, endPoint.x)
+  const y = Math.min(startPoint.y, endPoint.y)
+  const width = Math.abs(endPoint.x - startPoint.x)
+  const height = Math.abs(endPoint.y - startPoint.y)
+
+  return { x, y, width, height }
+}
+
+function buildArrowHead(start: DrawingMarkupPoint, end: DrawingMarkupPoint): string {
+  const startPoint = toViewBoxPoint(start)
+  const endPoint = toViewBoxPoint(end)
+  const angle = Math.atan2(endPoint.y - startPoint.y, endPoint.x - startPoint.x)
+  const size = 26
+  const wingAngle = Math.PI / 7
+
+  const left = {
+    x: endPoint.x - size * Math.cos(angle - wingAngle),
+    y: endPoint.y - size * Math.sin(angle - wingAngle),
+  }
+  const right = {
+    x: endPoint.x - size * Math.cos(angle + wingAngle),
+    y: endPoint.y - size * Math.sin(angle + wingAngle),
+  }
+
+  return `${endPoint.x},${endPoint.y} ${Math.round(left.x)},${Math.round(left.y)} ${Math.round(right.x)},${Math.round(right.y)}`
+}
+
 function normalizeMarks(marks?: DrawingMarkupMark[]): DrawingMarkupMark[] {
   if (!marks || !Array.isArray(marks)) return []
 
@@ -74,6 +112,12 @@ function normalizeMarks(marks?: DrawingMarkupMark[]): DrawingMarkupMark[] {
     }
     if (mark.type === 'polygon-area') {
       return Array.isArray(mark.points) && mark.points.length >= 3
+    }
+    if (mark.type === 'line' || mark.type === 'arrow' || mark.type === 'rectangle' || mark.type === 'ellipse') {
+      return hasValidSegment(mark)
+    }
+    if (mark.type === 'text') {
+      return isValidPoint(mark.position) && typeof mark.text === 'string' && mark.text.trim().length > 0
     }
     return false
   })
@@ -124,6 +168,90 @@ function MarkupOverlay({ marks }: { marks: DrawingMarkupMark[] }) {
               strokeLinecap="round"
               strokeLinejoin="round"
             />
+          )
+        }
+
+        if (mark.type === 'line' || mark.type === 'arrow') {
+          const start = toViewBoxPoint(mark.start)
+          const end = toViewBoxPoint(mark.end)
+          const width = getLineWidth(mark.width, 0.006)
+          const color = mark.color ?? '#dc2626'
+
+          return (
+            <g key={`${mark.type}-${index}`}>
+              <line
+                x1={start.x}
+                y1={start.y}
+                x2={end.x}
+                y2={end.y}
+                stroke={color}
+                strokeWidth={width}
+                strokeLinecap="round"
+              />
+              {mark.type === 'arrow' && (
+                <polygon
+                  points={buildArrowHead(mark.start, mark.end)}
+                  fill={color}
+                />
+              )}
+            </g>
+          )
+        }
+
+        if (mark.type === 'rectangle' || mark.type === 'ellipse') {
+          const box = getBoxFromPoints(mark.start, mark.end)
+          const lineWidth = getLineWidth(mark.lineWidth, 0.005)
+          const strokeColor = mark.strokeColor ?? '#dc2626'
+          const fillColor = mark.fillColor ?? 'rgba(220, 38, 38, 0.12)'
+
+          if (box.width === 0 || box.height === 0) return null
+
+          if (mark.type === 'rectangle') {
+            return (
+              <rect
+                key={`rectangle-${index}`}
+                x={box.x}
+                y={box.y}
+                width={box.width}
+                height={box.height}
+                fill={fillColor}
+                stroke={strokeColor}
+                strokeWidth={lineWidth}
+              />
+            )
+          }
+
+          return (
+            <ellipse
+              key={`ellipse-${index}`}
+              cx={box.x + box.width / 2}
+              cy={box.y + box.height / 2}
+              rx={box.width / 2}
+              ry={box.height / 2}
+              fill={fillColor}
+              stroke={strokeColor}
+              strokeWidth={lineWidth}
+            />
+          )
+        }
+
+        if (mark.type === 'text') {
+          const position = toViewBoxPoint(mark.position)
+
+          return (
+            <text
+              key={`text-${index}`}
+              x={position.x}
+              y={position.y}
+              fontSize={Math.max(12, Math.round((mark.fontSize ?? 0.024) * VIEW_BOX_SIZE))}
+              fontWeight="bold"
+              fill={mark.color ?? '#dc2626'}
+              stroke="white"
+              strokeWidth={3}
+              paintOrder="stroke"
+            >
+              {mark.text.slice(0, 80)}
+            </text>
           )
         }
 
@@ -258,7 +386,7 @@ function PageCard({
  *
  * Renders drawing markup documents with:
  * - Multiple pages displayed vertically
- * - SVG overlay for brush and polygon-area marks
+ * - SVG overlay for brush, line, arrow, rectangle, ellipse, text, and polygon-area marks
  * - Signed URL support for Supabase storage
  * - Empty/loading/error state handling
  *

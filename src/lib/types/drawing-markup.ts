@@ -47,8 +47,70 @@ export type DrawingMarkupPolygonArea = {
 }
 
 /**
+ * A straight line between two normalized points.
+ */
+export type DrawingMarkupLine = {
+  type: 'line'
+  start: DrawingMarkupPoint
+  end: DrawingMarkupPoint
+  width?: number
+  color?: string
+}
+
+/**
+ * A directional arrow between two normalized points.
+ */
+export type DrawingMarkupArrow = {
+  type: 'arrow'
+  start: DrawingMarkupPoint
+  end: DrawingMarkupPoint
+  width?: number
+  color?: string
+}
+
+/**
+ * A rectangle defined by two opposite corners.
+ */
+export type DrawingMarkupRectangle = {
+  type: 'rectangle'
+  start: DrawingMarkupPoint
+  end: DrawingMarkupPoint
+  lineWidth?: number
+  strokeColor?: string
+  fillColor?: string
+}
+
+/**
+ * An ellipse defined by a bounding box's opposite corners.
+ */
+export type DrawingMarkupEllipse = {
+  type: 'ellipse'
+  start: DrawingMarkupPoint
+  end: DrawingMarkupPoint
+  lineWidth?: number
+  strokeColor?: string
+  fillColor?: string
+}
+
+/**
+ * A text annotation anchored at a normalized point.
+ */
+export type DrawingMarkupText = {
+  type: 'text'
+  position: DrawingMarkupPoint
+  text: string
+  fontSize?: number
+  color?: string
+}
+
+/**
  * Union type for all supported mark types.
  */
 export type DrawingMarkupMark =
   | DrawingMarkupBrushStroke
   | DrawingMarkupPolygonArea
+  | DrawingMarkupLine
+  | DrawingMarkupArrow
+  | DrawingMarkupRectangle
+  | DrawingMarkupEllipse
+  | DrawingMarkupText

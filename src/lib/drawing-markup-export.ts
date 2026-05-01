@@ -20,6 +20,27 @@ export interface DrawingMarkupExportOptions {
   includeImages?: boolean
 }
 
+function getDrawingMarkupMarkLabel(mark: DrawingMarkupMark): string {
+  switch (mark.type) {
+    case 'polygon-area':
+      return '면적'
+    case 'brush':
+      return '붓터치'
+    case 'line':
+      return '선'
+    case 'arrow':
+      return '화살표'
+    case 'rectangle':
+      return '사각형'
+    case 'ellipse':
+      return '타원'
+    case 'text':
+      return '텍스트'
+    default:
+      return '마킹'
+  }
+}
+
 /**
  * Calculate total area for a single page.
  */
@@ -79,6 +100,16 @@ export function generateDrawingMarkupCsv(options: DrawingMarkupExportOptions): s
           '-',
           '-',
         ])
+      } else {
+        rows.push([
+          document.title,
+          document.siteName ?? '',
+          document.workDate ?? '',
+          page.title,
+          getDrawingMarkupMarkLabel(mark),
+          '-',
+          '-',
+        ])
       }
     }
 
@@ -114,6 +145,7 @@ export function generateDrawingMarkupSummaryCsv(options: DrawingMarkupExportOpti
     const pageMarks = page.marks ?? []
     let pageTotal = 0
     let polygonCount = 0
+    let markupCount = pageMarks.length
 
     for (const mark of pageMarks) {
       if (mark.type === 'polygon-area') {
@@ -133,7 +165,7 @@ export function generateDrawingMarkupSummaryCsv(options: DrawingMarkupExportOpti
       document.siteName ?? '',
       document.workDate ?? '',
       page.title,
-      polygonCount.toString(),
+      `${polygonCount}/${markupCount}`,
       polygonCount > 0 ? pageTotal.toFixed(4) : '-',
     ])
   }
@@ -202,7 +234,7 @@ export async function createDrawingMarkupPdfBlob(
     const pageMarks = page.marks ?? []
     let pageTotal = 0
     let polygonCount = 0
-    let brushCount = 0
+    let otherMarkCount = 0
 
     for (const mark of pageMarks) {
       if (mark.type === 'polygon-area') {
@@ -214,12 +246,12 @@ export async function createDrawingMarkupPdfBlob(
           pageTotal += scaled
           grandTotal += scaled
         }
-      } else if (mark.type === 'brush') {
-        brushCount++
+      } else {
+        otherMarkCount++
       }
     }
 
-    return { page, polygonCount, brushCount, pageTotal }
+    return { page, polygonCount, otherMarkCount, pageTotal }
   })
 
   const totalSummaryPages = pageSummaries.length + 1
@@ -240,7 +272,7 @@ export async function createDrawingMarkupPdfBlob(
           <tr>
             <th>페이지</th>
             <th>면적 객체</th>
-            <th>붓터치</th>
+            <th>기타 마킹</th>
             <th>총 면적 (${escapeHtml(areaUnit)})</th>
           </tr>
         </thead>
@@ -249,7 +281,7 @@ export async function createDrawingMarkupPdfBlob(
             <tr>
               <td>${escapeHtml(s.page.title)}</td>
               <td>${s.polygonCount}건</td>
-              <td>${s.brushCount}건</td>
+              <td>${s.otherMarkCount}건</td>
               <td>${s.polygonCount > 0 ? s.pageTotal.toFixed(4) : '-'}</td>
             </tr>
           `).join('')}

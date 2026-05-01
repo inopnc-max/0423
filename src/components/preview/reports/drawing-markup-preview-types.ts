@@ -13,6 +13,11 @@ export type {
   DrawingMarkupPoint,
   DrawingMarkupBrushStroke,
   DrawingMarkupPolygonArea,
+  DrawingMarkupLine,
+  DrawingMarkupArrow,
+  DrawingMarkupRectangle,
+  DrawingMarkupEllipse,
+  DrawingMarkupText,
   DrawingMarkupMark,
 } from '@/lib/types/drawing-markup'
 
