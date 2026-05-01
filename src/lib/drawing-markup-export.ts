@@ -322,9 +322,9 @@ export async function createDrawingMarkupPdfBlob(
     </html>
   `
 
-  const iframe = document.createElement('iframe')
+  const iframe = globalThis.document.createElement('iframe')
   iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;border:none;opacity:0;pointer-events:none;'
-  document.body.appendChild(iframe)
+  globalThis.document.body.appendChild(iframe)
 
   try {
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
@@ -375,7 +375,7 @@ export async function createDrawingMarkupPdfBlob(
 
     return doc.output('blob')
   } finally {
-    document.body.removeChild(iframe)
+    globalThis.document.body.removeChild(iframe)
   }
 }
 

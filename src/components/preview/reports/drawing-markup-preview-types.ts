@@ -17,7 +17,7 @@ export type {
 } from '@/lib/types/drawing-markup'
 
 // Import for local use in page/document types
-import type { DrawingMarkupMark } from '@/lib/types/drawing-markup'
+import type { DrawingMarkupMark, DrawingMarkupPoint } from '@/lib/types/drawing-markup'
 
 /**
  * Area calculation result for a polygon.
