@@ -32,7 +32,12 @@ export function PreviewHost() {
       onSave={preview.onSave}
       onSign={preview.onSign}
       onSubmit={preview.onSubmit}
+      onLock={preview.onLock}
+      onUnlock={preview.onUnlock}
+      onExportPdf={preview.onExportPdf}
+      onExportCsv={preview.onExportCsv}
       customActions={preview.customActions}
+      showExportMenu={preview.showExportMenu}
       backdropClassName={preview.backdropClassName}
       maxWidth={preview.maxWidth}
     >

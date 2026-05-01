@@ -17,6 +17,8 @@ function sanitizePreviewConfig(config: PreviewConfig, role?: Role): PreviewConfi
     onSave: undefined,
     onSign: undefined,
     onSubmit: undefined,
+    onLock: undefined,
+    onUnlock: undefined,
   }
 }
 

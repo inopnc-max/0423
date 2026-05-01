@@ -40,6 +40,7 @@ import { usePreview, DrawingMarkupMultiPagePreview } from '@/components/preview'
 import { PhotoSheetDraftViewer, PhotoSheetWizard } from '@/components/photo-sheet'
 import { enqueueSyncQueueItem } from '@/lib/offline/sync-queue'
 import { buildDrawingMarkupPreviewFromMediaInfo } from '@/lib/drawing-markup-preview-mapping'
+import { downloadDrawingMarkupCsv, downloadDrawingMarkupPdf } from '@/lib/drawing-markup-export'
 import { SiteCombobox } from '@/components/site/SiteCombobox'
 import { WorklogTimeline, type WorklogTimelineStep } from '@/components/worklog/WorklogTimeline'
 
@@ -367,6 +368,13 @@ function WorklogDetailView({
                   mode: 'fullscreen',
                   contentType: 'report',
                   dockMode: 'readonly',
+                  showExportMenu: true,
+                  onExportPdf: () => {
+                    void downloadDrawingMarkupPdf({ document: drawingPreviewDocument })
+                  },
+                  onExportCsv: () => {
+                    downloadDrawingMarkupCsv({ document: drawingPreviewDocument })
+                  },
                   showBack: false,
                   onClose: () => {},
                   children: <DrawingMarkupMultiPagePreview document={drawingPreviewDocument} />,
