@@ -174,27 +174,17 @@ export function ProductionEntryDraftForm({
           </label>
 
               <label className={labelClassName}>
-                {values.entryType === '판매' ? '거래처' : '품목'}
-                {values.entryType === '판매' ? (
-                  <input
-                    type="text"
-                    className={fieldClassName}
-                    placeholder="거래처명을 입력해주세요"
-                    value={values.productId}
-                    onChange={e => handleChange('productId', e.target.value)}
-                  />
-                ) : (
-                  <select
-                    className={fieldClassName}
-                    value={values.productId}
-                    onChange={e => handleChange('productId', e.target.value)}
-                  >
-                    <option value="">품목 선택</option>
-                    {selectedProducts.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                )}
+                품목
+                <select
+                  className={fieldClassName}
+                  value={values.productId}
+                  onChange={e => handleChange('productId', e.target.value)}
+                >
+                  <option value="">품목 선택</option>
+                  {selectedProducts.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
               </label>
 
           <label className={labelClassName}>
