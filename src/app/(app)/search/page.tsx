@@ -21,7 +21,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth-context'
 import { isPartner } from '@/lib/roles'
-import { ROUTES } from '@/lib/routes'
+import { ROUTES, canAccessRoute } from '@/lib/routes'
 import { FilePreviewGateway, usePreview } from '@/components/preview'
 import type { MenuSearchPreviewPayload } from '@/lib/menu-search'
 import type { PreviewContentType } from '@/components/preview/preview-types'
@@ -304,7 +304,7 @@ export default function SearchPage() {
               if (isPartner(user?.role || '')) {
                 return item.href !== ROUTES.worklog && item.href !== ROUTES.materials && item.href !== ROUTES.output
               }
-              return true
+              return canAccessRoute(item.href, user?.role || '')
             }).map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
