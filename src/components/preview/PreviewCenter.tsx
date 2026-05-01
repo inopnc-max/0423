@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect } from 'react'
 import { PreviewHeader } from './PreviewHeader'
@@ -25,8 +25,13 @@ interface PreviewCenterProps {
   onSave?: () => void
   onSign?: () => void
   onSubmit?: () => void
+  onLock?: () => void
+  onUnlock?: () => void
+  onExportPdf?: () => void
+  onExportCsv?: () => void
   dockDisabled?: boolean
   customActions?: DockAction[]
+  showExportMenu?: boolean
   // Backdrop
   backdropClassName?: string
   // Layout
@@ -34,16 +39,16 @@ interface PreviewCenterProps {
 }
 
 /**
- * PreviewCenter - 통합 미리보기 컨테이너
+ * PreviewCenter - 도면 미리보기 컨테이너
  *
- * 3가지 모드 지원:
- * 1. modal: z-index 60, backdrop, AppShell 위에 띄움
- * 2. fullscreen: 전체 화면, 독립 페이지처럼 동작
+ * 3가지 모드 지원
+ * 1. modal: z-index 50, backdrop, AppShell 안에 표시
+ * 2. fullscreen: 전체 화면, 헤더 뒤로 가기 포함 가능
  *
- * 콘텐츠 타입:
- * - report: 문서/리포트 (A4 비율 고려)
- * - media: 이미지/비디오 (원본 비율 유지)
- * - file: 일반 파일 (다운로드 중심)
+ * 컨텐츠 유형
+ * - report: 문서/보고서(A4 기준 영역)
+ * - media: 이미지/비디오(자체 영역 사용)
+ * - file: 기타 파일 (다운로드 제공)
  */
 export function PreviewCenter({
   children,
@@ -62,8 +67,13 @@ export function PreviewCenter({
   onSave,
   onSign,
   onSubmit,
+  onLock,
+  onUnlock,
+  onExportPdf,
+  onExportCsv,
   dockDisabled,
   customActions,
+  showExportMenu,
   backdropClassName,
   maxWidth = 'max-w-[960px]',
 }: PreviewCenterProps) {
@@ -98,7 +108,7 @@ export function PreviewCenter({
         rightAction={headerRightAction}
       />
 
-      {/* Body - 하단 Dock 높이만큼 padding 추가하여 콘텐츠 가림 방지 */}
+      {/* Body - 하단 Dock 공간이 있도록 padding 추가해서 컨텐츠가 잘리지 않도록 */}
       <div
         className={`flex-1 overflow-auto pb-[calc(100px+var(--safe-bottom))] ${
           contentType === 'report'
@@ -118,8 +128,13 @@ export function PreviewCenter({
         onSave={onSave}
         onSign={onSign}
         onSubmit={onSubmit}
+        onLock={onLock}
+        onUnlock={onUnlock}
+        onExportPdf={onExportPdf}
+        onExportCsv={onExportCsv}
         disabled={dockDisabled}
         customActions={customActions}
+        showExportMenu={showExportMenu}
       />
     </div>
   )

@@ -1,4 +1,4 @@
-import type { DockAction } from './PreviewActionDock'
+﻿import type { DockAction } from './PreviewActionDock'
 import type { Role } from '@/lib/roles'
 
 export type PreviewMode = 'modal' | 'fullscreen'
@@ -22,7 +22,12 @@ export interface PreviewConfig {
   onSave?: () => void
   onSign?: () => void
   onSubmit?: () => void
+  onLock?: () => void
+  onUnlock?: () => void
+  onExportPdf?: () => void
+  onExportCsv?: () => void
   customActions?: DockAction[]
+  showExportMenu?: boolean
   backdropClassName?: string
   maxWidth?: string
 }
