@@ -22,7 +22,12 @@ export interface PreviewConfig {
   onSave?: () => void
   onSign?: () => void
   onSubmit?: () => void
+  onLock?: () => void
+  onUnlock?: () => void
+  onExportPdf?: () => void
+  onExportCsv?: () => void
   customActions?: DockAction[]
+  showExportMenu?: boolean
   backdropClassName?: string
   maxWidth?: string
 }

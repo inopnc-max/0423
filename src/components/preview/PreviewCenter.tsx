@@ -25,8 +25,13 @@ interface PreviewCenterProps {
   onSave?: () => void
   onSign?: () => void
   onSubmit?: () => void
+  onLock?: () => void
+  onUnlock?: () => void
+  onExportPdf?: () => void
+  onExportCsv?: () => void
   dockDisabled?: boolean
   customActions?: DockAction[]
+  showExportMenu?: boolean
   // Backdrop
   backdropClassName?: string
   // Layout
@@ -62,8 +67,13 @@ export function PreviewCenter({
   onSave,
   onSign,
   onSubmit,
+  onLock,
+  onUnlock,
+  onExportPdf,
+  onExportCsv,
   dockDisabled,
   customActions,
+  showExportMenu,
   backdropClassName,
   maxWidth = 'max-w-[960px]',
 }: PreviewCenterProps) {
@@ -118,8 +128,13 @@ export function PreviewCenter({
         onSave={onSave}
         onSign={onSign}
         onSubmit={onSubmit}
+        onLock={onLock}
+        onUnlock={onUnlock}
+        onExportPdf={onExportPdf}
+        onExportCsv={onExportCsv}
         disabled={dockDisabled}
         customActions={customActions}
+        showExportMenu={showExportMenu}
       />
     </div>
   )
