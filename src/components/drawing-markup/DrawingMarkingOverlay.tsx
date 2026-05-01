@@ -1,0 +1,377 @@
+'use client'
+
+import type { PointerEvent } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import {
+  ArrowUpRight,
+  Circle,
+  Edit3,
+  Highlighter,
+  MousePointer2,
+  PenLine,
+  Square,
+  Type,
+} from 'lucide-react'
+import type { DrawingMarkupMark, DrawingMarkupPoint } from '@/lib/types/drawing-markup'
+
+export type DrawingMarkingTool =
+  | 'select'
+  | 'brush'
+  | 'line'
+  | 'arrow'
+  | 'rectangle'
+  | 'ellipse'
+  | 'text'
+  | 'polygon-area'
+
+export interface DrawingMarkingOverlayProps {
+  imageUrl?: string | null
+  imageAlt?: string
+  marks: DrawingMarkupMark[]
+  activeTool: DrawingMarkingTool
+  onActiveToolChange?: (tool: DrawingMarkingTool) => void
+  onMarksChange?: (marks: DrawingMarkupMark[]) => void
+  readOnly?: boolean
+  disabled?: boolean
+  className?: string
+}
+
+const VIEW_BOX_SIZE = 1000
+const DEFAULT_COLOR = '#dc2626'
+
+const TOOL_ITEMS: Array<{
+  tool: DrawingMarkingTool
+  label: string
+  icon: typeof MousePointer2
+}> = [
+  { tool: 'select', label: 'Select', icon: MousePointer2 },
+  { tool: 'brush', label: 'Brush', icon: Highlighter },
+  { tool: 'line', label: 'Line', icon: PenLine },
+  { tool: 'arrow', label: 'Arrow', icon: ArrowUpRight },
+  { tool: 'rectangle', label: 'Rectangle', icon: Square },
+  { tool: 'ellipse', label: 'Ellipse', icon: Circle },
+  { tool: 'text', label: 'Text', icon: Type },
+  { tool: 'polygon-area', label: 'Area', icon: Edit3 },
+]
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value))
+}
+
+function toViewBoxPoint(point: DrawingMarkupPoint): { x: number; y: number } {
+  return {
+    x: Math.round(clamp01(point.x) * VIEW_BOX_SIZE),
+    y: Math.round(clamp01(point.y) * VIEW_BOX_SIZE),
+  }
+}
+
+function getPointerPoint(event: PointerEvent<HTMLDivElement>, element: HTMLDivElement): DrawingMarkupPoint {
+  const rect = element.getBoundingClientRect()
+
+  return {
+    x: clamp01((event.clientX - rect.left) / rect.width),
+    y: clamp01((event.clientY - rect.top) / rect.height),
+  }
+}
+
+function getBox(start: DrawingMarkupPoint, end: DrawingMarkupPoint) {
+  const startPoint = toViewBoxPoint(start)
+  const endPoint = toViewBoxPoint(end)
+  const x = Math.min(startPoint.x, endPoint.x)
+  const y = Math.min(startPoint.y, endPoint.y)
+  const width = Math.abs(endPoint.x - startPoint.x)
+  const height = Math.abs(endPoint.y - startPoint.y)
+
+  return { x, y, width, height }
+}
+
+function buildArrowHead(start: DrawingMarkupPoint, end: DrawingMarkupPoint): string {
+  const startPoint = toViewBoxPoint(start)
+  const endPoint = toViewBoxPoint(end)
+  const angle = Math.atan2(endPoint.y - startPoint.y, endPoint.x - startPoint.x)
+  const size = 26
+  const wingAngle = Math.PI / 7
+
+  const left = {
+    x: endPoint.x - size * Math.cos(angle - wingAngle),
+    y: endPoint.y - size * Math.sin(angle - wingAngle),
+  }
+  const right = {
+    x: endPoint.x - size * Math.cos(angle + wingAngle),
+    y: endPoint.y - size * Math.sin(angle + wingAngle),
+  }
+
+  return `${endPoint.x},${endPoint.y} ${Math.round(left.x)},${Math.round(left.y)} ${Math.round(right.x)},${Math.round(right.y)}`
+}
+
+function renderMark(mark: DrawingMarkupMark, index: number, isDraft = false) {
+  const opacity = isDraft ? 0.72 : 1
+
+  if (mark.type === 'brush') {
+    const points = mark.points
+      .map(toViewBoxPoint)
+      .map((point) => `${point.x},${point.y}`)
+      .join(' ')
+
+    if (!points) return null
+
+    return (
+      <polyline
+        key={`brush-${index}`}
+        points={points}
+        fill="none"
+        stroke={mark.color ?? DEFAULT_COLOR}
+        strokeWidth={Math.max(1, Math.round((mark.width ?? 0.01) * VIEW_BOX_SIZE))}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={opacity}
+      />
+    )
+  }
+
+  if (mark.type === 'line' || mark.type === 'arrow') {
+    const start = toViewBoxPoint(mark.start)
+    const end = toViewBoxPoint(mark.end)
+    const color = mark.color ?? DEFAULT_COLOR
+
+    return (
+      <g key={`${mark.type}-${index}`} opacity={opacity}>
+        <line
+          x1={start.x}
+          y1={start.y}
+          x2={end.x}
+          y2={end.y}
+          stroke={color}
+          strokeWidth={Math.max(1, Math.round((mark.width ?? 0.006) * VIEW_BOX_SIZE))}
+          strokeLinecap="round"
+        />
+        {mark.type === 'arrow' && <polygon points={buildArrowHead(mark.start, mark.end)} fill={color} />}
+      </g>
+    )
+  }
+
+  if (mark.type === 'rectangle' || mark.type === 'ellipse') {
+    const box = getBox(mark.start, mark.end)
+    const strokeColor = mark.strokeColor ?? DEFAULT_COLOR
+    const fillColor = mark.fillColor ?? 'rgba(220, 38, 38, 0.12)'
+
+    if (box.width === 0 || box.height === 0) return null
+
+    if (mark.type === 'rectangle') {
+      return (
+        <rect
+          key={`rectangle-${index}`}
+          x={box.x}
+          y={box.y}
+          width={box.width}
+          height={box.height}
+          fill={fillColor}
+          stroke={strokeColor}
+          strokeWidth={Math.max(1, Math.round((mark.lineWidth ?? 0.005) * VIEW_BOX_SIZE))}
+          opacity={opacity}
+        />
+      )
+    }
+
+    return (
+      <ellipse
+        key={`ellipse-${index}`}
+        cx={box.x + box.width / 2}
+        cy={box.y + box.height / 2}
+        rx={box.width / 2}
+        ry={box.height / 2}
+        fill={fillColor}
+        stroke={strokeColor}
+        strokeWidth={Math.max(1, Math.round((mark.lineWidth ?? 0.005) * VIEW_BOX_SIZE))}
+        opacity={opacity}
+      />
+    )
+  }
+
+  if (mark.type === 'text') {
+    const position = toViewBoxPoint(mark.position)
+
+    return (
+      <text
+        key={`text-${index}`}
+        x={position.x}
+        y={position.y}
+        fontSize={Math.max(12, Math.round((mark.fontSize ?? 0.024) * VIEW_BOX_SIZE))}
+        fontWeight="bold"
+        fill={mark.color ?? DEFAULT_COLOR}
+        stroke="white"
+        strokeWidth={3}
+        paintOrder="stroke"
+        opacity={opacity}
+      >
+        {mark.text.slice(0, 80)}
+      </text>
+    )
+  }
+
+  if (mark.type === 'polygon-area') {
+    const points = mark.points
+      .map(toViewBoxPoint)
+      .map((point) => `${point.x},${point.y}`)
+      .join(' ')
+
+    if (!points) return null
+
+    return (
+      <polygon
+        key={`polygon-area-${index}`}
+        points={points}
+        fill={mark.fillColor ?? 'rgba(220, 38, 38, 0.2)'}
+        stroke={mark.strokeColor ?? DEFAULT_COLOR}
+        strokeWidth={Math.max(1, Math.round((mark.lineWidth ?? 0.005) * VIEW_BOX_SIZE))}
+        opacity={opacity}
+      />
+    )
+  }
+
+  return null
+}
+
+function buildDraftMark(
+  tool: DrawingMarkingTool,
+  start: DrawingMarkupPoint,
+  end: DrawingMarkupPoint
+): DrawingMarkupMark | null {
+  if (tool === 'line') {
+    return { type: 'line', start, end, color: DEFAULT_COLOR, width: 0.006 }
+  }
+  if (tool === 'arrow') {
+    return { type: 'arrow', start, end, color: DEFAULT_COLOR, width: 0.006 }
+  }
+  if (tool === 'rectangle') {
+    return { type: 'rectangle', start, end, strokeColor: DEFAULT_COLOR, fillColor: 'rgba(220, 38, 38, 0.12)' }
+  }
+  if (tool === 'ellipse') {
+    return { type: 'ellipse', start, end, strokeColor: DEFAULT_COLOR, fillColor: 'rgba(220, 38, 38, 0.12)' }
+  }
+  return null
+}
+
+export function DrawingMarkingOverlay({
+  imageUrl,
+  imageAlt = 'Drawing',
+  marks,
+  activeTool,
+  onActiveToolChange,
+  onMarksChange,
+  readOnly = false,
+  disabled = false,
+  className = '',
+}: DrawingMarkingOverlayProps) {
+  const surfaceRef = useRef<HTMLDivElement | null>(null)
+  const [draftStart, setDraftStart] = useState<DrawingMarkupPoint | null>(null)
+  const [draftEnd, setDraftEnd] = useState<DrawingMarkupPoint | null>(null)
+  const isLocked = readOnly || disabled || !onMarksChange
+  const draftMark = useMemo(() => {
+    if (!draftStart || !draftEnd) return null
+    return buildDraftMark(activeTool, draftStart, draftEnd)
+  }, [activeTool, draftEnd, draftStart])
+
+  const commitMark = (mark: DrawingMarkupMark) => {
+    if (isLocked) return
+    onMarksChange?.([...marks, mark])
+  }
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (isLocked || activeTool === 'select') return
+    if (!surfaceRef.current) return
+
+    const point = getPointerPoint(event, surfaceRef.current)
+
+    if (activeTool === 'text') {
+      commitMark({ type: 'text', position: point, text: 'Text', color: DEFAULT_COLOR, fontSize: 0.024 })
+      return
+    }
+
+    if (activeTool === 'brush') {
+      setDraftStart(point)
+      setDraftEnd(point)
+      event.currentTarget.setPointerCapture(event.pointerId)
+      return
+    }
+
+    if (buildDraftMark(activeTool, point, point)) {
+      setDraftStart(point)
+      setDraftEnd(point)
+      event.currentTarget.setPointerCapture(event.pointerId)
+    }
+  }
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!draftStart || isLocked || !surfaceRef.current) return
+
+    setDraftEnd(getPointerPoint(event, surfaceRef.current))
+  }
+
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (!draftStart || !draftEnd || isLocked) return
+
+    const nextMark =
+      activeTool === 'brush'
+        ? { type: 'brush' as const, points: [draftStart, draftEnd], color: DEFAULT_COLOR, width: 0.01 }
+        : buildDraftMark(activeTool, draftStart, draftEnd)
+
+    if (nextMark) {
+      commitMark(nextMark)
+    }
+
+    setDraftStart(null)
+    setDraftEnd(null)
+    event.currentTarget.releasePointerCapture(event.pointerId)
+  }
+
+  return (
+    <div className={`flex w-full flex-col gap-2 ${className}`}>
+      <div className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-white p-1">
+        {TOOL_ITEMS.map(({ tool, label, icon: Icon }) => {
+          const isActive = activeTool === tool
+          return (
+            <button
+              key={tool}
+              type="button"
+              aria-label={label}
+              title={label}
+              disabled={disabled || readOnly}
+              onClick={() => onActiveToolChange?.(tool)}
+              className={`flex h-9 w-9 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition ${
+                isActive ? 'bg-[var(--color-primary)] text-white' : 'hover:bg-[var(--color-bg-soft)]'
+              } disabled:cursor-not-allowed disabled:opacity-50`}
+            >
+              <Icon className="h-4 w-4" />
+            </button>
+          )
+        })}
+      </div>
+
+      <div
+        ref={surfaceRef}
+        className="relative min-h-[320px] overflow-hidden rounded-md border border-[var(--color-border)] bg-slate-100"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+      >
+        {imageUrl ? (
+          <img src={imageUrl} alt={imageAlt} className="h-full min-h-[320px] w-full object-contain" />
+        ) : (
+          <div className="flex min-h-[320px] items-center justify-center text-sm text-[var(--color-text-tertiary)]">
+            No drawing image
+          </div>
+        )}
+
+        <svg
+          viewBox={`0 0 ${VIEW_BOX_SIZE} ${VIEW_BOX_SIZE}`}
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          preserveAspectRatio="none"
+        >
+          {marks.map((mark, index) => renderMark(mark, index))}
+          {draftMark && renderMark(draftMark, marks.length, true)}
+        </svg>
+      </div>
+    </div>
+  )
+}
