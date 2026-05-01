@@ -626,6 +626,7 @@ function WorklogEditorView({
     try {
       const result = await savePhotoSheetPdfToStorageAndCreateDocument({
         draft: latestPhotoSheetDraft,
+        uploadedBy: user.userId,
       })
 
       setSavedPhotoSheetDocumentId(result.documentId)
@@ -1853,6 +1854,14 @@ function WorklogEditorView({
           >
             사진대지 미리보기
           </button>
+          {savedPhotoSheetDocumentId && (
+            <a
+              href="/documents"
+              className="mt-2 flex items-center justify-center rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm font-semibold text-[var(--color-text)] transition hover:bg-slate-50"
+            >
+              문서함에서 보기
+            </a>
+          )}
         </div>
       )}
 
