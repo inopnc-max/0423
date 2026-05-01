@@ -97,7 +97,11 @@ export default function SearchPage() {
         if (requestIdRef.current !== currentRequestId) return
 
         if (!error && data) {
-          setResults(data)
+          const rows = (data as SearchResult[]).filter(result => {
+            if (!isPartner(user?.role || '')) return true
+            return result.entity_type === 'site'
+          })
+          setResults(rows)
           setSelectedIndex(0)
           return
         }
@@ -164,6 +168,11 @@ export default function SearchPage() {
   }
 
   function handleResultOpen(result: SearchResult) {
+    if (isPartner(user?.role || '') && result.entity_type !== 'site') {
+      openResultFallback(result)
+      return
+    }
+
     const payload = getPreviewPayload(result)
 
     if (!payload || !payload.url) {
@@ -293,7 +302,7 @@ export default function SearchPage() {
           <div className="grid grid-cols-2 gap-3">
             {QUICK_LINKS.filter(item => {
               if (isPartner(user?.role || '')) {
-                return item.href !== ROUTES.worklog && item.href !== ROUTES.materials
+                return item.href !== ROUTES.worklog && item.href !== ROUTES.materials && item.href !== ROUTES.output
               }
               return true
             }).map(({ href, label, icon: Icon }) => (

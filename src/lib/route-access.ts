@@ -22,7 +22,7 @@ export const ROUTE_ROLE_ACCESS: Record<string, readonly Role[]> = {
   // worker, site_manager, admin only (NOT production_manager)
   [ROUTES.materials]: ['worker', 'site_manager', 'admin'],
   // worker, partner, site_manager, admin only (NOT production_manager)
-  [ROUTES.confirmSheet]: ['worker', 'partner', 'site_manager', 'admin'],
+  [ROUTES.confirmSheet]: ['worker', 'site_manager', 'admin'],
   // All roles
   [ROUTES.search]: ['worker', 'partner', 'site_manager', 'production_manager', 'admin'],
   // All roles

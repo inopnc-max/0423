@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
+import { isPartner } from '@/lib/roles'
 import { usePreview } from '@/components/preview'
 import {
   ConfirmSheetForm,
@@ -203,6 +204,7 @@ export default function ConfirmSheetPage() {
   const [draft, setDraft] = useState<ConfirmSheetDraft>(createInitialDraft)
   const [showSuccess, setShowSuccess] = useState(false)
   const [savedDocId, setSavedDocId] = useState<string | null>(null)
+  const isPartnerUser = isPartner(user?.role || '')
 
   const { openPreview } = usePreview()
 
@@ -476,6 +478,16 @@ export default function ConfirmSheetPage() {
   }
 
   // 입력 모드
+  if (isPartnerUser) {
+    return (
+      <div className="flex h-64 items-center justify-center p-4">
+        <div className="rounded-2xl bg-white p-6 text-center text-sm text-[var(--color-text-secondary)] shadow-sm">
+          파트너 계정은 확인서 생성 기능을 사용할 수 없습니다.
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4 pt-4">
       {/* 탭 전환 */}
