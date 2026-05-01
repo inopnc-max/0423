@@ -4,7 +4,7 @@
 --
 -- 주의:
 --   - destructive migration 금지
---   - SECURITY DEFINER 금지 (service role key 노출 방지)
+--   - SECURITY INVOKER 사용 (service role key 노출 방지)
 -- ============================================================
 
 -- ── calculate_current_stock ──────────────────────────────────
@@ -14,7 +14,7 @@
 CREATE OR REPLACE FUNCTION calculate_current_stock(prod_id UUID)
 RETURNS NUMERIC(10,3)
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY INVOKER
 SET search_path = public
 AS $$
 DECLARE
@@ -40,7 +40,7 @@ $$;
 CREATE OR REPLACE FUNCTION check_stock_availability(prod_id UUID, req_qty NUMERIC(10,3))
 RETURNS BOOLEAN
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY INVOKER
 SET search_path = public
 AS $$
 DECLARE
@@ -57,7 +57,7 @@ $$;
 CREATE OR REPLACE FUNCTION generate_monthly_inventory_snapshot(snapshot_month TEXT, user_id UUID)
 RETURNS VOID
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY INVOKER
 SET search_path = public
 AS $$
 DECLARE
@@ -114,7 +114,7 @@ CREATE OR REPLACE FUNCTION create_document_version(
 )
 RETURNS UUID
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY INVOKER
 SET search_path = public
 AS $$
 DECLARE
@@ -149,7 +149,7 @@ CREATE OR REPLACE FUNCTION create_share_link(
 )
 RETURNS TEXT
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY INVOKER
 SET search_path = public
 AS $$
 DECLARE
@@ -170,7 +170,7 @@ $$;
 CREATE OR REPLACE FUNCTION check_document_access(doc_id UUID, user_uuid UUID)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY INVOKER
 SET search_path = public
 AS $$
 DECLARE
