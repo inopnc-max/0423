@@ -24,6 +24,7 @@ import { ROUTES } from '@/lib/routes'
 import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
 import { CommonHomeDateRail } from '@/components/home/CommonHomeDateRail'
 import { RecentViewedDocuments } from '@/components/home/RecentViewedDocuments'
+import { PartnerReadonlyPortal } from '@/components/partner/PartnerReadonlyPortal'
 import { SiteCombobox as SharedSiteCombobox } from '@/components/site/SiteCombobox'
 import { SiteManagerHomeSummary } from '@/components/site-manager/SiteManagerAttendancePanel'
 import { useSiteManagerDashboard } from '@/hooks/site-manager/useSiteManagerDashboard'
@@ -235,6 +236,22 @@ export default function HomePage() {
       <div className="flex h-64 items-center justify-center">
         <div className="text-[var(--color-text-secondary)]">로딩 중...</div>
       </div>
+    )
+  }
+
+  if (isPartnerUser) {
+    return (
+      <PartnerReadonlyPortal
+        userName={user?.profile?.name}
+        userId={user?.userId}
+        sites={accessibleSites}
+        selectedSite={selectedSite}
+        selectedSiteId={selectedSiteId}
+        error={error}
+        onSelectSite={id => {
+          void setSelectedSiteId(id)
+        }}
+      />
     )
   }
 
