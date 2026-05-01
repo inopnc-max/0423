@@ -38,7 +38,7 @@ export default function ProductionPage() {
 
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <ProductionWorkflowPanel />
-        <ProductionRecentEntries entries={records?.recentEntries ?? []} loading={loading} />
+        <ProductionRecentEntries entries={(records?.recentEntries ?? []).slice(0, 8)} loading={loading} />
       </section>
     </div>
   )
