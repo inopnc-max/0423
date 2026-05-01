@@ -433,35 +433,33 @@ export default function OutputPage() {
       </section>
 
       {/* 6. 연/월 선택 컨트롤 */}
-      {!isPartnerUser && (
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-[var(--color-text-secondary)]">기간 선택</label>
-            <select
-              value={selectedYear}
-              onChange={event => setSelectedYear(Number(event.target.value))}
-              className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
-            >
-              {[2024, 2025, 2026].map(year => (
-                <option key={year} value={year}>
-                  {year}년
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedMonth}
-              onChange={event => setSelectedMonth(Number(event.target.value))}
-              className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
-            >
-              {Array.from({ length: 12 }, (_, index) => index + 1).map(month => (
-                <option key={month} value={month}>
-                  {month}월
-                </option>
-              ))}
-            </select>
-          </div>
-        </section>
-      )}
+      <section className="rounded-2xl bg-white p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-[var(--color-text-secondary)]">기간 선택</label>
+          <select
+            value={selectedYear}
+            onChange={event => setSelectedYear(Number(event.target.value))}
+            className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
+          >
+            {[2024, 2025, 2026].map(year => (
+              <option key={year} value={year}>
+                {year}년
+              </option>
+            ))}
+          </select>
+          <select
+            value={selectedMonth}
+            onChange={event => setSelectedMonth(Number(event.target.value))}
+            className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
+          >
+            {Array.from({ length: 12 }, (_, index) => index + 1).map(month => (
+              <option key={month} value={month}>
+                {month}월
+              </option>
+            ))}
+          </select>
+        </div>
+      </section>
 
       {/* 7. 달력 또는 리스트 */}
       <section>
