@@ -2,6 +2,124 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type ProductionEntryType = '생산' | '판매' | '자체사용' | '운송비'
 
+export type StockMovementType = 'production' | 'sale' | 'self_use'
+
+function getStockMovementType(type: ProductionEntryType): StockMovementType | null {
+  if (type === '생산') return 'production'
+  if (type === '판매') return 'sale'
+  if (type === '자체사용') return 'self_use'
+  return null
+}
+
+async function getProductIdByName(
+  supabase: SupabaseClient,
+  productName: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('products')
+    .select('id')
+    .eq('name', productName)
+    .eq('active', true)
+    .single()
+
+  if (error || !data) return null
+  return data.id
+}
+
+async function recordStockMovement(
+  supabase: SupabaseClient,
+  entryId: string,
+  productionType: ProductionEntryType,
+  productName: string,
+  quantity: number,
+  workDate: string,
+  siteId: string | null | undefined,
+  memo: string | null | undefined,
+  createdBy: string
+): Promise<void> {
+  const movementType = getStockMovementType(productionType)
+  if (!movementType) return
+
+  const productId = await getProductIdByName(supabase, productName)
+  if (!productId) {
+    console.warn(`[productionRecords] Product not found: ${productName}`)
+    return
+  }
+
+  const { error } = await supabase.rpc('record_production_stock_movement', {
+    p_product_id: productId,
+    p_movement_date: workDate,
+    p_movement_type: movementType,
+    p_quantity: quantity,
+    p_unit_price: 0,
+    p_source_table: 'production_entries',
+    p_source_id: entryId,
+    p_site_id: siteId ?? null,
+    p_created_by: createdBy,
+    p_notes: memo ?? null,
+  })
+
+  if (error) {
+    console.error('[productionRecords] Failed to record stock movement:', error)
+  }
+}
+
+async function upsertStockMovement(
+  supabase: SupabaseClient,
+  entryId: string,
+  productionType: ProductionEntryType,
+  productName: string,
+  quantity: number,
+  workDate: string,
+  siteId: string | null | undefined,
+  memo: string | null | undefined,
+  createdBy: string
+): Promise<void> {
+  const movementType = getStockMovementType(productionType)
+
+  if (!movementType) {
+    await reverseStockMovement(supabase, entryId)
+    return
+  }
+
+  const productId = await getProductIdByName(supabase, productName)
+  if (!productId) {
+    console.warn(`[productionRecords] Product not found: ${productName}`)
+    return
+  }
+
+  const { error } = await supabase.rpc('upsert_production_stock_movement', {
+    p_product_id: productId,
+    p_movement_date: workDate,
+    p_movement_type: movementType,
+    p_quantity: quantity,
+    p_unit_price: 0,
+    p_source_table: 'production_entries',
+    p_source_id: entryId,
+    p_site_id: siteId ?? null,
+    p_created_by: createdBy,
+    p_notes: memo ?? null,
+  })
+
+  if (error) {
+    console.error('[productionRecords] Failed to upsert stock movement:', error)
+  }
+}
+
+async function reverseStockMovement(
+  supabase: SupabaseClient,
+  entryId: string
+): Promise<void> {
+  const { error } = await supabase.rpc('reverse_production_stock_movement', {
+    p_source_table: 'production_entries',
+    p_source_id: entryId,
+  })
+
+  if (error) {
+    console.error('[productionRecords] Failed to reverse stock movement:', error)
+  }
+}
+
 export interface ProductionEntrySaveInput {
   workDate: string
   productionType: ProductionEntryType
@@ -11,6 +129,7 @@ export interface ProductionEntrySaveInput {
   amount?: number
   siteId?: string | null
   memo?: string | null
+  createdBy: string
 }
 
 export interface ProductionEntryUpdateInput {
@@ -22,6 +141,7 @@ export interface ProductionEntryUpdateInput {
   amount?: number
   siteId?: string | null
   memo?: string | null
+  createdBy: string
 }
 
 export async function updateProductionEntry(
@@ -51,6 +171,18 @@ export async function updateProductionEntry(
     throw new Error(error.message)
   }
 
+  await upsertStockMovement(
+    supabase,
+    id,
+    input.productionType,
+    input.productName,
+    input.quantity,
+    input.workDate,
+    input.siteId,
+    input.memo,
+    input.createdBy
+  )
+
   return { id: data.id }
 }
 
@@ -58,6 +190,8 @@ export async function deleteProductionEntry(
   supabase: SupabaseClient,
   id: string
 ): Promise<void> {
+  await reverseStockMovement(supabase, id)
+
   const { error } = await supabase
     .from('production_entries')
     .delete()
@@ -81,6 +215,7 @@ export async function saveProductionEntry(
     amount: input.amount ?? 0,
     site_id: input.siteId ?? null,
     memo: input.memo ?? null,
+    created_by: input.createdBy,
   }
 
   const { data, error } = await supabase
@@ -92,6 +227,18 @@ export async function saveProductionEntry(
   if (error) {
     throw new Error(error.message)
   }
+
+  await recordStockMovement(
+    supabase,
+    data.id,
+    input.productionType,
+    input.productName,
+    input.quantity,
+    input.workDate,
+    input.siteId,
+    input.memo,
+    input.createdBy
+  )
 
   return { id: data.id }
 }
@@ -116,6 +263,7 @@ export interface ProductionRecentEntry {
   amount: number
   siteName: string | null
   createdByName: string | null
+  createdBy: string | null
   memo: string | null
 }
 
@@ -142,7 +290,7 @@ interface ProductionEntryRow {
   amount: number | null
   memo: string | null
   site?: { name?: string | null } | Array<{ name?: string | null }> | null
-  creator?: { name?: string | null } | Array<{ name?: string | null }> | null
+  creator?: { name?: string | null; id?: string | null } | Array<{ name?: string | null; id?: string | null }> | null
 }
 
 interface CountResponse {
@@ -181,6 +329,7 @@ function mapRecentEntry(row: ProductionEntryRow): ProductionRecentEntry {
     amount: row.amount ?? 0,
     siteName: site?.name ?? null,
     createdByName: creator?.name ?? null,
+    createdBy: creator?.id ?? null,
     memo: row.memo,
   }
 }
@@ -216,7 +365,7 @@ async function getEntries(supabase: SupabaseClient): Promise<ProductionEntryRow[
       .select(`
         id, work_date, product_name, production_type, quantity, unit, amount, memo,
         site:sites(name),
-        creator:workers(name)
+        creator:workers(id, name)
       `)
       .order('work_date', { ascending: false })
       .limit(80)

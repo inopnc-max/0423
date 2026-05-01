@@ -14,6 +14,7 @@ interface ProductionEntryDraftFormProps {
   sites: ProductionReferenceOption[]
   products: ProductionReferenceOption[]
   clients: ProductionReferenceOption[]
+  currentUserId: string
   onSave: (input: ProductionEntrySaveInput) => Promise<void>
   onSaveSuccess?: () => void
 }
@@ -32,6 +33,7 @@ export function ProductionEntryDraftForm({
   sites,
   products,
   clients,
+  currentUserId,
   onSave,
   onSaveSuccess,
 }: ProductionEntryDraftFormProps) {
@@ -88,6 +90,7 @@ export function ProductionEntryDraftForm({
         amount: values.amount ? Number(values.amount) : undefined,
         siteId: values.siteId || undefined,
         memo: values.memo || undefined,
+        createdBy: currentUserId,
       }
 
       await onSave(input)
