@@ -289,6 +289,51 @@ export interface ProductionReferenceOption {
   name: string
 }
 
+export async function ensureProductionProduct(
+  supabase: SupabaseClient,
+  productName: string
+): Promise<ProductionReferenceOption> {
+  const normalizedName = productName.trim()
+  if (!normalizedName) {
+    throw new Error('품목명을 입력해주세요.')
+  }
+
+  const code = normalizedName.toUpperCase().replace(/\s+/g, '-')
+
+  const { data: existing, error: selectError } = await supabase
+    .from('products')
+    .select('id, name')
+    .eq('code', code)
+    .maybeSingle()
+
+  if (selectError) {
+    throw new Error(selectError.message)
+  }
+
+  if (existing) {
+    return { id: existing.id, name: existing.name }
+  }
+
+  const { data, error } = await supabase
+    .from('products')
+    .insert({
+      code,
+      name: normalizedName,
+      unit: 'EA',
+      unit_price: 0,
+      category: '직접입력',
+      active: true,
+    })
+    .select('id, name')
+    .single()
+
+  if (error || !data) {
+    throw new Error(error?.message ?? '품목 생성에 실패했습니다.')
+  }
+
+  return { id: data.id, name: data.name }
+}
+
 export interface ProductionDashboardRecords {
   summary: ProductionDashboardSummary
   recentEntries: ProductionRecentEntry[]
