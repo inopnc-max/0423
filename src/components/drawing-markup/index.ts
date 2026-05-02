@@ -5,5 +5,6 @@ export {
 } from './DrawingMarkingOverlay'
 export {
   WorklogDrawingMarkupPreviewEditor,
+  type WorklogDrawingMarkupDraftSource,
   type WorklogDrawingMarkupPreviewEditorProps,
 } from './WorklogDrawingMarkupPreviewEditor'

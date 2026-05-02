@@ -1036,12 +1036,25 @@ function WorklogEditorView({
           imageUrl={canUseImagePreview ? attachment.previewUrl ?? attachment.imageUrl ?? null : null}
           imageAlt={attachment.name}
           initialMarks={initialMarks}
+          draftSource={{
+            siteId: selectedSite,
+            worklogId: existingLog?.id ?? null,
+            attachmentId: attachment.id,
+            pageNo,
+            originalPath: attachment.storagePath ?? null,
+          }}
           readOnly={isReadOnly}
           disabled={saving || mediaUploading}
           onPreviewMarksChange={marks => {
             setPreviewDrawingMarks(prev => ({
               ...prev,
               [attachment.id]: marks,
+            }))
+          }}
+          onDraftSaved={record => {
+            setPreviewDrawingMarks(prev => ({
+              ...prev,
+              [attachment.id]: record.marks,
             }))
           }}
         />
