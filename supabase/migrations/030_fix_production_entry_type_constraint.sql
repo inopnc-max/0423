@@ -3,16 +3,16 @@
 --
 -- Problem:
 --   - production_type column contains production types (생산, 판매, 자체사용, 운송비)
---   - product_type column should contain legacy distinction (NOT product name)
---   - product_name contains actual product name (NPC-1000, NPC-3000Q, etc.)
---   - The constraint on product_type only allowed npc1000/npc3000q/other
+--   - product_type column stores legacy distinction ('other')
+--   - product_name stores actual product name (NPC-1000, NPC-3000Q, etc.)
 --   - The RPC was incorrectly setting product_type = production_type value
+--   - Stock movements need product_type and proper movement_type values
 --
 -- Solution:
---   1. Drop the incorrect constraint on product_type
+--   1. Drop incorrect constraint on product_type
 --   2. Add proper constraint on production_type
---   3. Update RPC to set product_type = 'other' as legacy value
---      (product_name stores actual name like NPC-1000)
+--   3. Update RPC to set product_type = 'other' and include product_type in stock movement
+--   4. Add production/sale/self_use to stock movement_type constraint
 -- ============================================================
 
 -- Step 1: Drop the constraint that only allows npc1000/npc3000q/other
@@ -20,10 +20,22 @@
 ALTER TABLE public.production_entries
   DROP CONSTRAINT IF EXISTS production_entries_product_type_check;
 
--- Step 2: Add proper constraint for production_type (production category)
+-- Step 2: Drop existing production_type constraint if exists (for idempotency)
+ALTER TABLE public.production_entries
+  DROP CONSTRAINT IF EXISTS production_entries_production_type_check;
+
+-- Add proper constraint for production_type (production category)
 ALTER TABLE public.production_entries
   ADD CONSTRAINT production_entries_production_type_check
   CHECK (production_type IS NULL OR production_type IN ('생산', '판매', '자체사용', '운송비'));
+
+-- Update stock movement_type constraint to include production types
+ALTER TABLE public.production_stock_movements
+  DROP CONSTRAINT IF EXISTS production_stock_movements_movement_type_check;
+
+ALTER TABLE public.production_stock_movements
+  ADD CONSTRAINT production_stock_movements_movement_type_check
+  CHECK (movement_type IN ('inbound', 'outbound', 'adjustment', 'production', 'sale', 'self_use'));
 
 -- Step 3: Create new RPC with fixed product_type handling
 -- product_type stores 'other' as legacy value
@@ -119,7 +131,9 @@ BEGIN
       source_id,
       site_id,
       created_by,
-      note
+      note,
+      product_type,
+      unit
     ) VALUES (
       p_product_id,
       p_work_date,
@@ -130,7 +144,9 @@ BEGIN
       v_entry_id,
       p_site_id,
       p_created_by,
-      p_memo
+      p_memo,
+      v_product_type_val,
+      p_unit
     )
     RETURNING id INTO v_movement_id;
 

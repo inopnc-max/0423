@@ -188,7 +188,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   // 메인 네비게이션 및 헤더 액션 라우트에서는 헤더 타이틀 숨김
   // exact match routes
-  const hideTitleExactRoutes = ['/home', '/output', '/worklog', '/site', '/documents', '/settings', '/search', '/confirm-sheet', '/hq-requests', '/notifications']
+  const hideTitleExactRoutes = ['/home', '/output', '/worklog', '/site', '/documents', '/settings', '/search', '/confirm-sheet', '/hq-requests', '/notifications', '/production']
   // prefix match routes (production 하위 경로 모두 숨김)
   const hideTitlePrefixRoutes = ['/production/']
   const shouldHideTitle = hideTitleExactRoutes.includes(pathname) ||
