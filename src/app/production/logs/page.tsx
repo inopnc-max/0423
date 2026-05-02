@@ -69,8 +69,9 @@ export default function ProductionLogsPage() {
 
   const handleSave = useCallback(async (_id: string, input: ProductionEntryUpdateInput) => {
     try {
-      await updateEntry(_id, input)
+      const result = await updateEntry(_id, input)
       await reload()
+      return result
     } catch (err) {
       throw err
     }
