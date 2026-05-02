@@ -9,6 +9,8 @@ import {
   type ProductionDashboardRecords,
   type ProductionEntrySaveInput,
   type ProductionEntryUpdateInput,
+  type SaveProductionEntryResult,
+  type UpdateProductionEntryResult,
 } from '@/lib/production/productionRecords'
 import { createClient } from '@/lib/supabase/client'
 
@@ -41,28 +43,26 @@ export function useProductionDashboard() {
     }).catch(() => {})
   }, [reload])
 
-  const saveEntry = useCallback(async (input: ProductionEntrySaveInput) => {
+  const saveEntry = useCallback(async (input: ProductionEntrySaveInput): Promise<SaveProductionEntryResult> => {
     const userId = currentUserId
     if (!userId) {
       const { data } = await createClient().auth.getUser()
       if (!data.user) throw new Error('User not authenticated')
       setCurrentUserId(data.user.id)
-      await saveProductionEntry(createClient(), { ...input, createdBy: data.user.id })
-      return
+      return saveProductionEntry(createClient(), { ...input, createdBy: data.user.id })
     }
-    await saveProductionEntry(createClient(), { ...input, createdBy: userId })
+    return saveProductionEntry(createClient(), { ...input, createdBy: userId })
   }, [currentUserId])
 
-  const updateEntry = useCallback(async (id: string, input: ProductionEntryUpdateInput) => {
+  const updateEntry = useCallback(async (id: string, input: ProductionEntryUpdateInput): Promise<UpdateProductionEntryResult> => {
     const userId = currentUserId
     if (!userId) {
       const { data } = await createClient().auth.getUser()
       if (!data.user) throw new Error('User not authenticated')
       setCurrentUserId(data.user.id)
-      await updateProductionEntry(createClient(), id, { ...input, createdBy: data.user.id })
-      return
+      return updateProductionEntry(createClient(), id, { ...input, createdBy: data.user.id })
     }
-    await updateProductionEntry(createClient(), id, { ...input, createdBy: userId })
+    return updateProductionEntry(createClient(), id, { ...input, createdBy: userId })
   }, [currentUserId])
 
   const deleteEntry = useCallback(async (id: string) => {

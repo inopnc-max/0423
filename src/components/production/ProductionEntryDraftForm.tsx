@@ -15,7 +15,7 @@ interface ProductionEntryDraftFormProps {
   products: ProductionReferenceOption[]
   clients: ProductionReferenceOption[]
   currentUserId: string
-  onSave: (input: ProductionEntrySaveInput) => Promise<void>
+  onSave: (input: ProductionEntrySaveInput) => Promise<{ movementResult: { success: boolean; error?: { message: string } } }>
   onSaveSuccess?: () => void
 }
 
@@ -52,11 +52,13 @@ export function ProductionEntryDraftForm({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [movementWarning, setMovementWarning] = useState<string | null>(null)
 
   const handleChange = useCallback((field: keyof FormValues, value: string) => {
     setValues(prev => ({ ...prev, [field]: value }))
     setSaveError(null)
     setSaveSuccess(false)
+    setMovementWarning(null)
   }, [])
 
   const validate = useCallback((): string | null => {
@@ -96,7 +98,12 @@ export function ProductionEntryDraftForm({
         createdBy: currentUserId,
       }
 
-      await onSave(input)
+      const result = await onSave(input)
+
+      if (!result.movementResult.success) {
+        const msg = result.movementResult.error?.message ?? '재고 이동 처리에 실패했습니다.'
+        setMovementWarning(msg)
+      }
 
       setSaveSuccess(true)
       setValues({
@@ -116,7 +123,7 @@ export function ProductionEntryDraftForm({
     } finally {
       setSaving(false)
     }
-  }, [validate, values, today, onSave, onSaveSuccess])
+  }, [validate, values, products, today, onSave, onSaveSuccess])
 
   const selectedProducts = useMemo(() => {
     if (values.entryType !== '판매') return products
@@ -223,10 +230,18 @@ export function ProductionEntryDraftForm({
         </label>
       </div>
 
-      {(saveError || saveSuccess) && (
-        <div className={`mt-4 rounded-xl p-4 ${saveSuccess ? 'border border-green-200 bg-green-50' : 'border border-red-200 bg-red-50'}`}>
-          <p className={`text-sm ${saveSuccess ? 'text-green-700' : 'text-red-700'}`}>
-            {saveSuccess ? '저장이 완료되었습니다.' : saveError}
+      {(saveError || saveSuccess || movementWarning) && (
+        <div className={`mt-4 rounded-xl p-4 ${
+          saveError ? 'border border-red-200 bg-red-50' :
+          movementWarning ? 'border border-yellow-200 bg-yellow-50' :
+          'border border-green-200 bg-green-50'
+        }`}>
+          <p className={`text-sm ${
+            saveError ? 'text-red-700' :
+            movementWarning ? 'text-yellow-700' :
+            'text-green-700'
+          }`}>
+            {saveError ?? movementWarning ?? '저장이 완료되었습니다.'}
           </p>
         </div>
       )}

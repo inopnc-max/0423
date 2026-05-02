@@ -29,7 +29,7 @@ interface ProductionEntryEditModalProps {
   sites: ProductionReferenceOption[]
   products: ProductionReferenceOption[]
   currentUserId: string
-  onSave: (id: string, input: ProductionEntryUpdateInput) => Promise<void>
+  onSave: (id: string, input: ProductionEntryUpdateInput) => Promise<{ movementResult: { success: boolean; error?: { message: string } } }>
   onDelete: (id: string) => Promise<void>
   onClose: () => void
 }
@@ -58,6 +58,7 @@ export function ProductionEntryEditModal({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [movementWarning, setMovementWarning] = useState<string | null>(null)
 
   useEffect(() => {
     const matchedSite = sites.find(s => s.name === entry.siteName)
@@ -85,6 +86,7 @@ export function ProductionEntryEditModal({
     setValues(prev => ({ ...prev, [field]: value }))
     setSaveError(null)
     setDeleteError(null)
+    setMovementWarning(null)
   }, [])
 
   const validate = useCallback((): string | null => {
@@ -98,6 +100,7 @@ export function ProductionEntryEditModal({
 
   const handleSave = useCallback(async () => {
     setSaveError(null)
+    setMovementWarning(null)
 
     const validationError = validate()
     if (validationError) {
@@ -123,7 +126,14 @@ export function ProductionEntryEditModal({
         createdBy: currentUserId,
       }
 
-      await onSave(entry.id, input)
+      const result = await onSave(entry.id, input)
+
+      if (!result.movementResult.success) {
+        const msg = result.movementResult.error?.message ?? '재고 이동 처리에 실패했습니다.'
+        setMovementWarning(msg)
+        return
+      }
+
       onClose()
     } catch (err) {
       console.error('[ProductionEntryEditModal] save failed:', err)
@@ -269,9 +279,13 @@ export function ProductionEntryEditModal({
             </label>
           </div>
 
-          {(saveError || deleteError) && (
-            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
-              <p className="text-sm text-red-700">{saveError || deleteError}</p>
+          {(saveError || deleteError || movementWarning) && (
+            <div className={`mt-4 rounded-xl p-4 ${
+              movementWarning ? 'border border-yellow-200 bg-yellow-50' : 'border border-red-200 bg-red-50'
+            }`}>
+              <p className={`text-sm ${movementWarning ? 'text-yellow-700' : 'text-red-700'}`}>
+                {movementWarning ?? saveError ?? deleteError}
+              </p>
             </div>
           )}
         </div>
