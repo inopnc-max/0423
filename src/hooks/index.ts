@@ -2,4 +2,5 @@ export { useFormValidation, emailValidation, passwordValidation } from './useFor
 export type { FormField, ValidationRule } from './useFormValidation'
 export { useMenuSearch } from './useMenuSearch'
 export type { UseMenuSearchReturn, WorklogRow, OutputRow } from './useMenuSearch'
+export { useDrawingMarkupSave } from './useDrawingMarkupSave'
 export type { MenuSearchResult, MenuSearchScope, MenuSearchOptions, MenuSearchResultType, MenuSearchPreviewPayload } from '@/lib/menu-search'
