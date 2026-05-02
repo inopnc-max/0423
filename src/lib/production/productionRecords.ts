@@ -183,55 +183,54 @@ export async function updateProductionEntry(
   id: string,
   input: ProductionEntryUpdateInput
 ): Promise<UpdateProductionEntryResult> {
-  const payload = {
-    work_date: input.workDate,
-    production_type: input.productionType,
-    product_name: input.productName,
-    quantity: input.quantity,
-    unit: input.unit ?? '개',
-    amount: input.amount ?? 0,
-    site_id: input.siteId ?? null,
-    memo: input.memo ?? null,
-  }
-
-  const { data, error } = await supabase
-    .from('production_entries')
-    .update(payload)
-    .eq('id', id)
-    .select('id')
-    .single()
+  const { data, error } = await supabase.rpc('update_production_entry_with_movement', {
+    p_id: id,
+    p_work_date: input.workDate,
+    p_production_type: input.productionType,
+    p_product_id: input.productId ?? null,
+    p_product_name: input.productName,
+    p_quantity: input.quantity,
+    p_unit: input.unit ?? '개',
+    p_amount: input.amount ?? 0,
+    p_site_id: input.siteId ?? null,
+    p_memo: input.memo ?? null,
+    p_created_by: input.createdBy,
+  })
 
   if (error) {
-    throw new Error(error.message)
+    console.error('[productionRecords] update_production_entry_with_movement failed:', error)
+    return {
+      id,
+      movementResult: {
+        success: false,
+        movementCreated: false,
+        movementReverted: false,
+        error: { code: 'RPC_ERROR', message: error.message }
+      }
+    }
   }
 
-  const movementResult = await upsertStockMovement(
-    supabase,
-    id,
-    input.productionType,
-    input.productId,
-    input.quantity,
-    input.workDate,
-    input.siteId,
-    input.memo,
-    input.createdBy
-  )
-
-  return { id: data.id, movementResult }
+  const result = data as { id: string; movement_created: boolean; movement_id: string | null }
+  return {
+    id: result.id,
+    movementResult: {
+      success: true,
+      movementCreated: result.movement_created,
+      movementReverted: false
+    }
+  }
 }
 
 export async function deleteProductionEntry(
   supabase: SupabaseClient,
   id: string
 ): Promise<void> {
-  await reverseStockMovement(supabase, id)
-
-  const { error } = await supabase
-    .from('production_entries')
-    .delete()
-    .eq('id', id)
+  const { error } = await supabase.rpc('delete_production_entry_with_movement', {
+    p_id: id,
+  })
 
   if (error) {
+    console.error('[productionRecords] delete_production_entry_with_movement failed:', error)
     throw new Error(error.message)
   }
 }
@@ -240,41 +239,33 @@ export async function saveProductionEntry(
   supabase: SupabaseClient,
   input: ProductionEntrySaveInput
 ): Promise<SaveProductionEntryResult> {
-  const payload = {
-    work_date: input.workDate,
-    production_type: input.productionType,
-    product_name: input.productName,
-    quantity: input.quantity,
-    unit: input.unit ?? '개',
-    amount: input.amount ?? 0,
-    site_id: input.siteId ?? null,
-    memo: input.memo ?? null,
-    created_by: input.createdBy,
-  }
-
-  const { data, error } = await supabase
-    .from('production_entries')
-    .insert(payload)
-    .select('id')
-    .single()
+  const { data, error } = await supabase.rpc('save_production_entry_with_movement', {
+    p_work_date: input.workDate,
+    p_production_type: input.productionType,
+    p_product_id: input.productId ?? null,
+    p_product_name: input.productName,
+    p_quantity: input.quantity,
+    p_unit: input.unit ?? '개',
+    p_amount: input.amount ?? 0,
+    p_site_id: input.siteId ?? null,
+    p_memo: input.memo ?? null,
+    p_created_by: input.createdBy,
+  })
 
   if (error) {
+    console.error('[productionRecords] save_production_entry_with_movement failed:', error)
     throw new Error(error.message)
   }
 
-  const movementResult = await recordStockMovement(
-    supabase,
-    data.id,
-    input.productionType,
-    input.productId,
-    input.quantity,
-    input.workDate,
-    input.siteId,
-    input.memo,
-    input.createdBy
-  )
-
-  return { id: data.id, movementResult }
+  const result = data as { id: string; movement_created: boolean; movement_id: string | null }
+  return {
+    id: result.id,
+    movementResult: {
+      success: true,
+      movementCreated: result.movement_created,
+      movementReverted: false
+    }
+  }
 }
 
 export interface ProductionDashboardSummary {
