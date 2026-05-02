@@ -199,15 +199,7 @@ export async function updateProductionEntry(
 
   if (error) {
     console.error('[productionRecords] update_production_entry_with_movement failed:', error)
-    return {
-      id,
-      movementResult: {
-        success: false,
-        movementCreated: false,
-        movementReverted: false,
-        error: { code: 'RPC_ERROR', message: error.message }
-      }
-    }
+    throw new Error(error.message)
   }
 
   const result = data as { id: string; movement_created: boolean; movement_id: string | null }

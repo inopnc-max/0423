@@ -4,11 +4,14 @@
 --
 -- New RPC functions that wrap entry insert/update + stock movement
 -- in a single database transaction for atomicity.
+-- Enforces invariants: non-transport types require product_id,
+-- and update/delete target rows must exist.
 -- ============================================================
 
 -- ── save_production_entry_with_movement ────────────────────
 -- Atomic: insert entry + record stock movement in one transaction.
 -- Returns entry id and movement status.
+-- Invariant: non-transport types (생산/판매/자체사용) require product_id.
 --
 -- Parameters:
 --   p_work_date        DATE    - Work date
@@ -53,6 +56,12 @@ BEGIN
     ELSE NULL
   END;
 
+  -- Invariant: non-transport types require product_id
+  IF v_movement_type IS NOT NULL AND p_product_id IS NULL THEN
+    RAISE EXCEPTION 'product_id is required for production_type %', p_production_type
+      USING ERRCODE = '23502';
+  END IF;
+
   -- Insert production entry
   INSERT INTO public.production_entries (
     work_date,
@@ -79,8 +88,8 @@ BEGIN
   )
   RETURNING id INTO v_entry_id;
 
-  -- Record stock movement if applicable
-  IF v_movement_type IS NOT NULL AND p_product_id IS NOT NULL THEN
+  -- Record stock movement if applicable (product_id already validated above)
+  IF v_movement_type IS NOT NULL THEN
     INSERT INTO public.production_stock_movements (
       product_id,
       movement_date,
@@ -120,6 +129,9 @@ $$;
 -- ── update_production_entry_with_movement ────────────────────
 -- Atomic: update entry + upsert stock movement in one transaction.
 -- Returns entry id and movement status.
+-- Invariants:
+--   - Non-transport types require product_id
+--   - Target entry row must exist
 --
 -- Parameters:
 --   p_id               UUID    - Entry id to update
@@ -153,7 +165,7 @@ SECURITY INVOKER
 SET search_path = public
 AS $$
 DECLARE
-  v_entry_id         UUID := p_id;
+  v_entry_id         UUID;
   v_movement_id      UUID;
   v_movement_type    TEXT;
   v_movement_created BOOLEAN := FALSE;
@@ -167,7 +179,13 @@ BEGIN
     ELSE NULL
   END;
 
-  -- Update production entry
+  -- Invariant: non-transport types require product_id
+  IF v_movement_type IS NOT NULL AND p_product_id IS NULL THEN
+    RAISE EXCEPTION 'product_id is required for production_type %', p_production_type
+      USING ERRCODE = '23502';
+  END IF;
+
+  -- Update production entry with row existence check
   UPDATE public.production_entries
   SET
     work_date        = p_work_date,
@@ -179,7 +197,14 @@ BEGIN
     amount           = p_amount,
     site_id          = p_site_id,
     memo             = p_memo
-  WHERE id = p_id;
+  WHERE id = p_id
+  RETURNING id INTO v_entry_id;
+
+  -- Invariant: target row must exist
+  IF v_entry_id IS NULL THEN
+    RAISE EXCEPTION 'production entry not found: %', p_id
+      USING ERRCODE = 'P0002';
+  END IF;
 
   -- If production_type is not storable (운송비), reverse existing movement
   IF v_movement_type IS NULL THEN
@@ -187,13 +212,8 @@ BEGIN
     WHERE source_table = 'production_entries'
       AND source_id = p_id;
 
-  ELSIF p_product_id IS NULL THEN
-    -- No product but storable type - reverse movement
-    DELETE FROM public.production_stock_movements
-    WHERE source_table = 'production_entries'
-      AND source_id = p_id;
-
   ELSE
+    -- product_id is guaranteed non-null by invariant above
     -- Upsert stock movement
     SELECT id INTO v_existing_id
     FROM public.production_stock_movements
@@ -256,6 +276,7 @@ $$;
 -- ── delete_production_entry_with_movement ────────────────────
 -- Atomic: delete entry + reverse stock movement in one transaction.
 -- Returns success status.
+-- Invariant: target entry row must exist.
 --
 -- Parameters:
 --   p_id               UUID    - Entry id to delete
@@ -269,24 +290,27 @@ SECURITY INVOKER
 SET search_path = public
 AS $$
 DECLARE
-  v_deleted BOOLEAN := FALSE;
+  v_deleted_id       UUID;
 BEGIN
   -- Delete stock movements first
   DELETE FROM public.production_stock_movements
   WHERE source_table = 'production_entries'
     AND source_id = p_id;
 
-  -- Delete production entry
+  -- Delete production entry with existence check
   DELETE FROM public.production_entries
-  WHERE id = p_id;
+  WHERE id = p_id
+  RETURNING id INTO v_deleted_id;
 
-  -- Check if entry was actually deleted
-  IF NOT EXISTS (SELECT 1 FROM public.production_entries WHERE id = p_id) THEN
-    v_deleted := TRUE;
+  -- Invariant: target row must exist
+  IF v_deleted_id IS NULL THEN
+    RAISE EXCEPTION 'production entry not found: %', p_id
+      USING ERRCODE = 'P0002';
   END IF;
 
   RETURN jsonb_build_object(
-    'deleted', v_deleted
+    'deleted', TRUE,
+    'id', v_deleted_id
   );
 END;
 $$;
