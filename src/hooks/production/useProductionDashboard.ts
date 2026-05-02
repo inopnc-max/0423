@@ -6,6 +6,7 @@ import {
   saveProductionEntry,
   updateProductionEntry,
   deleteProductionEntry,
+  ensureProductionProduct,
   type ProductionDashboardRecords,
   type ProductionEntrySaveInput,
   type ProductionEntryUpdateInput,
@@ -69,6 +70,10 @@ export function useProductionDashboard() {
     await deleteProductionEntry(createClient(), id)
   }, [])
 
+  const ensureProduct = useCallback(async (productName: string) => {
+    return ensureProductionProduct(createClient(), productName)
+  }, [])
+
   return {
     records,
     loading,
@@ -78,5 +83,6 @@ export function useProductionDashboard() {
     saveEntry,
     updateEntry,
     deleteEntry,
+    ensureProduct,
   }
 }

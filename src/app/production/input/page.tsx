@@ -7,7 +7,7 @@ import { useProductionDashboard } from '@/hooks/production/useProductionDashboar
 import { type ProductionEntrySaveInput } from '@/lib/production/productionRecords'
 
 export default function ProductionInputPage() {
-  const { records, loading, error, reload, saveEntry, currentUserId } = useProductionDashboard()
+  const { records, loading, error, reload, saveEntry, currentUserId, ensureProduct } = useProductionDashboard()
 
   const handleSave = async (input: ProductionEntrySaveInput) => {
     const result = await saveEntry(input)
@@ -48,6 +48,7 @@ export default function ProductionInputPage() {
           clients={records?.clients ?? []}
           currentUserId={currentUserId}
           onSave={handleSave}
+          onEnsureProduct={ensureProduct}
         />
       )}
 

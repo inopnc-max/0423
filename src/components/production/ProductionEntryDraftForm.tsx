@@ -17,6 +17,7 @@ interface ProductionEntryDraftFormProps {
   currentUserId: string
   onSave: (input: ProductionEntrySaveInput) => Promise<{ movementResult: { success: boolean; error?: { message: string } } }>
   onSaveSuccess?: () => void
+  onEnsureProduct?: (productName: string) => Promise<ProductionReferenceOption>
 }
 
 interface FormValues {
@@ -24,6 +25,8 @@ interface FormValues {
   entryType: ProductionEntryType
   siteId: string
   productId: string
+  productMode: 'select' | 'custom'
+  customProductName: string
   quantity: string
   amount: string
   memo: string
@@ -36,6 +39,7 @@ export function ProductionEntryDraftForm({
   currentUserId,
   onSave,
   onSaveSuccess,
+  onEnsureProduct,
 }: ProductionEntryDraftFormProps) {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
 
@@ -44,6 +48,8 @@ export function ProductionEntryDraftForm({
     entryType: '생산',
     siteId: '',
     productId: '',
+    productMode: 'select',
+    customProductName: '',
     quantity: '',
     amount: '',
     memo: '',
@@ -64,7 +70,10 @@ export function ProductionEntryDraftForm({
   const validate = useCallback((): string | null => {
     if (!values.workDate) return '작업일을 선택해주세요.'
     if (!values.entryType) return '구분을 선택해주세요.'
-    if (values.entryType !== '운송비' && !values.productId) return '품목을 선택해주세요.'
+    if (values.entryType !== '운송비') {
+      if (values.productMode === 'select' && !values.productId) return '품목을 선택해주세요.'
+      if (values.productMode === 'custom' && !values.customProductName.trim()) return '직접입력 품목명을 입력해주세요.'
+    }
     const qty = Number(values.quantity)
     if (!values.quantity || isNaN(qty) || qty <= 0) return '수량은 0보다 큰 숫자로 입력해주세요.'
     return null
@@ -83,7 +92,22 @@ export function ProductionEntryDraftForm({
     setSaving(true)
 
     try {
-      const selectedProduct = products.find(p => p.id === values.productId)
+      let selectedProduct: ProductionReferenceOption | null = null
+
+      if (values.entryType !== '운송비') {
+        if (values.productMode === 'custom') {
+          if (!onEnsureProduct) {
+            throw new Error('품목 생성 기능이 없습니다.')
+          }
+          selectedProduct = await onEnsureProduct(values.customProductName)
+        } else {
+          selectedProduct = products.find(p => p.id === values.productId) ?? null
+        }
+
+        if (!selectedProduct) {
+          throw new Error('품목 정보를 확인할 수 없습니다.')
+        }
+      }
 
       const input: ProductionEntrySaveInput = {
         workDate: values.workDate,
@@ -111,6 +135,8 @@ export function ProductionEntryDraftForm({
         entryType: '생산',
         siteId: '',
         productId: '',
+        productMode: 'select',
+        customProductName: '',
         quantity: '',
         amount: '',
         memo: '',
@@ -123,7 +149,7 @@ export function ProductionEntryDraftForm({
     } finally {
       setSaving(false)
     }
-  }, [validate, values, products, today, onSave, onSaveSuccess])
+  }, [validate, values, products, today, onSave, onSaveSuccess, onEnsureProduct, currentUserId])
 
   const selectedProducts = useMemo(() => {
     if (values.entryType !== '판매') return products
@@ -157,6 +183,8 @@ export function ProductionEntryDraftForm({
                   onChange={e => {
                     handleChange('entryType', e.target.value as ProductionEntryType)
                     handleChange('productId', '')
+                    handleChange('productMode', 'select')
+                    handleChange('customProductName', '')
                   }}
                 >
                   <option value="생산">생산</option>
@@ -184,15 +212,38 @@ export function ProductionEntryDraftForm({
                 품목
                 <select
                   className={fieldClassName}
-                  value={values.productId}
-                  onChange={e => handleChange('productId', e.target.value)}
+                  value={values.productMode === 'custom' ? '__custom__' : values.productId}
+                  onChange={e => {
+                    if (e.target.value === '__custom__') {
+                      handleChange('productMode', 'custom')
+                      handleChange('productId', '')
+                    } else {
+                      handleChange('productMode', 'select')
+                      handleChange('productId', e.target.value)
+                    }
+                  }}
+                  disabled={values.entryType === '운송비'}
                 >
                   <option value="">품목 선택</option>
                   {selectedProducts.map(p => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
+                  <option value="__custom__">직접입력</option>
                 </select>
               </label>
+
+          {values.productMode === 'custom' && values.entryType !== '운송비' && (
+            <label className={labelClassName}>
+              직접입력 품목명
+              <input
+                type="text"
+                className={fieldClassName}
+                placeholder="예: NPC-5000"
+                value={values.customProductName}
+                onChange={e => handleChange('customProductName', e.target.value)}
+              />
+            </label>
+          )}
 
           <label className={labelClassName}>
             수량
