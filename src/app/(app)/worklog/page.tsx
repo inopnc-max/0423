@@ -683,12 +683,14 @@ function WorklogEditorView({
   const [readyForPersistence, setReadyForPersistence] = useState(false)
   const [mediaSaving, setMediaSaving] = useState(false)
   const [mediaUploading, setMediaUploading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [message, setMessage] = useState<{ type: 'success' | 'info' | 'error'; text: string } | null>(null)
   const [hasDraft, setHasDraft] = useState(false)
 
   type LocalMediaAttachment = WorklogMediaAttachment & {
     /** File object — optional because restored attachments from draft may not have it */
     file?: File
+    uploadState?: 'uploaded' | 'local' | 'failed'
+    uploadMessage?: string
   }
   const [mediaAttachments, setMediaAttachments] = useState<LocalMediaAttachment[]>([])
   const [previewDrawingMarks, setPreviewDrawingMarks] = useState<Record<string, DrawingMarkupMark[]>>({})
@@ -986,6 +988,8 @@ function WorklogEditorView({
             localBlobId,
             photoStatus: meta.kind === 'photo' ? 'after_repair' : undefined,
             displayStatus: meta.kind === 'photo' ? '보수후' : undefined,
+            uploadState: 'local',
+            uploadMessage: '임시 첨부됨. 일지 저장 시 서버에 업로드해 연결합니다.',
           })
         } catch (err) {
           console.warn('[worklog] failed to save local media blob:', file.name, err)
@@ -995,9 +999,11 @@ function WorklogEditorView({
             previewUrl: URL.createObjectURL(file),
             photoStatus: meta.kind === 'photo' ? 'after_repair' : undefined,
             displayStatus: meta.kind === 'photo' ? '보수후' : undefined,
+            uploadState: 'local',
+            uploadMessage: '로컬 임시 첨부됨. 새로고침 전 일지 저장을 완료해주세요.',
           })
           setMessage({
-            type: 'error',
+            type: 'info',
             text: `파일을 임시 첨부했습니다. 새로고침 전 저장을 완료해주세요: ${file.name}`,
           })
         }
@@ -1101,7 +1107,18 @@ function WorklogEditorView({
       }
 
       if (!blob) {
-        throw new Error(`첨부 파일 "${attachment.name}"을(를) 찾을 수 없어 업로드할 수 없습니다.`)
+        uploaded.push({
+          ...attachment,
+          uploadState: 'failed',
+          uploadMessage: '로컬 파일을 찾을 수 없어 일지 저장 시 연결할 수 없습니다.',
+        })
+        console.warn('[worklog] attachment blob missing; cannot upload:', {
+          id: attachment.id,
+          name: attachment.name,
+          localBlobId: attachment.localBlobId,
+          hasFile: Boolean(attachment.file),
+        })
+        continue
       }
 
       const target = buildWorklogMediaStorageTarget({
@@ -1126,10 +1143,22 @@ function WorklogEditorView({
           ...attachment,
           storageBucket: target.bucket,
           storagePath: target.path,
+          uploadState: 'uploaded',
+          uploadMessage: '서버 업로드 완료',
         })
       } catch (err) {
-        console.error('[worklog] failed to upload attachment:', attachment.name, err)
-        throw new Error(`첨부 파일 "${attachment.name}" 업로드에 실패했습니다.`)
+        console.warn('[worklog] failed to upload attachment; keeping local attachment:', {
+          id: attachment.id,
+          name: attachment.name,
+          bucket: target.bucket,
+          path: target.path,
+          error: err,
+        })
+        uploaded.push({
+          ...attachment,
+          uploadState: 'local',
+          uploadMessage: '서버 업로드 실패. 임시 첨부 상태이며 저장 시 다시 업로드합니다.',
+        })
       }
     }
 
@@ -1216,6 +1245,28 @@ function WorklogEditorView({
           const uploadedAttachments = await uploadMediaAttachments(mediaAttachments)
           attachmentsForPayload = uploadedAttachments
           setMediaAttachments(uploadedAttachments)
+          const failedAttachments = uploadedAttachments.filter(attachment => attachment.uploadState === 'failed')
+          const localAttachments = uploadedAttachments.filter(attachment => !attachment.storagePath && attachment.uploadState !== 'failed')
+
+          if (failedAttachments.length > 0) {
+            setMessage({
+              type: 'error',
+              text: `첨부 파일 ${failedAttachments.length}개를 찾을 수 없어 일지에 연결할 수 없습니다. 다시 선택해주세요.`,
+            })
+            setSaving(false)
+            setMediaUploading(false)
+            return
+          }
+
+          if (localAttachments.length > 0) {
+            setMessage({
+              type: 'info',
+              text: `첨부 파일 ${localAttachments.length}개가 임시 첨부 상태입니다. 서버 업로드 후 일지에 연결됩니다. 잠시 후 다시 저장해주세요.`,
+            })
+            setSaving(false)
+            setMediaUploading(false)
+            return
+          }
         } catch (uploadError) {
           setMessage({
             type: 'error',
@@ -1824,6 +1875,26 @@ function WorklogEditorView({
                           }`}>
                             {attachment.kind === 'photo' ? '사진' : attachment.kind === 'drawing' ? '도면' : '기타'}
                           </span>
+                          {attachment.uploadState && (
+                            <span className={`mt-1 inline-block w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${
+                              attachment.uploadState === 'uploaded'
+                                ? 'bg-green-100 text-green-700'
+                                : attachment.uploadState === 'failed'
+                                  ? 'bg-red-100 text-red-700'
+                                  : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              {attachment.uploadState === 'uploaded'
+                                ? '업로드 완료'
+                                : attachment.uploadState === 'failed'
+                                  ? '연결 불가'
+                                  : '임시 첨부'}
+                            </span>
+                          )}
+                          {attachment.uploadMessage && (
+                            <span className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+                              {attachment.uploadMessage}
+                            </span>
+                          )}
                         </div>
 
                         {attachment.kind === 'drawing' && (
@@ -1897,7 +1968,13 @@ function WorklogEditorView({
       )}
 
       {message && (
-        <div className={`rounded-xl px-4 py-3 text-sm ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+        <div className={`rounded-xl px-4 py-3 text-sm ${
+          message.type === 'success'
+            ? 'bg-green-50 text-green-700'
+            : message.type === 'info'
+              ? 'bg-amber-50 text-amber-700'
+              : 'bg-red-50 text-red-700'
+        }`}>
           {message.text}
         </div>
       )}
@@ -1969,7 +2046,11 @@ function WorklogEditorView({
       {mediaAttachments.length > 0 && (
         <div className="mx-auto max-w-3xl px-4 pb-2">
           <div className="rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm font-medium text-amber-700">
-            첨부 파일은 저장 시 일지에 함께 연결됩니다.
+            {mediaAttachments.some(attachment => attachment.uploadState === 'failed')
+              ? '연결할 수 없는 첨부 파일이 있습니다. 해당 파일을 삭제 후 다시 선택해주세요.'
+              : mediaAttachments.some(attachment => !attachment.storagePath)
+                ? '첨부 파일은 임시 첨부 상태입니다. 일지 저장 시 서버 업로드 후 연결됩니다.'
+                : '첨부 파일은 저장 시 일지에 함께 연결됩니다.'}
           </div>
         </div>
       )}
