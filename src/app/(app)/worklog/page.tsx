@@ -1760,12 +1760,18 @@ function WorklogEditorView({
                 </div>
 
                 {/* 파일 선택 */}
-                <label className="flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--color-accent)] bg-[var(--color-accent-light)] py-8 transition hover:bg-amber-50">
+                <label className="flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--color-accent)] bg-[var(--color-accent-light)] px-4 py-8 text-center transition hover:bg-amber-50">
                   <svg className="mb-2 h-10 w-10 text-[var(--color-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                   </svg>
                   <span className="text-sm font-semibold text-[var(--color-accent)]">사진 / 도면 첨부</span>
                   <span className="mt-1 text-xs text-[var(--color-text-tertiary)]">이미지 (JPG, PNG 등) 또는 PDF 파일</span>
+                  <span className="mt-4 rounded-xl bg-[var(--color-accent)] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--color-accent-hover)]">
+                    파일 선택하기
+                  </span>
+                  <span className="mt-2 text-xs font-medium text-[var(--color-text-secondary)]">
+                    PDF 도면을 선택하면 첨부 행에 도면마킹 버튼이 표시됩니다.
+                  </span>
                   <input
                     type="file"
                     accept="image/*,application/pdf"
@@ -1778,7 +1784,12 @@ function WorklogEditorView({
 
                 {/* 첨부 목록 */}
                 {mediaAttachments.length === 0 ? (
-                  <p className="text-center text-sm text-[var(--color-text-tertiary)]">첨부된 파일이 없습니다.</p>
+                  <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-white px-4 py-5 text-center">
+                    <p className="text-sm font-medium text-[var(--color-text-secondary)]">첨부된 파일이 없습니다.</p>
+                    <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+                      위의 파일 선택하기를 눌러 PDF 도면을 추가하면 도면마킹 버튼이 나타납니다.
+                    </p>
+                  </div>
                 ) : (
                   <div className="flex flex-col gap-2">
                     {mediaAttachments.map((attachment, index) => (
