@@ -4,6 +4,23 @@ export type ProductionEntryType = '생산' | '판매' | '자체사용' | '운송
 
 export type StockMovementType = 'production' | 'sale' | 'self_use'
 
+export interface StockMovementResult {
+  success: boolean
+  movementCreated: boolean
+  movementReverted: boolean
+  error?: { code: string; message: string }
+}
+
+export interface SaveProductionEntryResult {
+  id: string
+  movementResult: StockMovementResult
+}
+
+export interface UpdateProductionEntryResult {
+  id: string
+  movementResult: StockMovementResult
+}
+
 function getStockMovementType(type: ProductionEntryType): StockMovementType | null {
   if (type === '생산') return 'production'
   if (type === '판매') return 'sale'
@@ -21,13 +38,20 @@ async function recordStockMovement(
   siteId: string | null | undefined,
   memo: string | null | undefined,
   createdBy: string
-): Promise<void> {
+): Promise<StockMovementResult> {
   const movementType = getStockMovementType(productionType)
-  if (!movementType) return
+  if (!movementType) {
+    return { success: true, movementCreated: false, movementReverted: false }
+  }
 
   if (!productId) {
     console.warn(`[productionRecords] Product ID not provided for stock movement: entry=${entryId}, type=${productionType}`)
-    return
+    return {
+      success: false,
+      movementCreated: false,
+      movementReverted: false,
+      error: { code: 'MISSING_PRODUCT_ID', message: `품목 ID가 없습니다: ${productionType}` }
+    }
   }
 
   const { error } = await supabase.rpc('record_production_stock_movement', {
@@ -45,7 +69,15 @@ async function recordStockMovement(
 
   if (error) {
     console.error('[productionRecords] Failed to record stock movement:', error)
+    return {
+      success: false,
+      movementCreated: false,
+      movementReverted: false,
+      error: { code: 'RPC_ERROR', message: error.message }
+    }
   }
+
+  return { success: true, movementCreated: true, movementReverted: false }
 }
 
 async function upsertStockMovement(
@@ -58,18 +90,23 @@ async function upsertStockMovement(
   siteId: string | null | undefined,
   memo: string | null | undefined,
   createdBy: string
-): Promise<void> {
+): Promise<StockMovementResult> {
   const movementType = getStockMovementType(productionType)
 
   if (!movementType) {
-    await reverseStockMovement(supabase, entryId)
-    return
+    const reverseResult = await reverseStockMovement(supabase, entryId)
+    return { success: true, movementCreated: false, movementReverted: reverseResult.reversed }
   }
 
   if (!productId) {
     console.warn(`[productionRecords] Product ID not provided for stock movement upsert: entry=${entryId}, type=${productionType}`)
-    await reverseStockMovement(supabase, entryId)
-    return
+    const reverseResult = await reverseStockMovement(supabase, entryId)
+    return {
+      success: false,
+      movementCreated: false,
+      movementReverted: reverseResult.reversed,
+      error: { code: 'MISSING_PRODUCT_ID', message: `품목 ID가 없습니다: ${productionType}` }
+    }
   }
 
   const { error } = await supabase.rpc('upsert_production_stock_movement', {
@@ -87,13 +124,21 @@ async function upsertStockMovement(
 
   if (error) {
     console.error('[productionRecords] Failed to upsert stock movement:', error)
+    return {
+      success: false,
+      movementCreated: false,
+      movementReverted: false,
+      error: { code: 'RPC_ERROR', message: error.message }
+    }
   }
+
+  return { success: true, movementCreated: true, movementReverted: false }
 }
 
 async function reverseStockMovement(
   supabase: SupabaseClient,
   entryId: string
-): Promise<void> {
+): Promise<{ reversed: boolean }> {
   const { error } = await supabase.rpc('reverse_production_stock_movement', {
     p_source_table: 'production_entries',
     p_source_id: entryId,
@@ -101,7 +146,10 @@ async function reverseStockMovement(
 
   if (error) {
     console.error('[productionRecords] Failed to reverse stock movement:', error)
+    return { reversed: false }
   }
+
+  return { reversed: true }
 }
 
 export interface ProductionEntrySaveInput {
@@ -134,7 +182,7 @@ export async function updateProductionEntry(
   supabase: SupabaseClient,
   id: string,
   input: ProductionEntryUpdateInput
-): Promise<{ id: string }> {
+): Promise<UpdateProductionEntryResult> {
   const payload = {
     work_date: input.workDate,
     production_type: input.productionType,
@@ -157,7 +205,7 @@ export async function updateProductionEntry(
     throw new Error(error.message)
   }
 
-  await upsertStockMovement(
+  const movementResult = await upsertStockMovement(
     supabase,
     id,
     input.productionType,
@@ -169,7 +217,7 @@ export async function updateProductionEntry(
     input.createdBy
   )
 
-  return { id: data.id }
+  return { id: data.id, movementResult }
 }
 
 export async function deleteProductionEntry(
@@ -191,7 +239,7 @@ export async function deleteProductionEntry(
 export async function saveProductionEntry(
   supabase: SupabaseClient,
   input: ProductionEntrySaveInput
-): Promise<{ id: string }> {
+): Promise<SaveProductionEntryResult> {
   const payload = {
     work_date: input.workDate,
     production_type: input.productionType,
@@ -214,7 +262,7 @@ export async function saveProductionEntry(
     throw new Error(error.message)
   }
 
-  await recordStockMovement(
+  const movementResult = await recordStockMovement(
     supabase,
     data.id,
     input.productionType,
@@ -226,7 +274,7 @@ export async function saveProductionEntry(
     input.createdBy
   )
 
-  return { id: data.id }
+  return { id: data.id, movementResult }
 }
 
 export interface ProductionDashboardSummary {

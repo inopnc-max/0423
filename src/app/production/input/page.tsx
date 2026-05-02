@@ -10,8 +10,9 @@ export default function ProductionInputPage() {
   const { records, loading, error, reload, saveEntry, currentUserId } = useProductionDashboard()
 
   const handleSave = async (input: ProductionEntrySaveInput) => {
-    await saveEntry(input)
+    const result = await saveEntry(input)
     await reload()
+    return result
   }
 
   return (
