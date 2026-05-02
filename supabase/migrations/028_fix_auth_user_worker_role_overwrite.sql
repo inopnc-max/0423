@@ -36,11 +36,22 @@ BEGIN
     COALESCE(NULLIF(NEW.raw_user_meta_data->>'role', ''), 'worker'),
     COALESCE(NEW.raw_user_meta_data->>'company', ''),
     NEW.raw_user_meta_data->>'phone',
-    COALESCE((NEW.raw_user_meta_data->>'daily')::integer, 150000),
-    COALESCE(
-      (SELECT array_agg(value::uuid) FROM jsonb_array_elements_text(NEW.raw_user_meta_data->'site_ids') AS value),
-      '{}'
-    )::uuid[],
+    CASE
+      WHEN (NEW.raw_user_meta_data->>'daily') ~ '^[0-9]+$'
+        THEN (NEW.raw_user_meta_data->>'daily')::integer
+      ELSE 150000
+    END,
+    CASE
+      WHEN jsonb_typeof(NEW.raw_user_meta_data->'site_ids') = 'array' THEN
+        COALESCE(
+          (
+            SELECT array_agg(value::uuid)
+            FROM jsonb_array_elements_text(NEW.raw_user_meta_data->'site_ids') AS value
+          ),
+          '{}'
+        )::uuid[]
+      ELSE '{}'::uuid[]
+    END,
     TRUE,
     NOW(),
     NOW()
