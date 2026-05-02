@@ -1733,6 +1733,9 @@ function WorklogEditorView({
                   <p className="text-sm font-medium text-amber-700">
                     첨부 파일은 저장 시 서버에 업로드되고 일지 첨부 목록에 연결됩니다.
                   </p>
+                  <p className="mt-1 text-sm text-amber-700">
+                    PDF 도면을 첨부하면 첨부 목록에서 도면마킹 버튼으로 마킹 편집과 draft 저장을 할 수 있습니다.
+                  </p>
                   {mediaSaving && (
                     <p className="mt-1 text-sm text-amber-600">
                       첨부 파일을 로컬에 저장 중입니다.
@@ -1805,11 +1808,12 @@ function WorklogEditorView({
                           <button
                             type="button"
                             onClick={() => openDrawingMarkupPreviewEditor(attachment, index + 1)}
-                            className="shrink-0 rounded-full p-2 text-[var(--color-accent)] transition hover:bg-[var(--color-accent-light)]"
-                            aria-label={`${attachment.name} 도면마킹 미리보기 편집`}
-                            title="도면마킹 미리보기 편집"
+                            className="flex shrink-0 items-center gap-1 rounded-xl border border-[var(--color-accent)] px-3 py-2 text-sm font-semibold text-[var(--color-accent)] transition hover:bg-[var(--color-accent-light)]"
+                            aria-label={`${attachment.name} 도면마킹 편집`}
+                            title="도면마킹 편집"
                           >
                             <Edit3 className="h-5 w-5" strokeWidth={1.9} />
+                            <span>도면마킹</span>
                           </button>
                         )}
 
