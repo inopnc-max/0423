@@ -75,6 +75,7 @@ export default function AdminUsersPage() {
     worker: 'bg-blue-100 text-blue-700',
     partner: 'bg-green-100 text-green-700',
     site_manager: 'bg-yellow-100 text-yellow-700',
+    production_manager: 'bg-indigo-100 text-indigo-700',
     admin: 'bg-purple-100 text-purple-700',
   }
 
@@ -135,6 +136,7 @@ export default function AdminUsersPage() {
           <option value="worker">작업자</option>
           <option value="partner">파트너</option>
           <option value="site_manager">현장관리자</option>
+          <option value="production_manager">생산관리자</option>
           <option value="admin">관리자</option>
         </select>
       </div>
