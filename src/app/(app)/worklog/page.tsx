@@ -987,8 +987,19 @@ function WorklogEditorView({
             photoStatus: meta.kind === 'photo' ? 'after_repair' : undefined,
             displayStatus: meta.kind === 'photo' ? '보수후' : undefined,
           })
-        } catch {
-          setMessage({ type: 'error', text: `파일 저장 실패: ${file.name}` })
+        } catch (err) {
+          console.warn('[worklog] failed to save local media blob:', file.name, err)
+          newAttachments.push({
+            ...meta,
+            file,
+            previewUrl: URL.createObjectURL(file),
+            photoStatus: meta.kind === 'photo' ? 'after_repair' : undefined,
+            displayStatus: meta.kind === 'photo' ? '보수후' : undefined,
+          })
+          setMessage({
+            type: 'error',
+            text: `파일을 임시 첨부했습니다. 새로고침 전 저장을 완료해주세요: ${file.name}`,
+          })
         }
       }
       setMediaAttachments(prev => [...prev, ...newAttachments])
