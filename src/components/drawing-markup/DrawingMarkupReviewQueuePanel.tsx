@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Clock3,
   FileSearch,
+  LockKeyhole,
   Layers3,
   MapPinned,
   X,
@@ -56,11 +57,16 @@ function isActionable(item: DrawingMarkupReviewQueueItem): boolean {
   return item.status === 'pending' && item.approvalStatus === 'pending' && !item.lockedAt
 }
 
+function isLockable(item: DrawingMarkupReviewQueueItem): boolean {
+  return item.status === 'approved' && item.approvalStatus === 'approved' && !item.lockedAt
+}
+
 export function DrawingMarkupReviewQueuePanel() {
   const {
     loadPendingQueue,
     approvePending,
     rejectPending,
+    lockApproved,
     loading,
     submitting,
     error,
@@ -127,13 +133,22 @@ export function DrawingMarkupReviewQueuePanel() {
     await refreshQueue()
   }
 
+  const handleLock = async (item: DrawingMarkupReviewQueueItem) => {
+    if (!isLockable(item)) return
+
+    setActionMessage(null)
+    await lockApproved(item.id)
+    setActionMessage('Drawing markup locked.')
+    await refreshQueue()
+  }
+
   return (
     <section className="mb-6 rounded-2xl bg-white p-5 shadow-sm">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-[var(--color-navy)]">Drawing Markup Review Queue</h2>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            Review pending drawing markups, then approve or reject them.
+            Review pending drawing markups, then approve, reject, or lock approved records.
           </p>
         </div>
         <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
@@ -142,7 +157,7 @@ export function DrawingMarkupReviewQueuePanel() {
       </div>
 
       <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-        This PR only supports pending to approved or rejected review actions. Locking, document registration, and export are not included.
+        This PR only supports approved to locked finalization after review. Document registration, Storage export, and partner publication are not included.
       </div>
 
       {actionMessage && (
@@ -188,7 +203,7 @@ export function DrawingMarkupReviewQueuePanel() {
                       {item.attachmentName || `Attachment ${item.attachmentId.slice(0, 8)}`}
                     </div>
                     <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-                      pending
+                      {item.status}
                     </span>
                   </div>
                   <div className="mt-2 space-y-1.5 text-xs text-[var(--color-text-secondary)]">
@@ -252,6 +267,17 @@ export function DrawingMarkupReviewQueuePanel() {
                     >
                       <XCircle className="h-3.5 w-3.5" />
                       Reject
+                    </button>
+                    <button
+                      type="button"
+                      disabled={submitting || !isLockable(selectedItem)}
+                      onClick={() => {
+                        void handleLock(selectedItem)
+                      }}
+                      className="flex h-8 items-center gap-1.5 rounded-md bg-slate-100 px-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <LockKeyhole className="h-3.5 w-3.5" />
+                      Lock
                     </button>
                     <button
                       type="button"

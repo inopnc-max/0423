@@ -6,6 +6,7 @@ import { useSelectedSite } from '@/contexts/selected-site-context'
 import {
   approveDrawingMarkup,
   listDrawingMarkupReviewQueue,
+  lockDrawingMarkup,
   rejectDrawingMarkup,
   type DrawingMarkupRecord,
   type DrawingMarkupReviewQueueItem,
@@ -45,8 +46,8 @@ export function useDrawingMarkupReviewQueue() {
 
     try {
       return await listDrawingMarkupReviewQueue(createClient(), {
-        status: 'pending',
-        approvalStatus: 'pending',
+        statuses: ['pending', 'approved'],
+        approvalStatuses: ['pending', 'approved'],
         siteId: siteScope,
         limit: 50,
       })
@@ -107,6 +108,28 @@ export function useDrawingMarkupReviewQueue() {
     }
   }, [user?.role, user?.userId])
 
+  const lockApproved = useCallback(async (id: string): Promise<DrawingMarkupRecord> => {
+    assertReviewQueueAllowed(user?.role)
+    if (!user?.userId) {
+      throw new Error('User is required to lock drawing markups')
+    }
+
+    setState(current => ({ ...current, submitting: true, error: null }))
+
+    try {
+      return await lockDrawingMarkup(createClient(), {
+        id,
+        actorId: user.userId,
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to lock drawing markup'
+      setState(current => ({ ...current, error: message }))
+      throw err
+    } finally {
+      setState(current => ({ ...current, submitting: false }))
+    }
+  }, [user?.role, user?.userId])
+
   return {
     ...state,
     isSiteManager,
@@ -114,5 +137,6 @@ export function useDrawingMarkupReviewQueue() {
     loadPendingQueue,
     approvePending,
     rejectPending,
+    lockApproved,
   }
 }

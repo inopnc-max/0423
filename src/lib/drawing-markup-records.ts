@@ -97,9 +97,16 @@ export interface RejectDrawingMarkupInput {
   reason: string
 }
 
+export interface LockDrawingMarkupInput {
+  id: string
+  actorId: string
+}
+
 export interface ListDrawingMarkupReviewQueueInput {
   status?: DrawingMarkupStatus
   approvalStatus?: DrawingMarkupApprovalStatus
+  statuses?: DrawingMarkupStatus[]
+  approvalStatuses?: DrawingMarkupApprovalStatus[]
   siteId?: string | null
   limit?: number
 }
@@ -265,11 +272,13 @@ export async function listDrawingMarkupReviewQueue(
   supabase: SupabaseClient,
   input: ListDrawingMarkupReviewQueueInput = {}
 ): Promise<DrawingMarkupReviewQueueItem[]> {
+  const statuses = input.statuses ?? (input.status ? [input.status] : ['pending'])
+  const approvalStatuses = input.approvalStatuses ?? (input.approvalStatus ? [input.approvalStatus] : ['pending'])
   let query = supabase
     .from('drawing_markups')
     .select(DRAWING_MARKUP_REVIEW_QUEUE_SELECT)
-    .eq('status', input.status ?? 'pending')
-    .eq('approval_status', input.approvalStatus ?? 'pending')
+    .in('status', statuses)
+    .in('approval_status', approvalStatuses)
     .order('updated_at', { ascending: false })
     .limit(input.limit ?? 50)
 
@@ -430,6 +439,33 @@ export async function rejectDrawingMarkup(
     .eq('id', input.id)
     .eq('status', 'pending')
     .eq('approval_status', 'pending')
+    .is('locked_at', null)
+    .select(DRAWING_MARKUP_SELECT)
+    .single()
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return toDrawingMarkupRecord(data as DrawingMarkupRow)
+}
+
+export async function lockDrawingMarkup(
+  supabase: SupabaseClient,
+  input: LockDrawingMarkupInput
+): Promise<DrawingMarkupRecord> {
+  const lockedAt = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('drawing_markups')
+    .update({
+      status: 'locked',
+      approval_status: 'approved',
+      locked_by: input.actorId,
+      locked_at: lockedAt,
+    })
+    .eq('id', input.id)
+    .eq('status', 'approved')
+    .eq('approval_status', 'approved')
     .is('locked_at', null)
     .select(DRAWING_MARKUP_SELECT)
     .single()
