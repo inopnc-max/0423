@@ -45,14 +45,14 @@ const TOOL_ITEMS: Array<{
   label: string
   icon: typeof MousePointer2
 }> = [
-  { tool: 'select', label: 'Select', icon: MousePointer2 },
-  { tool: 'brush', label: 'Brush', icon: Highlighter },
-  { tool: 'line', label: 'Line', icon: PenLine },
-  { tool: 'arrow', label: 'Arrow', icon: ArrowUpRight },
-  { tool: 'rectangle', label: 'Rectangle', icon: Square },
-  { tool: 'ellipse', label: 'Ellipse', icon: Circle },
-  { tool: 'text', label: 'Text', icon: Type },
-  { tool: 'polygon-area', label: 'Area', icon: Edit3 },
+  { tool: 'select', label: '선택', icon: MousePointer2 },
+  { tool: 'brush', label: '브러시', icon: Highlighter },
+  { tool: 'line', label: '선', icon: PenLine },
+  { tool: 'arrow', label: '화살표', icon: ArrowUpRight },
+  { tool: 'rectangle', label: '사각형', icon: Square },
+  { tool: 'ellipse', label: '원형', icon: Circle },
+  { tool: 'text', label: '텍스트', icon: Type },
+  { tool: 'polygon-area', label: '영역', icon: Edit3 },
 ]
 
 function clamp01(value: number): number {
@@ -329,7 +329,7 @@ export function DrawingMarkingOverlay({
 
   return (
     <div className={`flex w-full flex-col gap-2 ${className}`}>
-      <div className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-white p-1">
+      <div className="flex flex-wrap items-center gap-1 rounded-md border border-[var(--color-border)] bg-white p-1">
         {TOOL_ITEMS.map(({ tool, label, icon: Icon }) => {
           const isActive = activeTool === tool
           return (
@@ -340,11 +340,12 @@ export function DrawingMarkingOverlay({
               title={label}
               disabled={disabled || readOnly}
               onClick={() => onActiveToolChange?.(tool)}
-              className={`flex h-9 w-9 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition ${
+              className={`flex h-9 items-center gap-2 rounded-md px-3 text-[var(--color-text-secondary)] transition ${
                 isActive ? 'bg-[var(--color-primary)] text-white' : 'hover:bg-[var(--color-bg-soft)]'
               } disabled:cursor-not-allowed disabled:opacity-50`}
             >
               <Icon className="h-4 w-4" />
+              <span className="text-sm font-medium">{label}</span>
             </button>
           )
         })}
@@ -352,7 +353,7 @@ export function DrawingMarkingOverlay({
 
       <div
         ref={surfaceRef}
-        className="relative min-h-[320px] overflow-hidden rounded-md border border-[var(--color-border)] bg-slate-100"
+        className="relative min-h-[320px] touch-none overflow-hidden rounded-md border border-[var(--color-border)] bg-slate-100"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -376,9 +377,13 @@ export function DrawingMarkingOverlay({
           </div>
         )}
 
+        {!isLocked && activeTool !== 'select' && (
+          <div className="pointer-events-none absolute inset-0 z-10 rounded-md ring-2 ring-sky-300/70" />
+        )}
+
         <svg
           viewBox={`0 0 ${VIEW_BOX_SIZE} ${VIEW_BOX_SIZE}`}
-          className="pointer-events-none absolute inset-0 h-full w-full"
+          className="pointer-events-none absolute inset-0 z-20 h-full w-full"
           preserveAspectRatio="none"
         >
           {marks.map((mark, index) => renderMark(mark, index))}

@@ -55,7 +55,7 @@ export function WorklogDrawingMarkupPreviewEditor({
   onClose,
 }: WorklogDrawingMarkupPreviewEditorProps) {
   const { loadBySource, saveDraft, submitForReview, loading, saving, submitting, error } = useDrawingMarkupSave()
-  const [activeTool, setActiveTool] = useState<DrawingMarkingTool>('select')
+  const [activeTool, setActiveTool] = useState<DrawingMarkingTool>(previewKind === 'pdf' ? 'line' : 'select')
   const [marks, setMarks] = useState<DrawingMarkupMark[]>(() => [...initialMarks])
   const [savedRecord, setSavedRecord] = useState<DrawingMarkupRecord | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
@@ -90,6 +90,18 @@ export function WorklogDrawingMarkupPreviewEditor({
     setSaveMessage(null)
     setLoadMessage(null)
   }, [hasDraftSource, initialMarks])
+
+  useEffect(() => {
+    if (readOnly || recordLocksEditing) {
+      setActiveTool('select')
+      return
+    }
+
+    setActiveTool(current => {
+      if (current !== 'select') return current
+      return previewKind === 'pdf' ? 'line' : 'select'
+    })
+  }, [previewKind, readOnly, recordLocksEditing])
 
   useEffect(() => {
     if (!draftSource?.siteId || !draftSource.attachmentId) return
@@ -207,6 +219,14 @@ export function WorklogDrawingMarkupPreviewEditor({
         {guideText}
       </div>
 
+      {!isLocked && (
+        <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-700">
+          {previewKind === 'pdf'
+            ? '기본 도구는 선 그리기입니다. PDF 위를 드래그해 마킹을 추가한 뒤 임시저장을 눌러주세요.'
+            : '도구를 선택한 뒤 화면 위를 드래그하거나 눌러 마킹을 추가해 주세요.'}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-2 rounded-md border border-[var(--color-border)] bg-white p-2">
         <span className="mr-auto text-sm font-semibold text-[var(--color-text)]">
           도면 {pageNo} · {marks.length}개 마킹
@@ -220,9 +240,10 @@ export function WorklogDrawingMarkupPreviewEditor({
             void handleSaveDraft()
           }}
           disabled={!canSaveDraft}
-          className="flex h-9 w-9 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-9 items-center gap-2 rounded-md px-3 text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-soft)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
+          <span className="text-sm font-medium">임시저장</span>
         </button>
 
         <button
@@ -233,9 +254,10 @@ export function WorklogDrawingMarkupPreviewEditor({
             void handleSubmitForReview()
           }}
           disabled={!canSubmitForReview}
-          className="flex h-9 w-9 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-9 items-center gap-2 rounded-md px-3 text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-soft)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Send className="h-4 w-4" />
+          <span className="text-sm font-medium">승인요청</span>
         </button>
 
         <button
@@ -244,9 +266,10 @@ export function WorklogDrawingMarkupPreviewEditor({
           title="마킹 초기화"
           onClick={resetMarks}
           disabled={isLocked}
-          className="flex h-9 w-9 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-9 items-center gap-2 rounded-md px-3 text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-soft)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <RotateCcw className="h-4 w-4" />
+          <span className="text-sm font-medium">초기화</span>
         </button>
 
         {onClose && (
