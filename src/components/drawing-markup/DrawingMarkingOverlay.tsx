@@ -41,8 +41,26 @@ export interface DrawingMarkingOverlayProps {
 
 const VIEW_BOX_SIZE = 1000
 const DEFAULT_COLOR = '#dc2626'
+const DEFAULT_LINE_WIDTH = 0.006
+const DEFAULT_BRUSH_WIDTH = 0.01
+const DEFAULT_SHAPE_LINE_WIDTH = 0.005
+const DEFAULT_TEXT_SIZE = 0.024
 const MIN_VISIBLE_DELTA = 0.018
 const MIN_BRUSH_STEP = 0.004
+
+const MARK_COLORS = [
+  { value: '#dc2626', label: 'Red' },
+  { value: '#ea580c', label: 'Orange' },
+  { value: '#2563eb', label: 'Blue' },
+  { value: '#16a34a', label: 'Green' },
+  { value: '#111827', label: 'Black' },
+] as const
+
+const STROKE_WIDTHS = [
+  { value: 0.004, label: 'Thin', previewHeight: 2 },
+  { value: DEFAULT_LINE_WIDTH, label: 'Medium', previewHeight: 3 },
+  { value: 0.01, label: 'Thick', previewHeight: 5 },
+] as const
 
 type DraftSession = {
   pointerId: number
@@ -111,6 +129,28 @@ function ensureVisibleEnd(start: DrawingMarkupPoint, end: DrawingMarkupPoint): D
     x: clamp01(start.x + MIN_VISIBLE_DELTA),
     y: clamp01(start.y + MIN_VISIBLE_DELTA),
   }
+}
+
+function getToolWidth(tool: DrawingMarkingTool, width: number): number {
+  if (tool === 'brush') {
+    return width === DEFAULT_LINE_WIDTH ? DEFAULT_BRUSH_WIDTH : width
+  }
+
+  if (tool === 'rectangle' || tool === 'ellipse' || tool === 'polygon-area') {
+    return width === DEFAULT_LINE_WIDTH ? DEFAULT_SHAPE_LINE_WIDTH : width
+  }
+
+  return width
+}
+
+function getTransparentFill(color: string, opacity: number): string {
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) return color
+
+  const red = Number.parseInt(color.slice(1, 3), 16)
+  const green = Number.parseInt(color.slice(3, 5), 16)
+  const blue = Number.parseInt(color.slice(5, 7), 16)
+
+  return `rgba(${red}, ${green}, ${blue}, ${opacity})`
 }
 
 function buildBoxPoints(start: DrawingMarkupPoint, end: DrawingMarkupPoint): DrawingMarkupPoint[] {
@@ -274,21 +314,26 @@ function renderMark(mark: DrawingMarkupMark, index: number, isDraft = false) {
 function buildDraftMark(
   tool: DrawingMarkingTool,
   start: DrawingMarkupPoint,
-  end: DrawingMarkupPoint
+  end: DrawingMarkupPoint,
+  color = DEFAULT_COLOR,
+  selectedWidth = DEFAULT_LINE_WIDTH
 ): DrawingMarkupMark | null {
+  const width = getToolWidth(tool, selectedWidth)
+
   if (tool === 'line') {
-    return { type: 'line', start, end: ensureVisibleEnd(start, end), color: DEFAULT_COLOR, width: 0.006 }
+    return { type: 'line', start, end: ensureVisibleEnd(start, end), color, width }
   }
   if (tool === 'arrow') {
-    return { type: 'arrow', start, end: ensureVisibleEnd(start, end), color: DEFAULT_COLOR, width: 0.006 }
+    return { type: 'arrow', start, end: ensureVisibleEnd(start, end), color, width }
   }
   if (tool === 'rectangle') {
     return {
       type: 'rectangle',
       start,
       end: ensureVisibleEnd(start, end),
-      strokeColor: DEFAULT_COLOR,
-      fillColor: 'rgba(220, 38, 38, 0.12)',
+      lineWidth: width,
+      strokeColor: color,
+      fillColor: getTransparentFill(color, 0.12),
     }
   }
   if (tool === 'ellipse') {
@@ -296,16 +341,18 @@ function buildDraftMark(
       type: 'ellipse',
       start,
       end: ensureVisibleEnd(start, end),
-      strokeColor: DEFAULT_COLOR,
-      fillColor: 'rgba(220, 38, 38, 0.12)',
+      lineWidth: width,
+      strokeColor: color,
+      fillColor: getTransparentFill(color, 0.12),
     }
   }
   if (tool === 'polygon-area') {
     return {
       type: 'polygon-area',
       points: buildBoxPoints(start, end),
-      strokeColor: DEFAULT_COLOR,
-      fillColor: 'rgba(220, 38, 38, 0.2)',
+      lineWidth: width,
+      strokeColor: color,
+      fillColor: getTransparentFill(color, 0.2),
     }
   }
   return null
@@ -329,14 +376,16 @@ export function DrawingMarkingOverlay({
   const [draftStart, setDraftStart] = useState<DrawingMarkupPoint | null>(null)
   const [draftEnd, setDraftEnd] = useState<DrawingMarkupPoint | null>(null)
   const [draftBrushPoints, setDraftBrushPoints] = useState<DrawingMarkupPoint[]>([])
+  const [markColor, setMarkColor] = useState(DEFAULT_COLOR)
+  const [markWidth, setMarkWidth] = useState(DEFAULT_LINE_WIDTH)
   const isLocked = readOnly || disabled || !onMarksChange
   const draftMark = useMemo(() => {
     if (activeTool === 'brush' && draftBrushPoints.length > 0) {
-      return { type: 'brush' as const, points: draftBrushPoints, color: DEFAULT_COLOR, width: 0.01 }
+      return { type: 'brush' as const, points: draftBrushPoints, color: markColor, width: getToolWidth('brush', markWidth) }
     }
     if (!draftStart || !draftEnd) return null
-    return buildDraftMark(activeTool, draftStart, draftEnd)
-  }, [activeTool, draftBrushPoints, draftEnd, draftStart])
+    return buildDraftMark(activeTool, draftStart, draftEnd, markColor, markWidth)
+  }, [activeTool, draftBrushPoints, draftEnd, draftStart, markColor, markWidth])
 
   const commitMark = (mark: DrawingMarkupMark) => {
     if (isLocked) return
@@ -406,7 +455,7 @@ export function DrawingMarkingOverlay({
     const point = getPointerPoint(event, surfaceRef.current)
 
     if (activeTool === 'text') {
-      commitMark({ type: 'text', position: point, text: '메모', color: DEFAULT_COLOR, fontSize: 0.024 })
+      commitMark({ type: 'text', position: point, text: '메모', color: markColor, fontSize: DEFAULT_TEXT_SIZE })
       return
     }
 
@@ -444,10 +493,10 @@ export function DrawingMarkingOverlay({
             points: finalSession.brushPoints.length > 1
               ? finalSession.brushPoints
               : [finalSession.start, ensureVisibleEnd(finalSession.start, finalSession.end)],
-            color: DEFAULT_COLOR,
-            width: 0.01,
+            color: markColor,
+            width: getToolWidth('brush', markWidth),
           }
-        : buildDraftMark(activeTool, finalSession.start, finalSession.end)
+        : buildDraftMark(activeTool, finalSession.start, finalSession.end, markColor, markWidth)
 
     if (nextMark) {
       commitMark(nextMark)
@@ -484,6 +533,56 @@ export function DrawingMarkingOverlay({
             </button>
           )
         })}
+        <div className="mx-1 h-6 w-px bg-[var(--color-border)]" aria-hidden="true" />
+        <div className="flex items-center gap-1">
+          {MARK_COLORS.map((color) => {
+            const isActive = markColor === color.value
+
+            return (
+              <button
+                key={color.value}
+                type="button"
+                aria-label={`Color ${color.label}`}
+                title={color.label}
+                disabled={disabled || readOnly}
+                onClick={() => setMarkColor(color.value)}
+                className={`grid h-9 w-9 place-items-center rounded-md transition hover:bg-[var(--color-bg-soft)] disabled:cursor-not-allowed disabled:opacity-50 ${
+                  isActive ? 'ring-2 ring-[var(--color-primary)] ring-offset-1' : ''
+                }`}
+              >
+                <span
+                  className="h-5 w-5 rounded-full border border-black/10"
+                  style={{ backgroundColor: color.value }}
+                />
+              </button>
+            )
+          })}
+        </div>
+        <div className="mx-1 h-6 w-px bg-[var(--color-border)]" aria-hidden="true" />
+        <div className="flex items-center gap-1">
+          {STROKE_WIDTHS.map((width) => {
+            const isActive = markWidth === width.value
+
+            return (
+              <button
+                key={width.value}
+                type="button"
+                aria-label={`Stroke ${width.label}`}
+                title={width.label}
+                disabled={disabled || readOnly}
+                onClick={() => setMarkWidth(width.value)}
+                className={`grid h-9 w-9 place-items-center rounded-md text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-soft)] disabled:cursor-not-allowed disabled:opacity-50 ${
+                  isActive ? 'bg-[var(--color-primary)] text-white' : ''
+                }`}
+              >
+                <span
+                  className="w-5 rounded-full bg-current"
+                  style={{ height: width.previewHeight }}
+                />
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       <div className="relative min-h-[320px] touch-none overflow-hidden rounded-md border border-[var(--color-border)] bg-slate-100">
