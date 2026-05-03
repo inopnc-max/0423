@@ -39,6 +39,8 @@ export interface DrawingMarkingOverlayProps {
 
 const VIEW_BOX_SIZE = 1000
 const DEFAULT_COLOR = '#dc2626'
+const MIN_VISIBLE_DELTA = 0.018
+const MIN_BRUSH_STEP = 0.004
 
 const TOOL_ITEMS: Array<{
   tool: DrawingMarkingTool
@@ -84,6 +86,33 @@ function getBox(start: DrawingMarkupPoint, end: DrawingMarkupPoint) {
   const height = Math.abs(endPoint.y - startPoint.y)
 
   return { x, y, width, height }
+}
+
+function getDistance(start: DrawingMarkupPoint, end: DrawingMarkupPoint): number {
+  const dx = end.x - start.x
+  const dy = end.y - start.y
+
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
+function ensureVisibleEnd(start: DrawingMarkupPoint, end: DrawingMarkupPoint): DrawingMarkupPoint {
+  if (getDistance(start, end) >= MIN_VISIBLE_DELTA) return end
+
+  return {
+    x: clamp01(start.x + MIN_VISIBLE_DELTA),
+    y: clamp01(start.y + MIN_VISIBLE_DELTA),
+  }
+}
+
+function buildBoxPoints(start: DrawingMarkupPoint, end: DrawingMarkupPoint): DrawingMarkupPoint[] {
+  const visibleEnd = ensureVisibleEnd(start, end)
+
+  return [
+    { x: start.x, y: start.y },
+    { x: visibleEnd.x, y: start.y },
+    { x: visibleEnd.x, y: visibleEnd.y },
+    { x: start.x, y: visibleEnd.y },
+  ]
 }
 
 function buildArrowHead(start: DrawingMarkupPoint, end: DrawingMarkupPoint): string {
@@ -239,16 +268,36 @@ function buildDraftMark(
   end: DrawingMarkupPoint
 ): DrawingMarkupMark | null {
   if (tool === 'line') {
-    return { type: 'line', start, end, color: DEFAULT_COLOR, width: 0.006 }
+    return { type: 'line', start, end: ensureVisibleEnd(start, end), color: DEFAULT_COLOR, width: 0.006 }
   }
   if (tool === 'arrow') {
-    return { type: 'arrow', start, end, color: DEFAULT_COLOR, width: 0.006 }
+    return { type: 'arrow', start, end: ensureVisibleEnd(start, end), color: DEFAULT_COLOR, width: 0.006 }
   }
   if (tool === 'rectangle') {
-    return { type: 'rectangle', start, end, strokeColor: DEFAULT_COLOR, fillColor: 'rgba(220, 38, 38, 0.12)' }
+    return {
+      type: 'rectangle',
+      start,
+      end: ensureVisibleEnd(start, end),
+      strokeColor: DEFAULT_COLOR,
+      fillColor: 'rgba(220, 38, 38, 0.12)',
+    }
   }
   if (tool === 'ellipse') {
-    return { type: 'ellipse', start, end, strokeColor: DEFAULT_COLOR, fillColor: 'rgba(220, 38, 38, 0.12)' }
+    return {
+      type: 'ellipse',
+      start,
+      end: ensureVisibleEnd(start, end),
+      strokeColor: DEFAULT_COLOR,
+      fillColor: 'rgba(220, 38, 38, 0.12)',
+    }
+  }
+  if (tool === 'polygon-area') {
+    return {
+      type: 'polygon-area',
+      points: buildBoxPoints(start, end),
+      strokeColor: DEFAULT_COLOR,
+      fillColor: 'rgba(220, 38, 38, 0.2)',
+    }
   }
   return null
 }
@@ -268,63 +317,113 @@ export function DrawingMarkingOverlay({
   const surfaceRef = useRef<HTMLDivElement | null>(null)
   const [draftStart, setDraftStart] = useState<DrawingMarkupPoint | null>(null)
   const [draftEnd, setDraftEnd] = useState<DrawingMarkupPoint | null>(null)
+  const [draftBrushPoints, setDraftBrushPoints] = useState<DrawingMarkupPoint[]>([])
   const isLocked = readOnly || disabled || !onMarksChange
   const draftMark = useMemo(() => {
+    if (activeTool === 'brush' && draftBrushPoints.length > 0) {
+      return { type: 'brush' as const, points: draftBrushPoints, color: DEFAULT_COLOR, width: 0.01 }
+    }
     if (!draftStart || !draftEnd) return null
     return buildDraftMark(activeTool, draftStart, draftEnd)
-  }, [activeTool, draftEnd, draftStart])
+  }, [activeTool, draftBrushPoints, draftEnd, draftStart])
 
   const commitMark = (mark: DrawingMarkupMark) => {
     if (isLocked) return
     onMarksChange?.([...marks, mark])
   }
 
+  const resetDraft = () => {
+    setDraftStart(null)
+    setDraftEnd(null)
+    setDraftBrushPoints([])
+  }
+
+  const setPointerCaptureSafely = (element: HTMLDivElement, pointerId: number) => {
+    try {
+      element.setPointerCapture(pointerId)
+    } catch {
+      // Some embedded preview surfaces can drop pointer capture during fast touch gestures.
+    }
+  }
+
+  const releasePointerCaptureSafely = (element: HTMLDivElement, pointerId: number) => {
+    try {
+      if (element.hasPointerCapture(pointerId)) {
+        element.releasePointerCapture(pointerId)
+      }
+    } catch {
+      // The draft has already been resolved, so losing capture here is harmless.
+    }
+  }
+
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (isLocked || activeTool === 'select') return
     if (!surfaceRef.current) return
 
+    event.preventDefault()
     const point = getPointerPoint(event, surfaceRef.current)
 
     if (activeTool === 'text') {
-      commitMark({ type: 'text', position: point, text: 'Text', color: DEFAULT_COLOR, fontSize: 0.024 })
+      commitMark({ type: 'text', position: point, text: '메모', color: DEFAULT_COLOR, fontSize: 0.024 })
       return
     }
 
     if (activeTool === 'brush') {
       setDraftStart(point)
       setDraftEnd(point)
-      event.currentTarget.setPointerCapture(event.pointerId)
+      setDraftBrushPoints([point])
+      setPointerCaptureSafely(event.currentTarget, event.pointerId)
       return
     }
 
     if (buildDraftMark(activeTool, point, point)) {
       setDraftStart(point)
       setDraftEnd(point)
-      event.currentTarget.setPointerCapture(event.pointerId)
+      setPointerCaptureSafely(event.currentTarget, event.pointerId)
     }
   }
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (!draftStart || isLocked || !surfaceRef.current) return
 
-    setDraftEnd(getPointerPoint(event, surfaceRef.current))
+    event.preventDefault()
+    const point = getPointerPoint(event, surfaceRef.current)
+    setDraftEnd(point)
+
+    if (activeTool === 'brush') {
+      setDraftBrushPoints(current => {
+        const previous = current[current.length - 1]
+        if (previous && getDistance(previous, point) < MIN_BRUSH_STEP) return current
+        return [...current, point]
+      })
+    }
   }
 
   const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
     if (!draftStart || !draftEnd || isLocked) return
 
+    event.preventDefault()
     const nextMark =
       activeTool === 'brush'
-        ? { type: 'brush' as const, points: [draftStart, draftEnd], color: DEFAULT_COLOR, width: 0.01 }
+        ? {
+            type: 'brush' as const,
+            points: draftBrushPoints.length > 1 ? draftBrushPoints : [draftStart, ensureVisibleEnd(draftStart, draftEnd)],
+            color: DEFAULT_COLOR,
+            width: 0.01,
+          }
         : buildDraftMark(activeTool, draftStart, draftEnd)
 
     if (nextMark) {
       commitMark(nextMark)
     }
 
-    setDraftStart(null)
-    setDraftEnd(null)
-    event.currentTarget.releasePointerCapture(event.pointerId)
+    resetDraft()
+    releasePointerCaptureSafely(event.currentTarget, event.pointerId)
+  }
+
+  const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
+    resetDraft()
+    releasePointerCaptureSafely(event.currentTarget, event.pointerId)
   }
 
   return (
@@ -351,13 +450,7 @@ export function DrawingMarkingOverlay({
         })}
       </div>
 
-      <div
-        ref={surfaceRef}
-        className="relative min-h-[320px] touch-none overflow-hidden rounded-md border border-[var(--color-border)] bg-slate-100"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-      >
+      <div className="relative min-h-[320px] touch-none overflow-hidden rounded-md border border-[var(--color-border)] bg-slate-100">
         {imageUrl && previewKind === 'pdf' ? (
           <object
             data={imageUrl}
@@ -370,7 +463,7 @@ export function DrawingMarkingOverlay({
             </div>
           </object>
         ) : imageUrl ? (
-          <img src={imageUrl} alt={imageAlt} className="h-full min-h-[320px] w-full object-contain" />
+          <img src={imageUrl} alt={imageAlt} className="pointer-events-none h-full min-h-[320px] w-full select-none object-contain" />
         ) : (
           <div className="flex min-h-[320px] items-center justify-center text-sm text-[var(--color-text-tertiary)]">
             No drawing image
@@ -389,6 +482,19 @@ export function DrawingMarkingOverlay({
           {marks.map((mark, index) => renderMark(mark, index))}
           {draftMark && renderMark(draftMark, marks.length, true)}
         </svg>
+
+        <div
+          ref={surfaceRef}
+          aria-label={activeTool === 'select' ? '도면마킹 선택 영역' : '도면마킹 입력 영역'}
+          className={`absolute inset-0 z-30 touch-none ${
+            isLocked || activeTool === 'select' ? 'cursor-default' : 'cursor-crosshair'
+          }`}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          onLostPointerCapture={resetDraft}
+        />
       </div>
     </div>
   )

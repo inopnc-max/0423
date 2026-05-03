@@ -41,6 +41,10 @@ function formatRecordTime(value: string): string {
   }).format(date)
 }
 
+function getMarksSignature(marks: DrawingMarkupMark[]): string {
+  return JSON.stringify(marks)
+}
+
 export function WorklogDrawingMarkupPreviewEditor({
   pageNo,
   imageUrl,
@@ -81,6 +85,15 @@ export function WorklogDrawingMarkupPreviewEditor({
     !saving &&
     !submitting
   )
+  const savedMarksSignature = savedRecord ? getMarksSignature(savedRecord.marks) : getMarksSignature(initialMarks)
+  const currentMarksSignature = getMarksSignature(marks)
+  const hasUnsavedChanges = currentMarksSignature !== savedMarksSignature
+  const saveButtonLabel = saving ? '저장 중' : hasUnsavedChanges ? '임시저장 필요' : '임시저장'
+  const statusTone = isLocked
+    ? 'border-slate-200 bg-slate-50 text-slate-700'
+    : hasUnsavedChanges
+      ? 'border-amber-200 bg-amber-50 text-amber-800'
+      : 'border-emerald-200 bg-emerald-50 text-emerald-700'
 
   useEffect(() => {
     if (hasDraftSource) return
@@ -209,7 +222,7 @@ export function WorklogDrawingMarkupPreviewEditor({
   const guideText = readOnly || recordLocksEditing
     ? '읽기 전용 도면마킹입니다. pending, approved, locked 상태는 draft 저장으로 덮어쓸 수 없습니다.'
     : hasDraftSource
-      ? '도면마킹 draft를 임시저장할 수 있습니다. 저장본이 있으면 자동으로 불러옵니다.'
+      ? '도면마킹 draft를 임시저장할 수 있습니다. 저장 후에도 worklog payload와 별도로 관리됩니다.'
       : '미리보기 전용 편집입니다. 저장하려면 작업일지 도면 첨부에서 다시 열어주세요.'
   const savedAtText = savedRecord ? formatRecordTime(savedRecord.updatedAt) : null
 
@@ -222,8 +235,8 @@ export function WorklogDrawingMarkupPreviewEditor({
       {!isLocked && (
         <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-700">
           {previewKind === 'pdf'
-            ? '기본 도구는 선 그리기입니다. PDF 위를 드래그해 마킹을 추가한 뒤 임시저장을 눌러주세요.'
-            : '도구를 선택한 뒤 화면 위를 드래그하거나 눌러 마킹을 추가해 주세요.'}
+            ? '기본 도구는 선입니다. PDF 위를 드래그하면 바로 마킹이 추가됩니다.'
+            : '도구를 선택한 뒤 화면 위를 드래그하거나 눌러 마킹을 추가할 수 있습니다.'}
         </div>
       )}
 
@@ -240,10 +253,14 @@ export function WorklogDrawingMarkupPreviewEditor({
             void handleSaveDraft()
           }}
           disabled={!canSaveDraft}
-          className="flex h-9 items-center gap-2 rounded-md px-3 text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+          className={`flex h-9 items-center gap-2 rounded-md px-3 transition disabled:cursor-not-allowed disabled:opacity-50 ${
+            canSaveDraft
+              ? 'bg-[var(--color-primary)] text-white hover:brightness-95'
+              : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-soft)]'
+          }`}
         >
           <Save className="h-4 w-4" />
-          <span className="text-sm font-medium">임시저장</span>
+          <span className="text-sm font-medium">{saveButtonLabel}</span>
         </button>
 
         <button
@@ -254,7 +271,11 @@ export function WorklogDrawingMarkupPreviewEditor({
             void handleSubmitForReview()
           }}
           disabled={!canSubmitForReview}
-          className="flex h-9 items-center gap-2 rounded-md px-3 text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+          className={`flex h-9 items-center gap-2 rounded-md px-3 transition disabled:cursor-not-allowed disabled:opacity-50 ${
+            canSubmitForReview
+              ? 'border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white'
+              : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-soft)]'
+          }`}
         >
           <Send className="h-4 w-4" />
           <span className="text-sm font-medium">승인요청</span>
@@ -285,10 +306,11 @@ export function WorklogDrawingMarkupPreviewEditor({
         )}
       </div>
 
-      <div className="rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-xs text-[var(--color-text-secondary)]">
+      <div className={`rounded-md border px-3 py-2 text-xs ${statusTone}`}>
         <div className="flex flex-wrap gap-x-4 gap-y-1">
           <span>상태: {statusLabel}</span>
           <span>마킹: {marks.length}개</span>
+          {!isLocked && <span>{hasUnsavedChanges ? '저장 필요' : '저장됨'}</span>}
           {savedAtText && <span>저장 시각: {savedAtText}</span>}
           {loading && <span>저장본 확인 중</span>}
           {saving && <span>임시저장 중</span>}
