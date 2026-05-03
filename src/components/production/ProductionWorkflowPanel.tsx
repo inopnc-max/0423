@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { BarChart3, ClipboardList, History } from 'lucide-react'
+import { BarChart3, ClipboardList, History, Package } from 'lucide-react'
 
 const WORKFLOW_LINKS = [
   {
@@ -20,13 +20,19 @@ const WORKFLOW_LINKS = [
     description: '품목별 수량과 금액 흐름을 점검합니다.',
     icon: BarChart3,
   },
+  {
+    href: '/production/products',
+    label: '품목',
+    description: '품목 마스터를 추가, 수정, 관리합니다.',
+    icon: Package,
+  },
 ]
 
 export function ProductionWorkflowPanel() {
   return (
     <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-sm">
       <h2 className="text-base font-semibold text-[var(--color-text)]">생산관리 흐름</h2>
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
+      <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         {WORKFLOW_LINKS.map(({ href, label, description, icon: Icon }) => (
           <Link
             key={href}
