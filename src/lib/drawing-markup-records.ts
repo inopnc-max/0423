@@ -127,6 +127,9 @@ function assertEditable(record: DrawingMarkupRecord): void {
   if (record.lockedAt || record.status === 'locked') {
     throw new Error('Locked drawing markup cannot be modified')
   }
+  if (record.approvalStatus === 'pending' || record.status === 'pending') {
+    throw new Error('Pending drawing markup cannot be modified by draft save')
+  }
   if (record.approvalStatus === 'approved' || record.status === 'approved') {
     throw new Error('Approved drawing markup cannot be modified by draft save')
   }
