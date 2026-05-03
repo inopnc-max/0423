@@ -48,6 +48,7 @@ const DEFAULT_LINE_WIDTH = 0.006
 const DEFAULT_BRUSH_WIDTH = 0.01
 const DEFAULT_SHAPE_LINE_WIDTH = 0.005
 const DEFAULT_TEXT_SIZE = 0.024
+const DEFAULT_TEXT_VALUE = '메모'
 const MIN_VISIBLE_DELTA = 0.018
 const MIN_BRUSH_STEP = 0.004
 
@@ -422,6 +423,16 @@ export function DrawingMarkingOverlay({
     applyMarks([...marks, mark])
   }
 
+  const requestTextValue = () => {
+    if (typeof window === 'undefined') return DEFAULT_TEXT_VALUE
+
+    const input = window.prompt('마킹 텍스트를 입력하세요.', DEFAULT_TEXT_VALUE)
+    if (input === null) return null
+
+    const nextValue = input.trim()
+    return nextValue || DEFAULT_TEXT_VALUE
+  }
+
   const resetDraft = () => {
     draftSessionRef.current = null
     setDraftStart(null)
@@ -485,7 +496,10 @@ export function DrawingMarkingOverlay({
     const point = getPointerPoint(event, surfaceRef.current)
 
     if (activeTool === 'text') {
-      commitMark({ type: 'text', position: point, text: '메모', color: markColor, fontSize: DEFAULT_TEXT_SIZE })
+      const text = requestTextValue()
+      if (text === null) return
+
+      commitMark({ type: 'text', position: point, text, color: markColor, fontSize: DEFAULT_TEXT_SIZE })
       return
     }
 
