@@ -362,7 +362,7 @@ export function DrawingMarkingOverlay({
             data={imageUrl}
             type="application/pdf"
             aria-label={imageAlt}
-            className="h-full min-h-[320px] w-full bg-white"
+            className="pointer-events-none h-full min-h-[320px] w-full bg-white"
           >
             <div className="flex min-h-[320px] items-center justify-center px-4 text-center text-sm text-[var(--color-text-tertiary)]">
               PDF preview is unavailable in this browser.
