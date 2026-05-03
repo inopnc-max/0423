@@ -19,6 +19,7 @@ export type WorklogDrawingMarkupPreviewEditorProps = {
   pageNo: number
   imageUrl?: string | null
   imageAlt?: string
+  previewKind?: 'image' | 'pdf'
   initialMarks?: DrawingMarkupMark[]
   draftSource?: WorklogDrawingMarkupDraftSource
   disabled?: boolean
@@ -32,6 +33,7 @@ export function WorklogDrawingMarkupPreviewEditor({
   pageNo,
   imageUrl,
   imageAlt,
+  previewKind = 'image',
   initialMarks = [],
   draftSource,
   disabled = false,
@@ -146,6 +148,7 @@ export function WorklogDrawingMarkupPreviewEditor({
       <DrawingMarkingOverlay
         imageUrl={imageUrl}
         imageAlt={imageAlt ?? `도면 ${pageNo}`}
+        previewKind={previewKind}
         marks={marks}
         activeTool={activeTool}
         onActiveToolChange={setActiveTool}
