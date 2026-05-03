@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Building2, Check, ChevronDown, MapPin, Search, X } from 'lucide-react'
-import { useMenuSearch } from '@/hooks/useMenuSearch'
 import { getSelectedSiteId } from '@/lib/ui-state'
 import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
 import type { SiteSummary } from '@/contexts/selected-site-context'
@@ -34,13 +33,28 @@ export function SiteCombobox({
   placeholder = '현장명, 원청사, 소속, 주소 검색',
   className = '',
 }: SiteComboboxProps) {
-  const { query, setQuery, filteredSites } = useMenuSearch({ scope: 'site_select' })
+  const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
 
   const selected = useMemo(
     () => sites.find(site => site.id === selectedId) ?? null,
     [sites, selectedId]
   )
+
+  const filteredSites = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return sites
+    return sites.filter(site => {
+      const fields = [
+        site.name,
+        site.company,
+        site.affiliation,
+        site.address,
+      ].filter(Boolean).join(' ').toLowerCase()
+      return fields.includes(q)
+    })
+  }, [sites, query])
+
   const selectionReason = useMemo(() => getSelectionReason(selectedId), [selectedId])
 
   useEffect(() => {
