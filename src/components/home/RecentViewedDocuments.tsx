@@ -159,8 +159,8 @@ export function RecentViewedDocuments({
       if (!cancelled) {
         const rows = (fallbackData ?? [])
           .filter(doc => !siteId || doc.site_id === siteId)
-          .slice(0, limit)
           .filter(doc => !partnerMode || isPartnerSafeDocument(doc))
+          .slice(0, limit)
         setDocuments(rows)
         setLoading(false)
       }
