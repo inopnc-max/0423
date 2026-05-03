@@ -51,15 +51,18 @@ export default function ProductionLogsPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
+  const getCurrentUserId = useCallback(async (): Promise<string> => {
+    if (currentUserId) return currentUserId
+    const { data } = await createClient().auth.getUser()
+    if (!data.user) throw new Error('User not authenticated')
+    setCurrentUserId(data.user.id)
+    return data.user.id
+  }, [currentUserId])
+
   const handleEdit = useCallback((entry: ProductionRecentEntry) => {
     setEditingEntry(entry)
     setActionError(null)
-    if (!currentUserId) {
-      createClient().auth.getUser().then(({ data }) => {
-        if (data.user) setCurrentUserId(data.user.id)
-      }).catch(() => {})
-    }
-  }, [currentUserId])
+  }, [])
 
   const handleDelete = useCallback((entry: ProductionRecentEntry) => {
     setDeletingEntry(entry)
@@ -69,15 +72,9 @@ export default function ProductionLogsPage() {
 
   const handleSave = useCallback(async (_id: string, input: ProductionEntryUpdateInput) => {
     const { updateProductionEntry } = await import('@/lib/production/productionRecords')
-    const userId = currentUserId
-    if (!userId) {
-      const { data } = await createClient().auth.getUser()
-      if (!data.user) throw new Error('User not authenticated')
-      setCurrentUserId(data.user.id)
-      return updateProductionEntry(createClient(), _id, { ...input, createdBy: data.user.id })
-    }
+    const userId = await getCurrentUserId()
     return updateProductionEntry(createClient(), _id, { ...input, createdBy: userId })
-  }, [currentUserId])
+  }, [getCurrentUserId])
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingEntry) return

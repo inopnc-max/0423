@@ -61,18 +61,20 @@ export function ProductionEntryEditModal({
   const [movementWarning, setMovementWarning] = useState<string | null>(null)
 
   useEffect(() => {
+    if (values.siteId || !entry.siteName) return
     const matchedSite = sites.find(s => s.name === entry.siteName)
     if (matchedSite) {
       setValues(prev => ({ ...prev, siteId: matchedSite.id }))
     }
-  }, [sites, entry.siteName])
+  }, [sites, entry.siteName, values.siteId])
 
   useEffect(() => {
+    if (values.productId || !entry.productName) return
     const matchedProduct = products.find(p => p.name === entry.productName)
     if (matchedProduct) {
       setValues(prev => ({ ...prev, productId: matchedProduct.id }))
     }
-  }, [products, entry.productName])
+  }, [products, entry.productName, values.productId])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
