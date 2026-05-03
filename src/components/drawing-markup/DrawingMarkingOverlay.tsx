@@ -1,7 +1,7 @@
 'use client'
 
 import type { PointerEvent } from 'react'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowUpRight,
   Circle,
@@ -9,8 +9,11 @@ import {
   Highlighter,
   MousePointer2,
   PenLine,
+  Redo2,
   Square,
+  Trash2,
   Type,
+  Undo2,
 } from 'lucide-react'
 import type { DrawingMarkupMark, DrawingMarkupPoint } from '@/lib/types/drawing-markup'
 import { PdfCanvasPreview } from './PdfCanvasPreview'
@@ -373,12 +376,16 @@ export function DrawingMarkingOverlay({
 }: DrawingMarkingOverlayProps) {
   const surfaceRef = useRef<HTMLDivElement | null>(null)
   const draftSessionRef = useRef<DraftSession | null>(null)
+  const historyRef = useRef<DrawingMarkupMark[][]>([marks])
+  const historyIndexRef = useRef(0)
   const [draftStart, setDraftStart] = useState<DrawingMarkupPoint | null>(null)
   const [draftEnd, setDraftEnd] = useState<DrawingMarkupPoint | null>(null)
   const [draftBrushPoints, setDraftBrushPoints] = useState<DrawingMarkupPoint[]>([])
   const [markColor, setMarkColor] = useState(DEFAULT_COLOR)
   const [markWidth, setMarkWidth] = useState(DEFAULT_LINE_WIDTH)
+  const [historyIndex, setHistoryIndex] = useState(0)
   const isLocked = readOnly || disabled || !onMarksChange
+  const marksSignature = useMemo(() => JSON.stringify(marks), [marks])
   const draftMark = useMemo(() => {
     if (activeTool === 'brush' && draftBrushPoints.length > 0) {
       return { type: 'brush' as const, points: draftBrushPoints, color: markColor, width: getToolWidth('brush', markWidth) }
@@ -387,9 +394,32 @@ export function DrawingMarkingOverlay({
     return buildDraftMark(activeTool, draftStart, draftEnd, markColor, markWidth)
   }, [activeTool, draftBrushPoints, draftEnd, draftStart, markColor, markWidth])
 
-  const commitMark = (mark: DrawingMarkupMark) => {
+  useEffect(() => {
+    const currentHistoryMarks = historyRef.current[historyIndexRef.current] ?? []
+    if (JSON.stringify(currentHistoryMarks) === marksSignature) return
+
+    historyRef.current = [marks]
+    historyIndexRef.current = 0
+    setHistoryIndex(0)
+  }, [marks, marksSignature])
+
+  const setHistoryCursor = (nextIndex: number) => {
+    historyIndexRef.current = nextIndex
+    setHistoryIndex(nextIndex)
+  }
+
+  const applyMarks = (nextMarks: DrawingMarkupMark[]) => {
     if (isLocked) return
-    onMarksChange?.([...marks, mark])
+
+    const nextHistory = historyRef.current.slice(0, historyIndexRef.current + 1)
+    nextHistory.push(nextMarks)
+    historyRef.current = nextHistory
+    setHistoryCursor(nextHistory.length - 1)
+    onMarksChange?.(nextMarks)
+  }
+
+  const commitMark = (mark: DrawingMarkupMark) => {
+    applyMarks([...marks, mark])
   }
 
   const resetDraft = () => {
@@ -511,6 +541,35 @@ export function DrawingMarkingOverlay({
     releasePointerCaptureSafely(event.currentTarget, event.pointerId)
   }
 
+  const handleUndo = () => {
+    if (isLocked || historyIndex <= 0) return
+
+    resetDraft()
+    const nextIndex = historyIndex - 1
+    setHistoryCursor(nextIndex)
+    onMarksChange?.(historyRef.current[nextIndex] ?? [])
+  }
+
+  const handleRedo = () => {
+    if (isLocked || historyIndex >= historyRef.current.length - 1) return
+
+    resetDraft()
+    const nextIndex = historyIndex + 1
+    setHistoryCursor(nextIndex)
+    onMarksChange?.(historyRef.current[nextIndex] ?? [])
+  }
+
+  const handleClear = () => {
+    if (isLocked || marks.length === 0) return
+
+    resetDraft()
+    applyMarks([])
+  }
+
+  const canUndo = !isLocked && historyIndex > 0
+  const canRedo = !isLocked && historyIndex < historyRef.current.length - 1
+  const canClear = !isLocked && marks.length > 0
+
   return (
     <div className={`flex w-full flex-col gap-2 ${className}`}>
       <div className="flex flex-wrap items-center gap-1 rounded-md border border-[var(--color-border)] bg-white p-1">
@@ -533,6 +592,37 @@ export function DrawingMarkingOverlay({
             </button>
           )
         })}
+        <div className="mx-1 h-6 w-px bg-[var(--color-border)]" aria-hidden="true" />
+        <button
+          type="button"
+          aria-label="Undo"
+          title="Undo"
+          disabled={!canUndo}
+          onClick={handleUndo}
+          className="flex h-9 w-9 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Undo2 className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          aria-label="Redo"
+          title="Redo"
+          disabled={!canRedo}
+          onClick={handleRedo}
+          className="flex h-9 w-9 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Redo2 className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          aria-label="Clear all"
+          title="Clear all"
+          disabled={!canClear}
+          onClick={handleClear}
+          className="flex h-9 w-9 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
         <div className="mx-1 h-6 w-px bg-[var(--color-border)]" aria-hidden="true" />
         <div className="flex items-center gap-1">
           {MARK_COLORS.map((color) => {
