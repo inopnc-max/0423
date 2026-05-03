@@ -439,11 +439,51 @@ async function getEntries(supabase: SupabaseClient): Promise<ProductionEntryRow[
   }
 }
 
+interface ProductionEntryAggregationRow {
+  production_type: string
+  quantity: number | string | null
+  amount: number | null
+}
+
+async function getSummaryAggregation(
+  supabase: SupabaseClient
+): Promise<Pick<ProductionDashboardSummary, 'totalEntries' | 'productionQuantity' | 'salesQuantity' | 'selfUseQuantity' | 'transportAmount'>> {
+  try {
+    const { data, error } = await supabase
+      .from('production_entries')
+      .select('production_type, quantity, amount')
+
+    if (error || !data) {
+      return { totalEntries: 0, productionQuantity: 0, salesQuantity: 0, selfUseQuantity: 0, transportAmount: 0 }
+    }
+
+    const rows = data as ProductionEntryAggregationRow[]
+    return rows.reduce(
+      (acc, row) => {
+        const quantity = toNumber(row.quantity)
+        const amount = row.amount ?? 0
+        acc.totalEntries += 1
+
+        if (row.production_type === '생산') acc.productionQuantity += quantity
+        if (row.production_type === '판매') acc.salesQuantity += quantity
+        if (row.production_type === '자체사용') acc.selfUseQuantity += quantity
+        if (row.production_type === '운송비') acc.transportAmount += amount
+
+        return acc
+      },
+      { totalEntries: 0, productionQuantity: 0, salesQuantity: 0, selfUseQuantity: 0, transportAmount: 0 }
+    )
+  } catch {
+    return { totalEntries: 0, productionQuantity: 0, salesQuantity: 0, selfUseQuantity: 0, transportAmount: 0 }
+  }
+}
+
 export async function getProductionDashboardRecords(
   supabase: SupabaseClient
 ): Promise<ProductionDashboardRecords> {
-  const [entries, activeProducts, activeClients, sites, products, clients] = await Promise.all([
+  const [entries, aggregation, activeProducts, activeClients, sites, products, clients] = await Promise.all([
     getEntries(supabase),
+    getSummaryAggregation(supabase),
     safeCount(supabase.from('products').select('id', { count: 'exact', head: true }).eq('active', true)),
     safeCount(supabase.from('production_clients').select('id', { count: 'exact', head: true }).eq('active', true)),
     safeOptions(supabase.from('sites').select('id, name').order('name').limit(100)),
@@ -451,29 +491,11 @@ export async function getProductionDashboardRecords(
     safeOptions(supabase.from('production_clients').select('id, name').eq('active', true).order('name').limit(100)),
   ])
 
-  const summary = entries.reduce<ProductionDashboardSummary>(
-    (acc, row) => {
-      const quantity = toNumber(row.quantity)
-      const amount = row.amount ?? 0
-      acc.totalEntries += 1
-
-      if (row.production_type === '생산') acc.productionQuantity += quantity
-      if (row.production_type === '판매') acc.salesQuantity += quantity
-      if (row.production_type === '자체사용') acc.selfUseQuantity += quantity
-      if (row.production_type === '운송비') acc.transportAmount += amount
-
-      return acc
-    },
-    {
-      totalEntries: 0,
-      productionQuantity: 0,
-      salesQuantity: 0,
-      selfUseQuantity: 0,
-      transportAmount: 0,
-      activeProducts,
-      activeClients,
-    }
-  )
+  const summary: ProductionDashboardSummary = {
+    ...aggregation,
+    activeProducts,
+    activeClients,
+  }
 
   return {
     summary,
