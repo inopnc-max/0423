@@ -457,10 +457,11 @@ export default function HQRequestsPage() {
 
   return (
     <div className="space-y-4 p-4">
+      {/* Page Header */}
       <div>
         <h1 className="text-xl font-bold text-[var(--color-navy)]">본사요청</h1>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          현장 이슈와 문서 요청을 본사에 바로 전달할 수 있습니다.
+          본사에 요청한 내역과 답변을 확인합니다.
         </p>
       </div>
 
@@ -472,9 +473,10 @@ export default function HQRequestsPage() {
             <button
               type="button"
               onClick={() => void fetchAdminRequests()}
-              className="inline-flex items-center gap-1 text-sm text-[var(--color-accent)] hover:underline"
+              disabled={adminLoading}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold text-[#394679] bg-[#eef1f8] hover:bg-[#e6ebf6] border border-[#d4ddef] transition active:scale-[0.98] disabled:opacity-60"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className={`h-4 w-4 ${adminLoading ? 'animate-spin' : ''}`} strokeWidth={1.9} />
               <span>새로고침</span>
             </button>
           </div>
@@ -518,11 +520,11 @@ export default function HQRequestsPage() {
                 return (
                   <div
                     key={request.id}
-                    className="rounded-2xl bg-white p-4 shadow-sm"
+                    className="rounded-2xl bg-white p-4 shadow-sm transition"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-navy)] bg-opacity-10">
-                        <FileText className="h-5 w-5 text-[var(--color-navy)]" />
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[#3b4b7c]">
+                        <FileText className="h-4 w-4" strokeWidth={1.9} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -698,9 +700,11 @@ export default function HQRequestsPage() {
           <button
             type="button"
             onClick={() => void fetchMyRequests()}
-            className="text-sm text-[var(--color-accent)] hover:underline"
+            disabled={loadingRequests}
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold text-[#394679] bg-[#eef1f8] hover:bg-[#e6ebf6] border border-[#d4ddef] transition active:scale-[0.98] disabled:opacity-60"
           >
-            새로고침
+            <RefreshCw className={`h-4 w-4 ${loadingRequests ? 'animate-spin' : ''}`} strokeWidth={1.9} />
+            <span>새로고침</span>
           </button>
         </div>
 
@@ -720,7 +724,7 @@ export default function HQRequestsPage() {
         )}
 
         {!loadingRequests && requests.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {requests.map(request => {
               const statusInfo = getStatusLabel(request.status)
               return (
@@ -728,11 +732,11 @@ export default function HQRequestsPage() {
                   key={request.id}
                   type="button"
                   onClick={() => handlePreviewRequest(request)}
-                  className="w-full text-left rounded-2xl bg-white p-4 shadow-sm transition hover:shadow-md"
+                  className="w-full rounded-2xl bg-white p-4 text-left shadow-sm transition hover:bg-slate-50 hover:shadow-md active:bg-slate-50 active:scale-[0.99]"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-navy)] bg-opacity-10">
-                      <FileText className="h-5 w-5 text-[var(--color-navy)]" />
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[#3b4b7c]">
+                      <FileText className="h-4 w-4" strokeWidth={1.9} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
