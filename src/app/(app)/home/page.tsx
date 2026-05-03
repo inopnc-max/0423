@@ -168,7 +168,7 @@ function SiteCombobox({
 
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth()
-  const { isOnline, queueCount, syncing, lastSyncedAt } = useSync()
+  const { isOnline, queueCount, syncing } = useSync()
   const {
     selectedSiteId,
     selectedSite,
@@ -263,27 +263,32 @@ export default function HomePage() {
       : queueCount > 0
         ? `동기화 대기 ${queueCount}건`
         : '온라인 상태'
-  const syncDescription = !isOnline
-    ? '저장된 작업은 기기에 보관되고, 네트워크 복귀 후 자동 반영됩니다.'
-    : queueCount > 0
-      ? '대기 중인 작업이 있어 온라인에서 자동으로 다시 전송됩니다.'
-      : lastSyncedAt
-        ? `마지막 동기화 ${new Date(lastSyncedAt).toLocaleTimeString('ko-KR', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}`
-        : '현재 작업 데이터가 서버와 연결된 상태입니다.'
 
   return (
     <div className="space-y-5 p-4">
       <section className="rounded-2xl bg-white p-5 shadow-sm">
-        <div className="text-sm text-[var(--color-text-secondary)]">오늘의 작업 시작</div>
-        <h1 className="mt-1 text-xl font-bold text-[var(--color-navy)]">
-          {user?.profile?.name || '사용자'}님, 반갑습니다.
-        </h1>
-        <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-          현장 선택 후 일지 작성, 출역 확인, 현장 정보를 한눈에 확인하세요.
-        </p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-lg font-bold text-[var(--color-navy)]">
+              {user?.profile?.name || '사용자'}님, 오늘의 작업
+            </h1>
+          </div>
+
+          <div
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
+              !isOnline
+                ? 'bg-red-50 text-red-600'
+                : syncing
+                  ? 'bg-blue-50 text-blue-600'
+                  : queueCount > 0
+                    ? 'bg-amber-50 text-amber-600'
+                    : 'bg-green-50 text-green-600'
+            }`}
+          >
+            <SyncIcon className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} strokeWidth={1.9} />
+            <span>{syncLabel}</span>
+          </div>
+        </div>
       </section>
 
       {error && (
@@ -312,6 +317,7 @@ export default function HomePage() {
           onSelect={id => {
             void setSelectedSiteId(id)
           }}
+          label=""
         />
       </section>
 
@@ -361,20 +367,6 @@ export default function HomePage() {
           </div>
         </section>
       )}
-
-      <section className="rounded-2xl bg-white p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-sm text-[var(--color-text-secondary)]">동기화 상태</div>
-            <div className="mt-1 text-lg font-semibold text-[var(--color-navy)]">{syncLabel}</div>
-            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{syncDescription}</p>
-          </div>
-
-          <div className="rounded-full bg-[var(--color-accent-light)] p-3 text-[var(--color-accent)]">
-            <SyncIcon className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} strokeWidth={1.9} />
-          </div>
-        </div>
-      </section>
 
       <section className="grid grid-cols-3 gap-3">
         {QUICK_ACTIONS.filter(item => item.show).map(
@@ -461,6 +453,7 @@ export default function HomePage() {
         userId={user?.userId}
         siteId={selectedSiteId}
         partnerMode={isPartnerUser}
+        limit={3}
       />
     </div>
   )

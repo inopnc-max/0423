@@ -31,14 +31,6 @@ export function CommonHomeDateRail({ selectedDate, onDateSelect }: CommonHomeDat
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   }, [weekStart])
 
-  const weekLabel = useMemo(() => {
-    const start = weekDays[0]
-    const end = weekDays[6]
-    if (start.getMonth() === end.getMonth()) {
-      return `${format(start, 'M월 d일')} ~ ${format(end, 'd일')}`
-    }
-    return `${format(start, 'M월 d일')} ~ ${format(end, 'M월 d일')}`
-  }, [weekDays])
 
   function moveWeek(delta: number) {
     const newDate = addDays(weekStart, delta * 7)
@@ -47,10 +39,25 @@ export function CommonHomeDateRail({ selectedDate, onDateSelect }: CommonHomeDat
 
   return (
     <div className="rounded-2xl bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <CalendarDays className="h-5 w-5 text-[var(--color-accent)]" strokeWidth={1.9} />
-          <span className="text-sm font-semibold text-[var(--color-navy)]">{weekLabel}</span>
+          <button
+            type="button"
+            onClick={() => {
+              const input = document.createElement('input')
+              input.type = 'date'
+              input.value = selectedDate
+              input.onchange = event => {
+                const value = (event.target as HTMLInputElement).value
+                if (value) onDateSelect(value)
+              }
+              input.click()
+            }}
+            className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--color-navy)] transition hover:border-[var(--color-navy)]"
+          >
+            <CalendarDays className="h-4 w-4" strokeWidth={1.9} />
+            <span>{format(selectedDateObj ?? today, 'M월 d일')}</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-1">

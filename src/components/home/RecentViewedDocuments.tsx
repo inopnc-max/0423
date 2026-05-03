@@ -84,10 +84,12 @@ export function RecentViewedDocuments({
   userId,
   siteId,
   partnerMode = false,
+  limit = 5,
 }: {
   userId?: string | null
   siteId?: string | null
   partnerMode?: boolean
+  limit?: number
 }) {
   const { openPreview } = usePreview()
   const [documents, setDocuments] = useState<RecentDocument[]>([])
@@ -107,12 +109,13 @@ export function RecentViewedDocuments({
           .select('viewed_at, documents(id, site_id, title, category, file_url, file_type, storage_bucket, storage_path, source_type, approval_status, locked_at, created_at, sites(name))')
           .eq('user_id', userId)
           .order('viewed_at', { ascending: false })
-          .limit(5)
+          .limit(limit)
 
         if (!cancelled && !fromViews.error && fromViews.data?.length) {
           const rows = fromViews.data
             .map(row => ({ ...(row.documents as unknown as RecentDocument), viewed_at: row.viewed_at as string }))
             .filter(doc => !siteId || doc.site_id === siteId)
+            .slice(0, limit)
           setDocuments(rows)
           setLoading(false)
           return
@@ -138,7 +141,7 @@ export function RecentViewedDocuments({
           .select('id, site_id, title, category, file_url, file_type, storage_bucket, storage_path, source_type, approval_status, locked_at, created_at, sites(name)')
           .not('locked_at', 'is', null)
           .order('created_at', { ascending: false })
-          .limit(5)
+          .limit(limit)
 
         if (siteId) {
           lockedQuery = lockedQuery.eq('site_id', siteId)
@@ -156,6 +159,7 @@ export function RecentViewedDocuments({
       if (!cancelled) {
         const rows = (fallbackData ?? [])
           .filter(doc => !siteId || doc.site_id === siteId)
+          .slice(0, limit)
           .filter(doc => !partnerMode || isPartnerSafeDocument(doc))
         setDocuments(rows)
         setLoading(false)
