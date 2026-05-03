@@ -6,6 +6,7 @@ import { Building2, Calendar, CheckCircle, XCircle, Clock, Search, ChevronDown }
 import { useAuth } from '@/contexts/auth-context'
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { ApprovalReviewTimeline, ApprovalSummary } from '@/components/site-manager/SiteManagerApprovalPanel'
+import { DrawingMarkupReviewQueuePanel } from '@/components/drawing-markup/DrawingMarkupReviewQueuePanel'
 import { useSiteManagerDashboard } from '@/hooks/site-manager/useSiteManagerDashboard'
 
 type WorklogStatus = 'draft' | 'pending' | 'approved' | 'rejected'
@@ -162,6 +163,7 @@ export default function AdminWorklogsPage() {
     return (
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-navy)] mb-6">작업일지 승인</h1>
+        <DrawingMarkupReviewQueuePanel />
         {siteManagerDashboard.message && (
           <div className={`mb-4 rounded-xl px-4 py-3 text-sm ${
             siteManagerDashboard.message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
@@ -187,6 +189,8 @@ export default function AdminWorklogsPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-[var(--color-navy)] mb-6">일지 승인</h1>
+
+      <DrawingMarkupReviewQueuePanel />
 
       {isSiteManagerUser && (
         <>

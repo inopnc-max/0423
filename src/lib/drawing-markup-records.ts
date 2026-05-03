@@ -27,6 +27,13 @@ export interface DrawingMarkupRecord {
   updatedAt: string
 }
 
+export interface DrawingMarkupReviewQueueItem extends DrawingMarkupRecord {
+  siteName: string | null
+  workDate: string | null
+  requesterName: string | null
+  attachmentName: string | null
+}
+
 interface DrawingMarkupRow {
   id: string
   site_id: string
@@ -50,6 +57,18 @@ interface DrawingMarkupRow {
   updated_at: string
 }
 
+interface DrawingMarkupReviewQueueRow extends DrawingMarkupRow {
+  site?: { name?: string | null } | Array<{ name?: string | null }> | null
+  worklog?: {
+    work_date?: string | null
+    media_info?: unknown
+  } | Array<{
+    work_date?: string | null
+    media_info?: unknown
+  }> | null
+  creator?: { name?: string | null } | Array<{ name?: string | null }> | null
+}
+
 export interface DrawingMarkupSourceKey {
   siteId: string
   worklogId?: string | null
@@ -65,6 +84,13 @@ export interface SaveDrawingMarkupDraftInput extends DrawingMarkupSourceKey {
 
 export interface SubmitDrawingMarkupForReviewInput {
   id: string
+}
+
+export interface ListDrawingMarkupReviewQueueInput {
+  status?: DrawingMarkupStatus
+  approvalStatus?: DrawingMarkupApprovalStatus
+  siteId?: string | null
+  limit?: number
 }
 
 const DRAWING_MARKUP_SELECT = `
@@ -90,12 +116,43 @@ const DRAWING_MARKUP_SELECT = `
   updated_at
 `
 
+const DRAWING_MARKUP_REVIEW_QUEUE_SELECT = `
+  ${DRAWING_MARKUP_SELECT},
+  site:sites!drawing_markups_site_id_fkey(name),
+  worklog:daily_logs!drawing_markups_worklog_id_fkey(work_date, media_info),
+  creator:workers!drawing_markups_created_by_fkey(name)
+`
+
 function normalizePageNo(pageNo?: number): number {
   return Math.max(1, Math.trunc(pageNo ?? 1))
 }
 
 function normalizeMarks(value: unknown): DrawingMarkupMark[] {
   return Array.isArray(value) ? (value as DrawingMarkupMark[]) : []
+}
+
+function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null
+  return value ?? null
+}
+
+function getAttachmentName(mediaInfo: unknown, attachmentId: string): string | null {
+  if (!mediaInfo || typeof mediaInfo !== 'object') return null
+
+  const attachments = (mediaInfo as { attachments?: unknown }).attachments
+  if (!Array.isArray(attachments)) return null
+
+  const match = attachments.find(item => {
+    if (!item || typeof item !== 'object') return false
+    return (item as { id?: unknown }).id === attachmentId
+  })
+
+  if (!match || typeof match !== 'object') return null
+
+  const name = (match as { name?: unknown; fileName?: unknown }).name
+    ?? (match as { fileName?: unknown }).fileName
+
+  return typeof name === 'string' && name.trim() ? name : null
 }
 
 function toDrawingMarkupRecord(row: DrawingMarkupRow): DrawingMarkupRecord {
@@ -120,6 +177,20 @@ function toDrawingMarkupRecord(row: DrawingMarkupRow): DrawingMarkupRecord {
     updatedBy: row.updated_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  }
+}
+
+function toDrawingMarkupReviewQueueItem(row: DrawingMarkupReviewQueueRow): DrawingMarkupReviewQueueItem {
+  const site = firstRelation(row.site)
+  const worklog = firstRelation(row.worklog)
+  const creator = firstRelation(row.creator)
+
+  return {
+    ...toDrawingMarkupRecord(row),
+    siteName: site?.name ?? null,
+    workDate: worklog?.work_date ?? null,
+    requesterName: creator?.name ?? null,
+    attachmentName: getAttachmentName(worklog?.media_info, row.attachment_id),
   }
 }
 
@@ -177,6 +248,31 @@ export async function listDrawingMarkupsByWorklog(
   }
 
   return (data ?? []).map(row => toDrawingMarkupRecord(row as DrawingMarkupRow))
+}
+
+export async function listDrawingMarkupReviewQueue(
+  supabase: SupabaseClient,
+  input: ListDrawingMarkupReviewQueueInput = {}
+): Promise<DrawingMarkupReviewQueueItem[]> {
+  let query = supabase
+    .from('drawing_markups')
+    .select(DRAWING_MARKUP_REVIEW_QUEUE_SELECT)
+    .eq('status', input.status ?? 'pending')
+    .eq('approval_status', input.approvalStatus ?? 'pending')
+    .order('updated_at', { ascending: false })
+    .limit(input.limit ?? 50)
+
+  if (input.siteId) {
+    query = query.eq('site_id', input.siteId)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return (data ?? []).map(row => toDrawingMarkupReviewQueueItem(row as DrawingMarkupReviewQueueRow))
 }
 
 export async function saveDrawingMarkupDraft(
