@@ -336,6 +336,7 @@ export function WorklogDrawingMarkupPreviewEditor({
         imageUrl={imageUrl}
         imageAlt={imageAlt ?? `도면 ${pageNo}`}
         previewKind={previewKind}
+        pageNo={pageNo}
         marks={marks}
         activeTool={activeTool}
         onActiveToolChange={setActiveTool}

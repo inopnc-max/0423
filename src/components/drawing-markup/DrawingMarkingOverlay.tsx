@@ -13,6 +13,7 @@ import {
   Type,
 } from 'lucide-react'
 import type { DrawingMarkupMark, DrawingMarkupPoint } from '@/lib/types/drawing-markup'
+import { PdfCanvasPreview } from './PdfCanvasPreview'
 
 export type DrawingMarkingTool =
   | 'select'
@@ -28,6 +29,7 @@ export interface DrawingMarkingOverlayProps {
   imageUrl?: string | null
   imageAlt?: string
   previewKind?: 'image' | 'pdf'
+  pageNo?: number
   marks: DrawingMarkupMark[]
   activeTool: DrawingMarkingTool
   onActiveToolChange?: (tool: DrawingMarkingTool) => void
@@ -41,6 +43,13 @@ const VIEW_BOX_SIZE = 1000
 const DEFAULT_COLOR = '#dc2626'
 const MIN_VISIBLE_DELTA = 0.018
 const MIN_BRUSH_STEP = 0.004
+
+type DraftSession = {
+  pointerId: number
+  start: DrawingMarkupPoint
+  end: DrawingMarkupPoint
+  brushPoints: DrawingMarkupPoint[]
+}
 
 const TOOL_ITEMS: Array<{
   tool: DrawingMarkingTool
@@ -306,6 +315,7 @@ export function DrawingMarkingOverlay({
   imageUrl,
   imageAlt = 'Drawing',
   previewKind = 'image',
+  pageNo = 1,
   marks,
   activeTool,
   onActiveToolChange,
@@ -315,6 +325,7 @@ export function DrawingMarkingOverlay({
   className = '',
 }: DrawingMarkingOverlayProps) {
   const surfaceRef = useRef<HTMLDivElement | null>(null)
+  const draftSessionRef = useRef<DraftSession | null>(null)
   const [draftStart, setDraftStart] = useState<DrawingMarkupPoint | null>(null)
   const [draftEnd, setDraftEnd] = useState<DrawingMarkupPoint | null>(null)
   const [draftBrushPoints, setDraftBrushPoints] = useState<DrawingMarkupPoint[]>([])
@@ -333,9 +344,40 @@ export function DrawingMarkingOverlay({
   }
 
   const resetDraft = () => {
+    draftSessionRef.current = null
     setDraftStart(null)
     setDraftEnd(null)
     setDraftBrushPoints([])
+  }
+
+  const startDraftSession = (pointerId: number, point: DrawingMarkupPoint) => {
+    draftSessionRef.current = {
+      pointerId,
+      start: point,
+      end: point,
+      brushPoints: activeTool === 'brush' ? [point] : [],
+    }
+    setDraftStart(point)
+    setDraftEnd(point)
+    setDraftBrushPoints(activeTool === 'brush' ? [point] : [])
+  }
+
+  const updateDraftSession = (pointerId: number, point: DrawingMarkupPoint) => {
+    const session = draftSessionRef.current
+    if (!session || session.pointerId !== pointerId) return null
+
+    session.end = point
+    setDraftEnd(point)
+
+    if (activeTool === 'brush') {
+      const previous = session.brushPoints[session.brushPoints.length - 1]
+      if (!previous || getDistance(previous, point) >= MIN_BRUSH_STEP) {
+        session.brushPoints = [...session.brushPoints, point]
+        setDraftBrushPoints(session.brushPoints)
+      }
+    }
+
+    return session
   }
 
   const setPointerCaptureSafely = (element: HTMLDivElement, pointerId: number) => {
@@ -369,49 +411,43 @@ export function DrawingMarkingOverlay({
     }
 
     if (activeTool === 'brush') {
-      setDraftStart(point)
-      setDraftEnd(point)
-      setDraftBrushPoints([point])
+      startDraftSession(event.pointerId, point)
       setPointerCaptureSafely(event.currentTarget, event.pointerId)
       return
     }
 
     if (buildDraftMark(activeTool, point, point)) {
-      setDraftStart(point)
-      setDraftEnd(point)
+      startDraftSession(event.pointerId, point)
       setPointerCaptureSafely(event.currentTarget, event.pointerId)
     }
   }
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (!draftStart || isLocked || !surfaceRef.current) return
+    if (!draftSessionRef.current || isLocked || !surfaceRef.current) return
 
     event.preventDefault()
     const point = getPointerPoint(event, surfaceRef.current)
-    setDraftEnd(point)
-
-    if (activeTool === 'brush') {
-      setDraftBrushPoints(current => {
-        const previous = current[current.length - 1]
-        if (previous && getDistance(previous, point) < MIN_BRUSH_STEP) return current
-        return [...current, point]
-      })
-    }
+    updateDraftSession(event.pointerId, point)
   }
 
   const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    if (!draftStart || !draftEnd || isLocked) return
+    const session = draftSessionRef.current
+    if (!session || session.pointerId !== event.pointerId || isLocked || !surfaceRef.current) return
 
     event.preventDefault()
+    const point = getPointerPoint(event, surfaceRef.current)
+    const finalSession = updateDraftSession(event.pointerId, point) ?? session
     const nextMark =
       activeTool === 'brush'
         ? {
             type: 'brush' as const,
-            points: draftBrushPoints.length > 1 ? draftBrushPoints : [draftStart, ensureVisibleEnd(draftStart, draftEnd)],
+            points: finalSession.brushPoints.length > 1
+              ? finalSession.brushPoints
+              : [finalSession.start, ensureVisibleEnd(finalSession.start, finalSession.end)],
             color: DEFAULT_COLOR,
             width: 0.01,
           }
-        : buildDraftMark(activeTool, draftStart, draftEnd)
+        : buildDraftMark(activeTool, finalSession.start, finalSession.end)
 
     if (nextMark) {
       commitMark(nextMark)
@@ -452,16 +488,7 @@ export function DrawingMarkingOverlay({
 
       <div className="relative min-h-[320px] touch-none overflow-hidden rounded-md border border-[var(--color-border)] bg-slate-100">
         {imageUrl && previewKind === 'pdf' ? (
-          <object
-            data={imageUrl}
-            type="application/pdf"
-            aria-label={imageAlt}
-            className="pointer-events-none h-full min-h-[320px] w-full bg-white"
-          >
-            <div className="flex min-h-[320px] items-center justify-center px-4 text-center text-sm text-[var(--color-text-tertiary)]">
-              PDF preview is unavailable in this browser.
-            </div>
-          </object>
+          <PdfCanvasPreview url={imageUrl} pageNo={pageNo} title={imageAlt} />
         ) : imageUrl ? (
           <img src={imageUrl} alt={imageAlt} className="pointer-events-none h-full min-h-[320px] w-full select-none object-contain" />
         ) : (
@@ -493,7 +520,6 @@ export function DrawingMarkingOverlay({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
-          onLostPointerCapture={resetDraft}
         />
       </div>
     </div>
