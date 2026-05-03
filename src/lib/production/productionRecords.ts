@@ -478,6 +478,79 @@ async function getSummaryAggregation(
   }
 }
 
+export interface ProductionLogsParams {
+  startDate?: string
+  endDate?: string
+  type?: ProductionEntryType | ''
+  limit?: number
+  offset?: number
+}
+
+export interface ProductionLogsResult {
+  entries: ProductionRecentEntry[]
+  totalCount: number
+}
+
+export interface ProductionLogsRecords {
+  entries: ProductionRecentEntry[]
+  totalCount: number
+  sites: ProductionReferenceOption[]
+  products: ProductionReferenceOption[]
+}
+
+export async function getProductionLogsEntries(
+  supabase: SupabaseClient,
+  params: ProductionLogsParams = {}
+): Promise<ProductionLogsResult> {
+  const { startDate, endDate, type, limit = 20, offset = 0 } = params
+
+  let query = supabase
+    .from('production_entries')
+    .select(`
+      id, work_date, product_name, production_type, quantity, unit, amount, memo,
+      site:sites(name),
+      creator:workers(id, name)
+    `, { count: 'exact' })
+    .order('work_date', { ascending: false })
+    .range(offset, offset + limit - 1)
+
+  if (startDate) {
+    query = query.gte('work_date', startDate)
+  }
+  if (endDate) {
+    query = query.lte('work_date', endDate)
+  }
+  if (type) {
+    query = query.eq('production_type', type)
+  }
+
+  try {
+    const { data, error, count } = await query
+
+    if (error || !data) {
+      return { entries: [], totalCount: 0 }
+    }
+
+    return {
+      entries: (data as ProductionEntryRow[]).map(mapRecentEntry),
+      totalCount: count ?? 0,
+    }
+  } catch {
+    return { entries: [], totalCount: 0 }
+  }
+}
+
+export async function getProductionLogsRecords(
+  supabase: SupabaseClient
+): Promise<{ sites: ProductionReferenceOption[]; products: ProductionReferenceOption[] }> {
+  const [sites, products] = await Promise.all([
+    safeOptions(supabase.from('sites').select('id, name').order('name').limit(100)),
+    safeOptions(supabase.from('products').select('id, name').eq('active', true).order('name').limit(100)),
+  ])
+
+  return { sites, products }
+}
+
 export async function getProductionDashboardRecords(
   supabase: SupabaseClient
 ): Promise<ProductionDashboardRecords> {
