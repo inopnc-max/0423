@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
-import { History, ListFilter } from 'lucide-react'
+import { useCallback, useState } from 'react'
+import { History, ListFilter, ChevronLeft, ChevronRight } from 'lucide-react'
 import { ProductionRecentEntries } from '@/components/production/ProductionRecentEntries'
 import { ProductionEntryEditModal } from '@/components/production/ProductionEntryEditModal'
-import { useProductionDashboard } from '@/hooks/production/useProductionDashboard'
+import { useProductionLogs } from '@/hooks/production/useProductionLogs'
 import type { ProductionEntryType, ProductionRecentEntry, ProductionEntryUpdateInput } from '@/lib/production/productionRecords'
 import { deleteProductionEntry } from '@/lib/production/productionRecords'
 import { createClient } from '@/lib/supabase/client'
@@ -22,44 +22,44 @@ const PRODUCTION_TYPES: { value: ProductionEntryType | ''; label: string }[] = [
   { value: '운송비', label: '운송비' },
 ]
 
-function getDefaultDateRange(): { startDate: string; endDate: string } {
-  const today = new Date()
-  const thirtyDaysAgo = new Date(today)
-  thirtyDaysAgo.setDate(today.getDate() - 30)
-  return {
-    startDate: thirtyDaysAgo.toISOString().split('T')[0],
-    endDate: today.toISOString().split('T')[0],
-  }
-}
-
 export default function ProductionLogsPage() {
-  const { records, loading, error, reload, updateEntry, currentUserId } = useProductionDashboard()
-  const { startDate, endDate, setStartDate, setEndDate } = useStateFilterDates()
-  const [selectedType, setSelectedType] = useState<ProductionEntryType | ''>('')
+  const {
+    entries,
+    totalCount,
+    sites,
+    products,
+    loading,
+    error,
+    reload,
+    currentPage,
+    startDate,
+    endDate,
+    selectedType,
+    setStartDate,
+    setEndDate,
+    setSelectedType,
+    setPage,
+    hasNextPage,
+    hasPrevPage,
+    totalPages,
+    pageSize,
+  } = useProductionLogs()
+
   const [editingEntry, setEditingEntry] = useState<ProductionRecentEntry | null>(null)
   const [deletingEntry, setDeletingEntry] = useState<ProductionRecentEntry | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-
-  const filteredEntries = useMemo(() => {
-    if (!records?.recentEntries) return []
-
-    return records.recentEntries.filter(entry => {
-      const entryDate = entry.workDate
-
-      const withinDateRange =
-        (!startDate || entryDate >= startDate) && (!endDate || entryDate <= endDate)
-
-      const matchesType = !selectedType || entry.type === selectedType
-
-      return withinDateRange && matchesType
-    })
-  }, [records?.recentEntries, startDate, endDate, selectedType])
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   const handleEdit = useCallback((entry: ProductionRecentEntry) => {
     setEditingEntry(entry)
     setActionError(null)
-  }, [])
+    if (!currentUserId) {
+      createClient().auth.getUser().then(({ data }) => {
+        if (data.user) setCurrentUserId(data.user.id)
+      }).catch(() => {})
+    }
+  }, [currentUserId])
 
   const handleDelete = useCallback((entry: ProductionRecentEntry) => {
     setDeletingEntry(entry)
@@ -68,14 +68,16 @@ export default function ProductionLogsPage() {
   }, [])
 
   const handleSave = useCallback(async (_id: string, input: ProductionEntryUpdateInput) => {
-    try {
-      const result = await updateEntry(_id, input)
-      await reload()
-      return result
-    } catch (err) {
-      throw err
+    const { updateProductionEntry } = await import('@/lib/production/productionRecords')
+    const userId = currentUserId
+    if (!userId) {
+      const { data } = await createClient().auth.getUser()
+      if (!data.user) throw new Error('User not authenticated')
+      setCurrentUserId(data.user.id)
+      return updateProductionEntry(createClient(), _id, { ...input, createdBy: data.user.id })
     }
-  }, [updateEntry, reload])
+    return updateProductionEntry(createClient(), _id, { ...input, createdBy: userId })
+  }, [currentUserId])
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingEntry) return
@@ -89,6 +91,13 @@ export default function ProductionLogsPage() {
       setConfirmDeleteId(null)
     }
   }, [deletingEntry, reload])
+
+  const handleFilterChange = useCallback(() => {
+    void reload()
+  }, [reload])
+
+  const displayStart = totalCount > 0 ? currentPage * pageSize + 1 : 0
+  const displayEnd = Math.min((currentPage + 1) * pageSize, totalCount)
 
   return (
     <div className="space-y-4 pb-6">
@@ -124,7 +133,7 @@ export default function ProductionLogsPage() {
           </div>
 
           <span className="inline-flex w-fit items-center rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
-            {filteredEntries.length}건
+            {totalCount > 0 ? `${displayStart}-${displayEnd} / ${totalCount}건` : `${totalCount}건`}
           </span>
         </div>
 
@@ -136,13 +145,13 @@ export default function ProductionLogsPage() {
                 type="date"
                 className={fieldClassName}
                 value={startDate}
-                onChange={e => setStartDate(e.target.value)}
+                onChange={e => { setStartDate(e.target.value); handleFilterChange() }}
               />
               <input
                 type="date"
                 className={fieldClassName}
                 value={endDate}
-                onChange={e => setEndDate(e.target.value)}
+                onChange={e => { setEndDate(e.target.value); handleFilterChange() }}
               />
             </div>
           </label>
@@ -152,7 +161,7 @@ export default function ProductionLogsPage() {
             <select
               className={fieldClassName}
               value={selectedType}
-              onChange={e => setSelectedType(e.target.value as ProductionEntryType | '')}
+              onChange={e => { setSelectedType(e.target.value as ProductionEntryType | ''); handleFilterChange() }}
             >
               {PRODUCTION_TYPES.map(type => (
                 <option key={type.value} value={type.value}>
@@ -171,18 +180,42 @@ export default function ProductionLogsPage() {
       )}
 
       <ProductionRecentEntries
-        entries={filteredEntries}
+        entries={entries}
         loading={loading}
         onEdit={handleEdit}
         onDelete={handleDelete}
       />
 
-      {editingEntry && records && currentUserId && (
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={() => setPage(currentPage - 1)}
+            disabled={!hasPrevPage || loading}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--color-border)] text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <ChevronLeft className="h-4 w-4" strokeWidth={1.9} />
+          </button>
+
+          <span className="px-3 text-sm text-[var(--color-text-secondary)]">
+            {currentPage + 1} / {totalPages}
+          </span>
+
+          <button
+            onClick={() => setPage(currentPage + 1)}
+            disabled={!hasNextPage || loading}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--color-border)] text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <ChevronRight className="h-4 w-4" strokeWidth={1.9} />
+          </button>
+        </div>
+      )}
+
+      {editingEntry && (
         <ProductionEntryEditModal
           entry={editingEntry}
-          sites={records.sites}
-          products={records.products}
-          currentUserId={currentUserId}
+          sites={sites}
+          products={products}
+          currentUserId={currentUserId ?? ''}
           onSave={handleSave}
           onDelete={async (id) => {
             setEditingEntry(null)
@@ -223,11 +256,4 @@ export default function ProductionLogsPage() {
       )}
     </div>
   )
-}
-
-function useStateFilterDates() {
-  const [dates] = useState(getDefaultDateRange)
-  const [startDate, setStartDate] = useState(dates.startDate)
-  const [endDate, setEndDate] = useState(dates.endDate)
-  return { startDate, endDate, setStartDate, setEndDate }
 }
