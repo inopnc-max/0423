@@ -53,8 +53,10 @@ export type WorklogMediaInfo = {
 }
 
 export function classifyWorklogMedia(file: File): WorklogMediaKind {
+  const fileName = file.name.toLowerCase()
+
   if (file.type.startsWith('image/')) return 'photo'
-  if (file.type === 'application/pdf') return 'drawing'
+  if (file.type === 'application/pdf' || fileName.endsWith('.pdf')) return 'drawing'
   return 'other'
 }
 

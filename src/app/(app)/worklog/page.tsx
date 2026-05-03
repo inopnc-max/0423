@@ -1036,7 +1036,8 @@ function WorklogEditorView({
 
   function openDrawingMarkupPreviewEditor(attachment: LocalMediaAttachment, pageNo: number) {
     const initialMarks = previewDrawingMarks[attachment.id] ?? attachment.marks ?? []
-    const canUseImagePreview = attachment.mimeType.startsWith('image/')
+    const canUseLocalPreview = attachment.mimeType.startsWith('image/') || attachment.kind === 'drawing'
+    const previewKind = attachment.mimeType === 'application/pdf' || attachment.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'image'
     const isReadOnly = existingLog?.status === 'approved'
 
     openPreview({
@@ -1050,8 +1051,9 @@ function WorklogEditorView({
       children: (
         <WorklogDrawingMarkupPreviewEditor
           pageNo={pageNo}
-          imageUrl={canUseImagePreview ? attachment.previewUrl ?? attachment.imageUrl ?? null : null}
+          imageUrl={canUseLocalPreview ? attachment.previewUrl ?? attachment.imageUrl ?? null : null}
           imageAlt={attachment.name}
+          previewKind={previewKind}
           initialMarks={initialMarks}
           draftSource={{
             siteId: selectedSite,
@@ -1263,9 +1265,6 @@ function WorklogEditorView({
               type: 'info',
               text: `첨부 파일 ${localAttachments.length}개가 임시 첨부 상태입니다. 서버 업로드 후 일지에 연결됩니다. 잠시 후 다시 저장해주세요.`,
             })
-            setSaving(false)
-            setMediaUploading(false)
-            return
           }
         } catch (uploadError) {
           setMessage({
@@ -1285,6 +1284,25 @@ function WorklogEditorView({
 
       // Check if we have media attachments but no valid media_info
       if (attachmentsForPayload.length > 0 && payload.media_info.attachments.length === 0) {
+        if (status === 'draft') {
+          await saveWorklogDraft({
+            userId: draftUserId,
+            siteId: draftSiteId,
+            workDate: draftWorkDate,
+            activeSection,
+            workerArray: workerArray.map(w => ({ name: w.name, count: w.count })),
+            taskTags,
+            materialItems: materialItems.map(m => ({ name: m.name, quantity: m.quantity })),
+            mediaAttachments: attachmentsForPayload.map(({ file, previewUrl, ...meta }) => meta),
+          })
+          setHasDraft(true)
+          setMessage({
+            type: 'info',
+            text: '첨부 파일은 임시 첨부 상태로 로컬 draft에 보존했습니다. 서버 업로드는 다음 저장 때 다시 시도됩니다.',
+          })
+          setSaving(false)
+          return
+        }
         setMessage({
           type: 'error',
           text: '첨부 파일 업로드 정보가 없어 일지를 저장할 수 없습니다.',
@@ -1331,7 +1349,7 @@ function WorklogEditorView({
 
       // localBlob cleanup - blobs that have been uploaded to storage can be removed
       for (const attachment of attachmentsForPayload) {
-        if (attachment.localBlobId) {
+        if (attachment.localBlobId && attachment.storagePath) {
           deleteLocalBlob(attachment.localBlobId).catch(err => {
             console.warn('[worklog] failed to delete local blob after upload:', attachment.localBlobId, err)
           })

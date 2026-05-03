@@ -27,6 +27,7 @@ export type DrawingMarkingTool =
 export interface DrawingMarkingOverlayProps {
   imageUrl?: string | null
   imageAlt?: string
+  previewKind?: 'image' | 'pdf'
   marks: DrawingMarkupMark[]
   activeTool: DrawingMarkingTool
   onActiveToolChange?: (tool: DrawingMarkingTool) => void
@@ -255,6 +256,7 @@ function buildDraftMark(
 export function DrawingMarkingOverlay({
   imageUrl,
   imageAlt = 'Drawing',
+  previewKind = 'image',
   marks,
   activeTool,
   onActiveToolChange,
@@ -355,7 +357,18 @@ export function DrawingMarkingOverlay({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        {imageUrl ? (
+        {imageUrl && previewKind === 'pdf' ? (
+          <object
+            data={imageUrl}
+            type="application/pdf"
+            aria-label={imageAlt}
+            className="h-full min-h-[320px] w-full bg-white"
+          >
+            <div className="flex min-h-[320px] items-center justify-center px-4 text-center text-sm text-[var(--color-text-tertiary)]">
+              PDF preview is unavailable in this browser.
+            </div>
+          </object>
+        ) : imageUrl ? (
           <img src={imageUrl} alt={imageAlt} className="h-full min-h-[320px] w-full object-contain" />
         ) : (
           <div className="flex min-h-[320px] items-center justify-center text-sm text-[var(--color-text-tertiary)]">
