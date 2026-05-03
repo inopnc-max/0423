@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { signUpWithEmail } from '@/lib/auth-utils'
 
@@ -105,10 +106,17 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         {/* Logo */}
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-[var(--color-navy)]">INOPNC</h1>
-          <p className="text-[var(--color-text-secondary)] mt-1">파트너 등록</p>
+        <div className="flex justify-center mb-6">
+          <Image
+            src="/logo_w.png"
+            alt="INOPNC Logo"
+            width={160}
+            height={48}
+            priority
+            className="h-12 w-auto object-contain"
+          />
         </div>
+        <p className="text-center text-[var(--color-text-secondary)] mt-1 mb-6">파트너 등록</p>
 
         {/* Form */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -277,9 +285,12 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <div className="mt-4 text-center">
-            <Link href="/login" className="text-sm text-[var(--color-accent)] hover:underline">
-              이미 계정이 있으신가요? 로그인
+          <div className="mt-6 text-center">
+            <Link
+              href="/login"
+              className="text-sm font-medium text-slate-800 hover:text-slate-900 transition-colors"
+            >
+              이미 계정이 있으신가요? <span className="underline underline-offset-2 text-[#3b4b7c]">로그인</span>
             </Link>
           </div>
         </div>
