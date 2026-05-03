@@ -86,6 +86,17 @@ export interface SubmitDrawingMarkupForReviewInput {
   id: string
 }
 
+export interface ApproveDrawingMarkupInput {
+  id: string
+  actorId: string
+}
+
+export interface RejectDrawingMarkupInput {
+  id: string
+  actorId: string
+  reason: string
+}
+
 export interface ListDrawingMarkupReviewQueueInput {
   status?: DrawingMarkupStatus
   approvalStatus?: DrawingMarkupApprovalStatus
@@ -360,6 +371,66 @@ export async function submitDrawingMarkupForReview(
       approval_status: 'pending',
     })
     .eq('id', input.id)
+    .select(DRAWING_MARKUP_SELECT)
+    .single()
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return toDrawingMarkupRecord(data as DrawingMarkupRow)
+}
+
+export async function approveDrawingMarkup(
+  supabase: SupabaseClient,
+  input: ApproveDrawingMarkupInput
+): Promise<DrawingMarkupRecord> {
+  const approvedAt = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('drawing_markups')
+    .update({
+      status: 'approved',
+      approval_status: 'approved',
+      approved_by: input.actorId,
+      approved_at: approvedAt,
+      rejected_by: null,
+      rejected_at: null,
+    })
+    .eq('id', input.id)
+    .eq('status', 'pending')
+    .eq('approval_status', 'pending')
+    .is('locked_at', null)
+    .select(DRAWING_MARKUP_SELECT)
+    .single()
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return toDrawingMarkupRecord(data as DrawingMarkupRow)
+}
+
+export async function rejectDrawingMarkup(
+  supabase: SupabaseClient,
+  input: RejectDrawingMarkupInput
+): Promise<DrawingMarkupRecord> {
+  if (!input.reason.trim()) {
+    throw new Error('Rejection reason is required')
+  }
+
+  const rejectedAt = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('drawing_markups')
+    .update({
+      status: 'rejected',
+      approval_status: 'rejected',
+      rejected_by: input.actorId,
+      rejected_at: rejectedAt,
+    })
+    .eq('id', input.id)
+    .eq('status', 'pending')
+    .eq('approval_status', 'pending')
+    .is('locked_at', null)
     .select(DRAWING_MARKUP_SELECT)
     .single()
 
