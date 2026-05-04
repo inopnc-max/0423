@@ -50,6 +50,11 @@ export default function BottomNav({ items, pathname }: BottomNavProps) {
                   {totalUnread > 99 ? '99+' : totalUnread}
                 </span>
               )}
+              {showBadge && (
+                <span className="ui-nav-tooltip--mini pointer-events-none" aria-hidden="true">
+                  {totalUnread > 99 ? '99+' : totalUnread}건
+                </span>
+              )}
             </span>
             <span className="ui-bottom-nav__item-label">{label}</span>
           </Link>
