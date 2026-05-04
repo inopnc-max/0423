@@ -1,5 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { DrawingMarkupMark } from '@/lib/types/drawing-markup'
+import {
+  normalizeDrawingMarkupMarks,
+  normalizeDrawingMarkupPageNo,
+  type DrawingMarkupMark,
+} from '@/lib/types/drawing-markup'
 
 export type DrawingMarkupStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'locked' | 'archived'
 export type DrawingMarkupApprovalStatus = 'draft' | 'pending' | 'approved' | 'rejected'
@@ -141,14 +145,6 @@ const DRAWING_MARKUP_REVIEW_QUEUE_SELECT = `
   creator:workers!drawing_markups_created_by_fkey(name)
 `
 
-function normalizePageNo(pageNo?: number): number {
-  return Math.max(1, Math.trunc(pageNo ?? 1))
-}
-
-function normalizeMarks(value: unknown): DrawingMarkupMark[] {
-  return Array.isArray(value) ? (value as DrawingMarkupMark[]) : []
-}
-
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null
   return value ?? null
@@ -182,7 +178,7 @@ function toDrawingMarkupRecord(row: DrawingMarkupRow): DrawingMarkupRecord {
     pageNo: row.page_no,
     originalPath: row.original_path,
     markedPath: row.marked_path,
-    marks: normalizeMarks(row.markup_json),
+    marks: normalizeDrawingMarkupMarks(row.markup_json, row.page_no),
     status: row.status,
     approvalStatus: row.approval_status,
     approvedBy: row.approved_by,
@@ -233,7 +229,7 @@ export async function getDrawingMarkupBySource(
     .select(DRAWING_MARKUP_SELECT)
     .eq('site_id', source.siteId)
     .eq('attachment_id', source.attachmentId)
-    .eq('page_no', normalizePageNo(source.pageNo))
+    .eq('page_no', normalizeDrawingMarkupPageNo(source.pageNo))
     .neq('status', 'archived')
     .limit(1)
 
@@ -338,7 +334,7 @@ export async function saveDrawingMarkupDraft(
       site_id: input.siteId,
       worklog_id: input.worklogId ?? null,
       attachment_id: input.attachmentId,
-      page_no: normalizePageNo(input.pageNo),
+      page_no: normalizeDrawingMarkupPageNo(input.pageNo),
       original_path: input.originalPath ?? null,
       markup_json: input.marks,
       status: 'draft',
