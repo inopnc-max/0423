@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Building2, Check, ChevronDown, MapPin, Search, X } from 'lucide-react'
+import { getSiteStatusConfig } from '@/lib/site-status'
 import { getSelectedSiteId } from '@/lib/ui-state'
-import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
 import type { SiteSummary } from '@/contexts/selected-site-context'
 
 interface SiteComboboxProps {
@@ -23,6 +23,15 @@ function getSelectionReason(selectedId: string | null): string {
   }
   if (getSelectedSiteId() === selectedId) return '최근 선택'
   return '배정 현장'
+}
+
+function SimpleSiteStatusBadge({ status }: { status: string }) {
+  const config = getSiteStatusConfig(status)
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${config.badgeClass}`}>
+      {config.label}
+    </span>
+  )
 }
 
 export function SiteCombobox({
@@ -45,12 +54,10 @@ export function SiteCombobox({
     const q = query.trim().toLowerCase()
     if (!q) return sites
     return sites.filter(site => {
-      const fields = [
-        site.name,
-        site.company,
-        site.affiliation,
-        site.address,
-      ].filter(Boolean).join(' ').toLowerCase()
+      const fields = [site.name, site.company, site.affiliation, site.address]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
       return fields.includes(q)
     })
   }, [sites, query])
@@ -59,7 +66,7 @@ export function SiteCombobox({
 
   useEffect(() => {
     if (!open) setQuery('')
-  }, [open, setQuery])
+  }, [open])
 
   if (sites.length === 0) {
     return (
@@ -85,21 +92,17 @@ export function SiteCombobox({
       <button
         type="button"
         onClick={() => setOpen(value => !value)}
-        className="flex w-full items-center gap-3 rounded-2xl border-2 border-[var(--color-border)] bg-white px-4 py-3 text-left shadow-sm transition hover:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+        className="flex h-[46px] w-full items-center gap-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 text-left shadow-sm transition hover:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
       >
-        <Building2 className="h-5 w-5 shrink-0 text-[var(--color-accent)]" strokeWidth={1.9} />
+        <Search className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
         {selected ? (
-          <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-2">
-              <span className="truncate font-semibold text-[var(--color-text)]">{selected.name}</span>
-              <SiteStatusBadge status={selected.status} />
-            </span>
-            <span className="mt-0.5 block truncate text-sm text-[var(--color-text-secondary)]">
-              {[selected.company, selected.affiliation].filter(Boolean).join(' · ')}
-            </span>
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--color-text)]">
+            {selected.name}
           </span>
         ) : (
-          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--color-text-secondary)]">{placeholder}</span>
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--color-text-secondary)]">
+            {placeholder}
+          </span>
         )}
         <ChevronDown
           className={`h-5 w-5 shrink-0 text-[var(--color-text-tertiary)] transition-transform ${open ? 'rotate-180' : ''}`}
@@ -108,9 +111,9 @@ export function SiteCombobox({
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-hidden rounded-2xl border-2 border-[var(--color-border)] bg-white shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-lg">
           <div className="sticky top-0 bg-white p-2">
-            <div className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2">
+            <div className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2">
               <Search className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
               <input
                 autoFocus
@@ -154,7 +157,7 @@ export function SiteCombobox({
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
                       <span className="truncate font-semibold text-[var(--color-text)]">{site.name}</span>
-                      <SiteStatusBadge status={site.status} />
+                      <SimpleSiteStatusBadge status={site.status} />
                     </span>
                     <span className="mt-1 block text-sm text-[var(--color-text-secondary)]">
                       {[site.company, site.affiliation].filter(Boolean).join(' · ')}
