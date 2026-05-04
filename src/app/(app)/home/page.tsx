@@ -338,12 +338,7 @@ export default function HomePage() {
       )}
 
       <section className="space-y-3">
-        <div>
-          <div className="text-sm font-semibold text-[var(--color-navy)]">현장 검색/선택</div>
-          <div className="mt-1 text-xs text-[var(--color-text-tertiary)]">
-            최근 선택 현장을 기본으로 표시합니다.
-          </div>
-        </div>
+        <div className="text-sm font-semibold text-[var(--color-navy)]">현장 검색/선택</div>
         <SiteCombobox
           sites={accessibleSites}
           selectedId={selectedSiteId}
@@ -355,7 +350,7 @@ export default function HomePage() {
       </section>
 
       {selectedSite ? (
-        <section className="rounded-2xl border-l-4 border-[var(--color-accent)] bg-gradient-to-r from-[var(--color-accent-light)] to-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-gradient-to-r from-[var(--color-accent-light)] to-white p-5 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-2">
@@ -419,16 +414,16 @@ export default function HomePage() {
               <Link
                 key={`${href}-${label}`}
                 href={href}
-                className="flex min-h-[72px] items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm transition hover:shadow-md"
+                className="flex min-h-[68px] items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm transition hover:shadow-md"
               >
                 <span className="min-w-0 flex-1 truncate">{label}</span>
-                <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--color-bg)]">
+                <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--color-bg)]">
                   <Image
                     src={imageSrc}
                     alt=""
                     fill
-                    sizes="56px"
-                    className="object-contain p-1.5"
+                    sizes="48px"
+                    className="object-contain p-1"
                   />
                   <span className="sr-only">{label}</span>
                 </span>

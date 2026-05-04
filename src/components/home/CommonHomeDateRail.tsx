@@ -12,7 +12,7 @@ import {
   startOfMonth,
   subMonths,
 } from 'date-fns'
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 type CommonHomeDateRailProps = {
   selectedDate: string
@@ -45,35 +45,14 @@ export function CommonHomeDateRail({ selectedDate, onDateSelect }: CommonHomeDat
 
   return (
     <div className="rounded-2xl bg-white p-4 shadow-sm">
-      <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="mb-4 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-xs font-semibold text-[var(--color-text-tertiary)]">작업일 선택</div>
-          <div className="mt-1 text-lg font-bold text-[var(--color-navy)]">
+          <div className="text-lg font-bold text-[var(--color-navy)]">
             {format(anchorDate, 'yyyy년 M월')}
-          </div>
-          <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            {format(anchorDate, 'M월 d일')} 기준
           </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            onClick={() => {
-              const input = document.createElement('input')
-              input.type = 'date'
-              input.value = selectedDate
-              input.onchange = event => {
-                const value = (event.target as HTMLInputElement).value
-                if (value) onDateSelect(value)
-              }
-              input.click()
-            }}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-navy)] transition hover:border-[var(--color-navy)]"
-            aria-label="달력에서 날짜 선택"
-          >
-            <CalendarDays className="h-4 w-4" strokeWidth={1.9} />
-          </button>
           <button
             type="button"
             onClick={() => moveMonth(-1)}
@@ -102,7 +81,7 @@ export function CommonHomeDateRail({ selectedDate, onDateSelect }: CommonHomeDat
         </div>
       </div>
 
-      <div className="-mx-4 overflow-x-auto px-4 pb-1">
+      <div className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:thin]">
         <div className="flex min-w-max gap-2">
           {monthDays.map(day => {
             const dateKey = format(day, 'yyyy-MM-dd')
@@ -124,7 +103,7 @@ export function CommonHomeDateRail({ selectedDate, onDateSelect }: CommonHomeDat
                       ? 'border-[var(--color-navy-light)] bg-[var(--color-navy-light)]/5'
                       : 'border-transparent bg-[var(--color-bg)] hover:border-[var(--color-border)]'
                 }`}
-                >
+              >
                 <span
                   className={`text-xs font-semibold ${
                     isSelected
