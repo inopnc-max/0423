@@ -6,12 +6,8 @@ import Image from 'next/image'
 import { endOfMonth, format, isValid, parseISO, startOfMonth } from 'date-fns'
 import {
   Building2,
-  CalendarCheck,
-  ClipboardList,
   Cloud,
   CloudOff,
-  FileText,
-  ImageIcon,
   MapPin,
   RefreshCw,
 } from 'lucide-react'
@@ -21,7 +17,6 @@ import { useSelectedSite } from '@/contexts/selected-site-context'
 import { isPartner } from '@/lib/roles'
 import { ROUTES } from '@/lib/routes'
 import { createClient } from '@/lib/supabase/client'
-import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
 import { CommonHomeDateRail } from '@/components/home/CommonHomeDateRail'
 import { RecentViewedDocuments } from '@/components/home/RecentViewedDocuments'
 import { PartnerReadonlyPortal } from '@/components/partner/PartnerReadonlyPortal'
@@ -29,6 +24,7 @@ import { SiteCombobox } from '@/components/site/SiteCombobox'
 import { SiteManagerHomeSummary } from '@/components/site-manager/SiteManagerAttendancePanel'
 import { useSiteManagerDashboard } from '@/hooks/site-manager/useSiteManagerDashboard'
 import { getSelectedWorkDate, setSelectedWorkDate } from '@/lib/ui-state'
+import { getSiteStatusConfig } from '@/lib/site-status'
 
 type HomeSiteSummary = {
   attendanceCount: number | null
@@ -81,10 +77,19 @@ function SelectedSiteMetric({
   value: string
 }) {
   return (
-    <div className="rounded-xl bg-white/75 px-3 py-2">
+    <div className="rounded-xl border border-[var(--color-border)] bg-white/75 px-3 py-2">
       <div className="text-xs font-medium text-[var(--color-text-tertiary)]">{label}</div>
       <div className="mt-1 truncate text-sm font-bold text-[var(--color-text)]">{value}</div>
     </div>
+  )
+}
+
+function SimpleSiteStatusBadge({ status }: { status: string }) {
+  const config = getSiteStatusConfig(status)
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${config.badgeClass}`}>
+      {config.label}
+    </span>
   )
 }
 
@@ -230,28 +235,24 @@ export default function HomePage() {
       {
         href: worklogRoute,
         label: '일지작성',
-        icon: ClipboardList,
         imageSrc: '/home/quick-actions/worklog.png',
         show: !isPartnerUser,
       },
       {
         href: outputRoute,
         label: '출역확인',
-        icon: CalendarCheck,
         imageSrc: '/home/quick-actions/output.png',
         show: true,
       },
       {
         href: photosRoute,
         label: '사진/도면',
-        icon: ImageIcon,
         imageSrc: '/home/quick-actions/photo-drawing.png',
         show: true,
       },
       {
         href: documentsRoute,
         label: '문서함',
-        icon: FileText,
         imageSrc: '/home/quick-actions/documents.png',
         show: true,
       },
@@ -338,7 +339,14 @@ export default function HomePage() {
       )}
 
       <section className="space-y-3">
-        <div className="text-sm font-semibold text-[var(--color-navy)]">현장 검색/선택</div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-base font-semibold text-[var(--color-navy)]">현장 검색</div>
+          {selectedSite && (
+            <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--color-accent)] bg-[var(--color-accent-light)] px-3 py-1 text-xs font-semibold text-[var(--color-accent)]">
+              최근 선택
+            </span>
+          )}
+        </div>
         <SiteCombobox
           sites={accessibleSites}
           selectedId={selectedSiteId}
@@ -350,87 +358,89 @@ export default function HomePage() {
       </section>
 
       {selectedSite ? (
-        <section className="rounded-2xl border border-[var(--color-border)] bg-gradient-to-r from-[var(--color-accent-light)] to-white p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center gap-2">
-                <Building2 className="h-5 w-5 shrink-0 text-[var(--color-accent)]" strokeWidth={1.9} />
-                <span className="truncate font-bold text-[var(--color-navy)]">{selectedSite.name}</span>
-                <SiteStatusBadge status={selectedSite.status} />
-              </div>
-              <div className="mt-3 grid gap-1.5 text-sm text-[var(--color-text-secondary)]">
-                <div className="truncate">원청사: {selectedSite.company || '정보 없음'}</div>
-                <div className="truncate">소속: {selectedSite.affiliation || user?.profile?.affiliation || user?.company || '정보 없음'}</div>
-                {selectedSite.address && (
-                  <div className="flex min-w-0 items-start gap-1">
-                    <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.9} />
-                    <span className="line-clamp-1">{selectedSite.address}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            <SelectedSiteMetric
-              label="누적 출역"
-              value={summaryLoading ? '확인 중' : siteSummary.attendanceCount === null ? '정보 없음' : `${siteSummary.attendanceCount}건`}
-            />
-            <div className={`rounded-xl px-3 py-2 ${getWorklogStatusClass(siteSummary.worklogStatus)}`}>
-              <div className="text-xs font-medium opacity-80">일지 상태</div>
-              <div className="mt-1 truncate text-sm font-bold">
-                {summaryLoading ? '확인 중' : getWorklogStatusLabel(siteSummary.worklogStatus)}
+        <>
+          <section className="rounded-2xl border border-[var(--color-border)] bg-gradient-to-r from-[var(--color-accent-light)] to-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Building2 className="h-5 w-5 shrink-0 text-[var(--color-accent)]" strokeWidth={1.9} />
+                  <span className="truncate font-bold text-[var(--color-navy)]">{selectedSite.name}</span>
+                  <SimpleSiteStatusBadge status={selectedSite.status} />
+                </div>
+                <div className="mt-3 grid gap-1.5 text-sm text-[var(--color-text-secondary)]">
+                  <div className="truncate">원청사: {selectedSite.company || '정보 없음'}</div>
+                  <div className="truncate">소속: {selectedSite.affiliation || user?.profile?.affiliation || user?.company || '정보 없음'}</div>
+                  {selectedSite.address && (
+                    <div className="flex min-w-0 items-start gap-1">
+                      <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.9} />
+                      <span className="line-clamp-1">{selectedSite.address}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-            <SelectedSiteMetric
-              label="필수서류"
-              value={
-                summaryLoading
-                  ? '확인 중'
-                  : siteSummary.missingRequiredDocuments === null
-                    ? '정보 없음'
-                    : `${siteSummary.missingRequiredDocuments}건 미제출`
-              }
-            />
-          </div>
 
-          <div className="mt-4 flex gap-2">
-            <Link
-              href={selectedSiteRoute}
-              className="flex h-11 flex-1 items-center justify-center rounded-full border-2 border-[var(--color-accent)] px-4 text-center text-sm font-semibold text-[var(--color-accent)] transition hover:bg-[var(--color-accent-light)]"
-            >
-              현장 보기
-            </Link>
-            <Link
-              href={worklogRoute}
-              className="flex h-11 flex-1 items-center justify-center rounded-full bg-[var(--color-navy)] px-4 text-center text-sm font-semibold text-white transition hover:bg-[var(--color-navy-hover)]"
-            >
-              일지 작성
-            </Link>
-          </div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <SelectedSiteMetric
+                label="누적 출역"
+                value={summaryLoading ? '확인 중' : siteSummary.attendanceCount === null ? '정보 없음' : `${siteSummary.attendanceCount}건`}
+              />
+              <div className={`rounded-xl border border-[var(--color-border)] px-3 py-2 ${getWorklogStatusClass(siteSummary.worklogStatus)}`}>
+                <div className="text-xs font-medium opacity-80">일지 상태</div>
+                <div className="mt-1 truncate text-sm font-bold">
+                  {summaryLoading ? '확인 중' : getWorklogStatusLabel(siteSummary.worklogStatus)}
+                </div>
+              </div>
+              <SelectedSiteMetric
+                label="필수서류"
+                value={
+                  summaryLoading
+                    ? '확인 중'
+                    : siteSummary.missingRequiredDocuments === null
+                      ? '정보 없음'
+                      : `${siteSummary.missingRequiredDocuments}건 미제출`
+                }
+              />
+            </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {quickActions.filter(action => action.show).map(({ href, label, icon: Icon, imageSrc }) => (
+            <div className="mt-4 flex gap-2">
+              <Link
+                href={selectedSiteRoute}
+                className="flex h-11 flex-1 items-center justify-center rounded-full border-2 border-[var(--color-accent)] px-4 text-center text-sm font-semibold text-[var(--color-accent)] transition hover:bg-[var(--color-accent-light)]"
+              >
+                현장 보기
+              </Link>
+              <Link
+                href={worklogRoute}
+                className="flex h-11 flex-1 items-center justify-center rounded-full bg-[var(--color-navy)] px-4 text-center text-sm font-semibold text-white transition hover:bg-[var(--color-navy-hover)]"
+              >
+                일지 작성
+              </Link>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-2 gap-2">
+            {quickActions.filter(action => action.show).map(({ href, label, imageSrc }) => (
               <Link
                 key={`${href}-${label}`}
                 href={href}
-                className="flex min-h-[68px] items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm transition hover:shadow-md"
+                className="flex min-h-[72px] items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm transition hover:shadow-md"
               >
                 <span className="min-w-0 flex-1 truncate">{label}</span>
-                <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--color-bg)]">
+                <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--color-bg)]">
                   <Image
                     src={imageSrc}
                     alt=""
                     fill
-                    sizes="48px"
-                    className="object-contain p-1"
+                    sizes="56px"
+                    className="object-contain p-0.5"
                   />
                   <span className="sr-only">{label}</span>
                 </span>
               </Link>
             ))}
-          </div>
-        </section>
+          </section>
+        </>
       ) : (
         <section className="rounded-2xl border-2 border-dashed border-[var(--color-border)] bg-white p-6 text-center text-sm text-[var(--color-text-secondary)] shadow-sm">
           현장을 검색해서 선택하면 오늘 기준 요약이 표시됩니다.

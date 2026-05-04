@@ -208,7 +208,7 @@ export function RecentViewedDocuments({
   return (
     <section className="space-y-3">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[var(--color-navy)]">최근 본 문서</h2>
+        <h2 className="text-base font-semibold text-[var(--color-navy)]">최근 본 문서</h2>
         <span className="text-xs font-semibold text-[var(--color-text-tertiary)]">{documents.length}건</span>
       </div>
       <div className="space-y-3">
