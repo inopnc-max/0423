@@ -14,7 +14,17 @@ interface SiteComboboxProps {
   label?: string
   placeholder?: string
   className?: string
+  role?: SiteComboboxRole
 }
+
+type SiteComboboxRole =
+  | 'worker'
+  | 'site_manager'
+  | 'admin'
+  | 'partner'
+  | 'production_manager'
+  | string
+  | undefined
 
 function getSelectionReason(selectedId: string | null): string {
   if (!selectedId) return '배정 현장'
@@ -26,15 +36,23 @@ function getSelectionReason(selectedId: string | null): string {
   return '배정 현장'
 }
 
-export function getSelectionReasonChipClass(role?: string | null): string {
-  const colorClass =
-    role === 'site_manager'
-      ? 'border-green-200 bg-green-50 text-green-700'
-      : role === 'production_manager'
-        ? 'border-purple-200 bg-purple-50 text-purple-700'
-        : 'border-blue-200 bg-blue-50 text-blue-700'
+const SELECTION_REASON_CHIP_BASE_CLASS =
+  'shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold shadow-[0_1px_2px_rgba(0,0,0,.05)]'
 
-  return `shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${colorClass}`
+export function getSelectionReasonChipClass(role?: SiteComboboxRole): string {
+  if (role === 'site_manager') {
+    return `${SELECTION_REASON_CHIP_BASE_CLASS} border-[var(--role-site-manager-primary)] bg-[var(--role-site-manager-primary-soft)] text-[var(--role-site-manager-primary)]`
+  }
+
+  if (role === 'production_manager') {
+    return `${SELECTION_REASON_CHIP_BASE_CLASS} border-[var(--role-production-manager-primary)] bg-[var(--role-production-manager-primary-soft)] text-[var(--role-production-manager-primary)]`
+  }
+
+  if (role === 'partner') {
+    return `${SELECTION_REASON_CHIP_BASE_CLASS} border-[var(--role-partner-primary)] bg-[var(--role-partner-primary-soft)] text-[var(--role-partner-primary)]`
+  }
+
+  return `${SELECTION_REASON_CHIP_BASE_CLASS} border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-navy)]`
 }
 
 function SimpleSiteStatusBadge({ status }: { status: string }) {
@@ -53,6 +71,7 @@ export function SiteCombobox({
   label = '현장 선택',
   placeholder = '현장명, 원청사, 소속, 주소 검색',
   className = '',
+  role,
 }: SiteComboboxProps) {
   const { user } = useAuth()
   const [query, setQuery] = useState('')
@@ -97,7 +116,7 @@ export function SiteCombobox({
         <div className="mb-2 flex items-center justify-between gap-2">
           <span className="text-sm font-semibold text-[var(--color-navy)]">{label}</span>
           {selected && (
-            <span className={getSelectionReasonChipClass(user?.role)}>
+            <span className={getSelectionReasonChipClass(role ?? user?.role)}>
               {selectionReason}
             </span>
           )}
