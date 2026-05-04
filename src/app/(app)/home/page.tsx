@@ -339,7 +339,14 @@ export default function HomePage() {
       )}
 
       <section className="space-y-3">
-        <div className="text-lg font-semibold text-[var(--color-navy)]">현장 검색</div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-base font-semibold text-[var(--color-navy)]">현장 검색</div>
+          {selectedSite && (
+            <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--color-accent)] bg-[var(--color-accent-light)] px-3 py-1 text-xs font-semibold text-[var(--color-accent)]">
+              최근 선택
+            </span>
+          )}
+        </div>
         <SiteCombobox
           sites={accessibleSites}
           selectedId={selectedSiteId}
