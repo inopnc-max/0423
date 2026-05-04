@@ -94,7 +94,7 @@ export function SiteCombobox({
       <button
         type="button"
         onClick={() => setOpen(value => !value)}
-        className="flex h-[46px] w-full items-center gap-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 text-left shadow-sm transition hover:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+        className="flex h-[46px] w-full items-center gap-3 rounded-[14px] border border-[var(--color-border)] bg-white px-3 text-left shadow-sm transition hover:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
       >
         <Search className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
         {selected ? (

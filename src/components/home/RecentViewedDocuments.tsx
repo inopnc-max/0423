@@ -197,7 +197,7 @@ export function RecentViewedDocuments({
   if (documents.length === 0) {
     return (
       <section className="rounded-2xl bg-white p-5 shadow-sm">
-        <div className="mb-1 text-lg font-semibold text-[var(--color-navy)]">최근 본 문서</div>
+        <div className="mb-1 text-base font-semibold text-[var(--color-navy)]">최근 본 문서</div>
         <div className="text-sm text-[var(--color-text-secondary)]">
           최근에 확인한 문서가 아직 없습니다.
         </div>
@@ -208,7 +208,7 @@ export function RecentViewedDocuments({
   return (
     <section className="space-y-3">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[var(--color-navy)]">최근 본 문서</h2>
+        <h2 className="text-base font-semibold text-[var(--color-navy)]">최근 본 문서</h2>
         <span className="text-xs font-semibold text-[var(--color-text-tertiary)]">{documents.length}건</span>
       </div>
       <div className="space-y-3">
