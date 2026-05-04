@@ -346,7 +346,7 @@ export default function HomePage() {
         <div className="flex items-center justify-between gap-3">
           <div className="text-base font-semibold text-[var(--color-navy)]">현장 검색</div>
           {selectedSite && (
-            <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--color-accent)] bg-[var(--color-accent-light)] px-3 py-1 text-xs font-semibold text-[var(--color-accent)]">
+            <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--color-accent)] bg-[var(--color-accent)] px-3 py-1 text-xs font-semibold text-white shadow-sm">
               최근 선택
             </span>
           )}
