@@ -2,13 +2,14 @@
 
 import { useMemo, useRef } from 'react'
 import {
-  addDays,
   addMonths,
+  eachDayOfInterval,
+  endOfMonth,
   format,
   isSameDay,
   isValid,
   parseISO,
-  startOfWeek,
+  startOfMonth,
   subMonths,
 } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -31,10 +32,11 @@ export function CommonHomeDateRail({ selectedDate, onDateSelect }: CommonHomeDat
   }, [selectedDate])
 
   const anchorDate = selectedDateObj ?? today
-  const weekStart = useMemo(() => startOfWeek(anchorDate, { weekStartsOn: 0 }), [anchorDate])
-  const weekDays = useMemo(
-    () => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
-    [weekStart]
+  const monthStart = useMemo(() => startOfMonth(anchorDate), [anchorDate])
+  const monthEnd = useMemo(() => endOfMonth(anchorDate), [anchorDate])
+  const monthDays = useMemo(
+    () => eachDayOfInterval({ start: monthStart, end: monthEnd }),
+    [monthEnd, monthStart]
   )
 
   function moveMonth(delta: number) {
@@ -114,7 +116,7 @@ export function CommonHomeDateRail({ selectedDate, onDateSelect }: CommonHomeDat
 
       <div className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[var(--color-border)]/80 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:h-1">
         <div className="flex min-w-max gap-2">
-          {weekDays.map(day => {
+          {monthDays.map(day => {
             const dateKey = format(day, 'yyyy-MM-dd')
             const isSelected = selectedDateObj ? isSameDay(day, selectedDateObj) : false
             const isToday = isSameDay(day, today)
