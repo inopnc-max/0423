@@ -27,6 +27,10 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
+  if (pathname.startsWith('/qa/')) {
+    return NextResponse.next()
+  }
+
   if ([ROUTES.login, ROUTES.register].some(route => pathname.startsWith(route))) {
     if (user) return NextResponse.redirect(new URL(ROUTES.home, request.url))
     return NextResponse.next()
