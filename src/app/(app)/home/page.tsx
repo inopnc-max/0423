@@ -20,7 +20,7 @@ import { createClient } from '@/lib/supabase/client'
 import { CommonHomeDateRail } from '@/components/home/CommonHomeDateRail'
 import { RecentViewedDocuments } from '@/components/home/RecentViewedDocuments'
 import { PartnerReadonlyPortal } from '@/components/partner/PartnerReadonlyPortal'
-import { SiteCombobox } from '@/components/site/SiteCombobox'
+import { getSelectionReasonChipClass, SiteCombobox } from '@/components/site/SiteCombobox'
 import { SiteManagerHomeSummary } from '@/components/site-manager/SiteManagerAttendancePanel'
 import { useSiteManagerDashboard } from '@/hooks/site-manager/useSiteManagerDashboard'
 import { getSelectedWorkDate, setSelectedWorkDate } from '@/lib/ui-state'
@@ -40,6 +40,14 @@ type DailyLogSummaryRow = {
 
 type RequiredDocumentRow = {
   status?: string | null
+}
+
+type QuickActionIconColor = 'blue' | 'green' | 'purple'
+
+function getQuickActionIconColor(role?: string | null): QuickActionIconColor {
+  if (role === 'site_manager') return 'green'
+  if (role === 'production_manager') return 'purple'
+  return 'blue'
 }
 
 const WORKLOG_STATUS_LABELS: Record<string, string> = {
@@ -229,39 +237,40 @@ export default function HomePage() {
   const outputRoute = `${ROUTES.output}?date=${selectedWorkDate}`
   const documentsRoute = ROUTES.documents
   const photosRoute = selectedSiteRoute
+  const quickActionIconColor = getQuickActionIconColor(user?.role)
 
   const quickActions = useMemo(
     () => [
       {
         href: worklogRoute,
         label: '일지작성',
-        imageSrc: '/home/quick-actions/worklog.png',
+        imageSrc: `/home/quick-actions/worklog-${quickActionIconColor}.png`,
         textClassName: 'text-[var(--color-text)]',
         show: !isPartnerUser,
       },
       {
         href: outputRoute,
         label: '출역확인',
-        imageSrc: '/home/quick-actions/output-green.png',
+        imageSrc: `/home/quick-actions/output-${quickActionIconColor}.png`,
         textClassName: 'text-[var(--color-text)]',
         show: true,
       },
       {
         href: photosRoute,
         label: '사진/도면',
-        imageSrc: '/home/quick-actions/photo-drawing-green.png',
+        imageSrc: `/home/quick-actions/photo-drawing-${quickActionIconColor}.png`,
         textClassName: 'text-[var(--color-text)]',
         show: true,
       },
       {
         href: documentsRoute,
         label: '문서함',
-        imageSrc: '/home/quick-actions/documents-purple.png',
+        imageSrc: `/home/quick-actions/documents-${quickActionIconColor}.png`,
         textClassName: 'text-[var(--color-text)]',
         show: true,
       },
     ],
-    [documentsRoute, isPartnerUser, outputRoute, photosRoute, worklogRoute]
+    [documentsRoute, isPartnerUser, outputRoute, photosRoute, quickActionIconColor, worklogRoute]
   )
 
   if (loading) {
@@ -346,7 +355,7 @@ export default function HomePage() {
         <div className="flex items-center justify-between gap-3">
           <div className="text-base font-semibold text-[var(--color-navy)]">현장 검색</div>
           {selectedSite && (
-            <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--color-accent)] bg-[var(--color-accent)] px-3 py-1 text-xs font-semibold text-white shadow-sm">
+            <span className={getSelectionReasonChipClass(user?.role)}>
               최근 선택
             </span>
           )}
@@ -431,7 +440,7 @@ export default function HomePage() {
                 className="flex min-h-[72px] items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm transition hover:shadow-md"
               >
                 <span className={`min-w-0 flex-1 truncate ${textClassName}`}>{label}</span>
-                <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--color-bg)]">
+                <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl">
                   <Image
                     src={imageSrc}
                     alt=""

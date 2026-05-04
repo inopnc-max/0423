@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Building2, Check, ChevronDown, MapPin, Search, X } from 'lucide-react'
+import { useAuth } from '@/contexts/auth-context'
 import { getSiteStatusConfig } from '@/lib/site-status'
 import { getSelectedSiteId } from '@/lib/ui-state'
 import type { SiteSummary } from '@/contexts/selected-site-context'
@@ -25,6 +26,17 @@ function getSelectionReason(selectedId: string | null): string {
   return '배정 현장'
 }
 
+export function getSelectionReasonChipClass(role?: string | null): string {
+  const colorClass =
+    role === 'site_manager'
+      ? 'border-green-200 bg-green-50 text-green-700'
+      : role === 'production_manager'
+        ? 'border-purple-200 bg-purple-50 text-purple-700'
+        : 'border-blue-200 bg-blue-50 text-blue-700'
+
+  return `shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${colorClass}`
+}
+
 function SimpleSiteStatusBadge({ status }: { status: string }) {
   const config = getSiteStatusConfig(status)
   return (
@@ -42,6 +54,7 @@ export function SiteCombobox({
   placeholder = '현장명, 원청사, 소속, 주소 검색',
   className = '',
 }: SiteComboboxProps) {
+  const { user } = useAuth()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
 
@@ -84,7 +97,7 @@ export function SiteCombobox({
         <div className="mb-2 flex items-center justify-between gap-2">
           <span className="text-sm font-semibold text-[var(--color-navy)]">{label}</span>
           {selected && (
-            <span className="shrink-0 whitespace-nowrap rounded-full bg-[var(--color-accent-light)] px-2.5 py-1 text-xs font-semibold text-[var(--color-accent)]">
+            <span className={getSelectionReasonChipClass(user?.role)}>
               {selectionReason}
             </span>
           )}
