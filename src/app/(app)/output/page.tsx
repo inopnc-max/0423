@@ -349,15 +349,7 @@ export default function OutputPage() {
 
   return (
     <div className="space-y-4 p-4">
-      {/* 1. 페이지 제목 */}
-      <div>
-        <h1 className="text-xl font-bold text-[var(--color-navy)]">출역</h1>
-        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          출역 현황과 급여 요약을 역할별로 확인할 수 있습니다.
-        </p>
-      </div>
-
-      {/* 2. 현장 콤보박스 */}
+      {/* 현장 콤보박스 */}
       <SiteCombobox
         sites={accessibleSites}
         selectedId={selectedSiteId}
