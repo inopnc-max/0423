@@ -161,12 +161,6 @@ export function CommonHomeDateRail({ selectedDate, onDateSelect }: CommonHomeDat
                 >
                   {format(day, 'd')}
                 </span>
-                {isToday && !isSelected && (
-                  <span className="h-1 w-1 rounded-full bg-[var(--color-navy)]" />
-                )}
-                {isSelected && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]" />
-                )}
               </button>
             )
           })}
