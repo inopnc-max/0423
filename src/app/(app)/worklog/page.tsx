@@ -1146,8 +1146,8 @@ function WorklogEditorView({
         })
         uploaded.push({
           ...attachment,
-          uploadState: 'local',
-          uploadMessage: '서버 업로드 실패. 임시 첨부 상태이며 저장 시 다시 업로드합니다.',
+          uploadState: 'failed',
+          uploadMessage: '서버 업로드 실패. 파일/버킷/권한 상태를 확인한 뒤 다시 저장해주세요.',
         })
       }
     }
@@ -1237,11 +1237,23 @@ function WorklogEditorView({
           setMediaAttachments(uploadedAttachments)
           const failedAttachments = uploadedAttachments.filter(attachment => attachment.uploadState === 'failed')
           const localAttachments = uploadedAttachments.filter(attachment => !attachment.storagePath && attachment.uploadState !== 'failed')
+          const mediaDraftItems = uploadedAttachments.map(({ file, previewUrl, ...meta }) => meta)
 
           if (failedAttachments.length > 0) {
+            await saveWorklogDraft({
+              userId: draftUserId,
+              siteId: draftSiteId,
+              workDate: draftWorkDate,
+              activeSection,
+              workerArray: workerArray.map(w => ({ name: w.name, count: w.count })),
+              taskTags,
+              materialItems: materialItems.map(m => ({ name: m.name, quantity: m.quantity })),
+              mediaAttachments: mediaDraftItems,
+            })
+            setHasDraft(true)
             setMessage({
               type: 'error',
-              text: `첨부 파일 ${failedAttachments.length}개를 찾을 수 없어 일지에 연결할 수 없습니다. 다시 선택해주세요.`,
+              text: `첨부 파일 ${failedAttachments.length}개가 서버 업로드에 실패해 저장을 중단했습니다. 로컬 draft에는 보존했으니 버킷/권한/네트워크를 확인한 뒤 다시 저장해주세요.`,
             })
             setSaving(false)
             setMediaUploading(false)
@@ -1249,10 +1261,24 @@ function WorklogEditorView({
           }
 
           if (localAttachments.length > 0) {
-            setMessage({
-              type: 'info',
-              text: `첨부 파일 ${localAttachments.length}개가 임시 첨부 상태입니다. 서버 업로드 후 일지에 연결됩니다. 잠시 후 다시 저장해주세요.`,
+            await saveWorklogDraft({
+              userId: draftUserId,
+              siteId: draftSiteId,
+              workDate: draftWorkDate,
+              activeSection,
+              workerArray: workerArray.map(w => ({ name: w.name, count: w.count })),
+              taskTags,
+              materialItems: materialItems.map(m => ({ name: m.name, quantity: m.quantity })),
+              mediaAttachments: mediaDraftItems,
             })
+            setHasDraft(true)
+            setMessage({
+              type: 'error',
+              text: `첨부 파일 ${localAttachments.length}개가 아직 서버 업로드되지 않아 저장을 중단했습니다. 로컬 draft에는 보존했으니 버킷/권한/네트워크를 확인한 뒤 다시 저장해주세요.`,
+            })
+            setSaving(false)
+            setMediaUploading(false)
+            return
           }
         } catch (uploadError) {
           setMessage({
