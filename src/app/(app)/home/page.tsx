@@ -235,24 +235,28 @@ export default function HomePage() {
       {
         href: worklogRoute,
         label: '일지작성',
+        labelColorClass: 'text-[var(--color-navy)]',
         imageSrc: '/home/quick-actions/worklog.png',
         show: !isPartnerUser,
       },
       {
         href: outputRoute,
         label: '출역확인',
+        labelColorClass: 'text-[var(--color-success)]',
         imageSrc: '/home/quick-actions/output.png',
         show: true,
       },
       {
         href: photosRoute,
         label: '사진/도면',
+        labelColorClass: 'text-[var(--color-accent-deep)]',
         imageSrc: '/home/quick-actions/photo-drawing.png',
         show: true,
       },
       {
         href: documentsRoute,
         label: '문서함',
+        labelColorClass: 'text-[var(--role-production-manager-primary)]',
         imageSrc: '/home/quick-actions/documents.png',
         show: true,
       },
@@ -420,19 +424,19 @@ export default function HomePage() {
           </section>
 
           <section className="grid grid-cols-2 gap-2">
-            {quickActions.filter(action => action.show).map(({ href, label, imageSrc }) => (
+            {quickActions.filter(action => action.show).map(({ href, label, labelColorClass, imageSrc }) => (
               <Link
                 key={`${href}-${label}`}
                 href={href}
                 className="flex min-h-[72px] items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm transition hover:shadow-md"
               >
-                <span className="min-w-0 flex-1 truncate">{label}</span>
-                <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--color-bg)]">
+                <span className={`min-w-0 flex-1 truncate ${labelColorClass}`}>{label}</span>
+                <span className="relative flex h-[60px] w-[60px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-transparent">
                   <Image
                     src={imageSrc}
                     alt=""
                     fill
-                    sizes="56px"
+                    sizes="60px"
                     className="object-contain p-0.5"
                   />
                   <span className="sr-only">{label}</span>
