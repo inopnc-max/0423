@@ -1,15 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { format } from 'date-fns'
+import Image from 'next/image'
+import { endOfMonth, format, isValid, parseISO, startOfMonth } from 'date-fns'
 import {
   Building2,
-  CalendarDays,
-  ChevronRight,
+  CalendarCheck,
   ClipboardList,
   Cloud,
   CloudOff,
+  FileText,
+  ImageIcon,
   MapPin,
   RefreshCw,
 } from 'lucide-react'
@@ -18,14 +20,73 @@ import { useSync } from '@/contexts/sync-context'
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { isPartner } from '@/lib/roles'
 import { ROUTES } from '@/lib/routes'
+import { createClient } from '@/lib/supabase/client'
 import { SiteStatusBadge } from '@/components/common/SiteStatusBadge'
 import { CommonHomeDateRail } from '@/components/home/CommonHomeDateRail'
 import { RecentViewedDocuments } from '@/components/home/RecentViewedDocuments'
 import { PartnerReadonlyPortal } from '@/components/partner/PartnerReadonlyPortal'
-import { SiteCombobox as SharedSiteCombobox } from '@/components/site/SiteCombobox'
+import { SiteCombobox } from '@/components/site/SiteCombobox'
 import { SiteManagerHomeSummary } from '@/components/site-manager/SiteManagerAttendancePanel'
 import { useSiteManagerDashboard } from '@/hooks/site-manager/useSiteManagerDashboard'
 import { getSelectedWorkDate, setSelectedWorkDate } from '@/lib/ui-state'
+
+type HomeSiteSummary = {
+  attendanceCount: number | null
+  worklogStatus: string | null
+  missingRequiredDocuments: number | null
+}
+
+type DailyLogSummaryRow = {
+  id: string
+  status: string | null
+  work_date: string
+}
+
+type RequiredDocumentRow = {
+  status?: string | null
+}
+
+const WORKLOG_STATUS_LABELS: Record<string, string> = {
+  draft: '임시저장',
+  pending: '승인대기',
+  approved: '승인완료',
+  rejected: '반려',
+  locked: '잠금',
+  final: '완료',
+}
+
+function getWorklogStatusLabel(status: string | null) {
+  if (!status) return '일지 없음'
+  return WORKLOG_STATUS_LABELS[status] ?? status
+}
+
+function getWorklogStatusClass(status: string | null) {
+  if (status === 'approved' || status === 'locked' || status === 'final') return 'bg-green-50 text-green-700'
+  if (status === 'pending') return 'bg-amber-50 text-amber-700'
+  if (status === 'rejected') return 'bg-red-50 text-red-700'
+  if (status === 'draft') return 'bg-slate-100 text-slate-700'
+  return 'bg-white/70 text-[var(--color-text-secondary)]'
+}
+
+function isRequiredDocumentMissing(status?: string | null) {
+  const normalized = String(status ?? '').toLowerCase()
+  return !['approved', 'locked', 'final', 'pending', 'submitted', 'reviewing'].includes(normalized)
+}
+
+function SelectedSiteMetric({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className="rounded-xl bg-white/75 px-3 py-2">
+      <div className="text-xs font-medium text-[var(--color-text-tertiary)]">{label}</div>
+      <div className="mt-1 truncate text-sm font-bold text-[var(--color-text)]">{value}</div>
+    </div>
+  )
+}
 
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth()
@@ -37,19 +98,20 @@ export default function HomePage() {
     loading: siteLoading,
     error,
     setSelectedSiteId,
-    refreshSelectedSite,
   } = useSelectedSite()
 
   const today = format(new Date(), 'yyyy-MM-dd')
   const [selectedWorkDate, setSelectedWorkDateState] = useState<string>(today)
+  const [siteSummary, setSiteSummary] = useState<HomeSiteSummary>({
+    attendanceCount: null,
+    worklogStatus: null,
+    missingRequiredDocuments: null,
+  })
+  const [summaryLoading, setSummaryLoading] = useState(false)
 
   useEffect(() => {
     const saved = getSelectedWorkDate()
-    if (saved) {
-      setSelectedWorkDateState(saved)
-    } else {
-      setSelectedWorkDateState(today)
-    }
+    setSelectedWorkDateState(saved || today)
   }, [today])
 
   const handleDateSelect = (date: string) => {
@@ -68,29 +130,134 @@ export default function HomePage() {
     workDate: selectedWorkDate,
   })
 
-  const QUICK_ACTIONS = [
-    {
-      href: `${ROUTES.worklog}${selectedSiteId ? `?site=${selectedSiteId}&date=${selectedWorkDate}` : `?date=${selectedWorkDate}`}`,
-      label: '일지 작성',
-      icon: ClipboardList,
-      colorClass: 'bg-blue-50 text-blue-600',
-      show: !isPartnerUser,
-    },
-    {
-      href: `${ROUTES.output}?date=${selectedWorkDate}`,
-      label: '출역 확인',
-      icon: CalendarDays,
-      colorClass: 'bg-emerald-50 text-emerald-600',
-      show: true,
-    },
-    {
-      href: ROUTES.site,
-      label: '현장 보기',
-      icon: Building2,
-      colorClass: 'bg-orange-50 text-orange-600',
-      show: true,
-    },
-  ]
+  useEffect(() => {
+    if (!user || !selectedSiteId || isPartnerUser) {
+      setSiteSummary({
+        attendanceCount: null,
+        worklogStatus: null,
+        missingRequiredDocuments: null,
+      })
+      return
+    }
+
+    let cancelled = false
+    const currentUser = user
+
+    async function loadSummary() {
+      setSummaryLoading(true)
+      const supabase = createClient()
+      const parsedSelectedDate = parseISO(selectedWorkDate)
+      const selectedDate = isValid(parsedSelectedDate) ? parsedSelectedDate : new Date()
+      const monthStart = format(startOfMonth(selectedDate), 'yyyy-MM-dd')
+      const monthEnd = format(endOfMonth(selectedDate), 'yyyy-MM-dd')
+
+      try {
+        const dailyLogsQuery = supabase
+          .from('daily_logs')
+          .select('id, status, work_date')
+          .eq('site_id', selectedSiteId)
+          .gte('work_date', monthStart)
+          .lte('work_date', monthEnd)
+
+        const selectedDateQuery = supabase
+          .from('daily_logs')
+          .select('id, status, work_date')
+          .eq('site_id', selectedSiteId)
+          .eq('work_date', selectedWorkDate)
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        const requiredDocsQuery = supabase
+          .from('worker_required_documents')
+          .select('status')
+          .eq('user_id', currentUser.userId)
+          .eq('site_id', selectedSiteId)
+
+        if (currentUser.role === 'worker') {
+          dailyLogsQuery.eq('user_id', currentUser.userId)
+          selectedDateQuery.eq('user_id', currentUser.userId)
+        }
+
+        const [dailyLogsResponse, selectedDateResponse, requiredDocsResponse] = await Promise.all([
+          dailyLogsQuery,
+          selectedDateQuery,
+          currentUser.role === 'worker'
+            ? requiredDocsQuery
+            : Promise.resolve({ data: null, error: null }),
+        ])
+
+        if (cancelled) return
+
+        const monthlyLogs = (dailyLogsResponse.data ?? []) as DailyLogSummaryRow[]
+        const selectedDateLog = ((selectedDateResponse.data ?? []) as DailyLogSummaryRow[])[0]
+        const requiredDocs = (requiredDocsResponse.data ?? []) as RequiredDocumentRow[]
+
+        setSiteSummary({
+          attendanceCount: dailyLogsResponse.error ? null : monthlyLogs.length,
+          worklogStatus: selectedDateResponse.error ? null : selectedDateLog?.status ?? null,
+          missingRequiredDocuments:
+            currentUser.role === 'worker' && !requiredDocsResponse.error
+              ? requiredDocs.filter(doc => isRequiredDocumentMissing(doc.status)).length
+              : null,
+        })
+      } catch {
+        if (!cancelled) {
+          setSiteSummary({
+            attendanceCount: null,
+            worklogStatus: null,
+            missingRequiredDocuments: null,
+          })
+        }
+      } finally {
+        if (!cancelled) setSummaryLoading(false)
+      }
+    }
+
+    void loadSummary()
+    return () => {
+      cancelled = true
+    }
+  }, [isPartnerUser, selectedSiteId, selectedWorkDate, user])
+
+  const selectedSiteRoute = selectedSiteId ? `${ROUTES.site}/${selectedSiteId}` : ROUTES.site
+  const worklogRoute = `${ROUTES.worklog}${selectedSiteId ? `?site=${selectedSiteId}&date=${selectedWorkDate}` : `?date=${selectedWorkDate}`}`
+  const outputRoute = `${ROUTES.output}?date=${selectedWorkDate}`
+  const documentsRoute = ROUTES.documents
+  const photosRoute = selectedSiteRoute
+
+  const quickActions = useMemo(
+    () => [
+      {
+        href: worklogRoute,
+        label: '일지작성',
+        icon: ClipboardList,
+        imageSrc: '/home/quick-actions/worklog.png',
+        show: !isPartnerUser,
+      },
+      {
+        href: outputRoute,
+        label: '출역확인',
+        icon: CalendarCheck,
+        imageSrc: '/home/quick-actions/output.png',
+        show: true,
+      },
+      {
+        href: photosRoute,
+        label: '사진/도면',
+        icon: ImageIcon,
+        imageSrc: '/home/quick-actions/photo-drawing.png',
+        show: true,
+      },
+      {
+        href: documentsRoute,
+        label: '문서함',
+        icon: FileText,
+        imageSrc: '/home/quick-actions/documents.png',
+        show: true,
+      },
+    ],
+    [documentsRoute, isPartnerUser, outputRoute, photosRoute, worklogRoute]
+  )
 
   if (loading) {
     return (
@@ -171,8 +338,13 @@ export default function HomePage() {
       )}
 
       <section className="space-y-3">
-        <div className="text-sm font-semibold text-[var(--color-navy)]">현장 선택</div>
-        <SharedSiteCombobox
+        <div>
+          <div className="text-sm font-semibold text-[var(--color-navy)]">현장 검색/선택</div>
+          <div className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+            최근 선택 현장을 기본으로 표시합니다.
+          </div>
+        </div>
+        <SiteCombobox
           sites={accessibleSites}
           selectedId={selectedSiteId}
           onSelect={id => {
@@ -182,131 +354,91 @@ export default function HomePage() {
         />
       </section>
 
-      {selectedSite && (
-        <section className="rounded-2xl bg-gradient-to-r from-[var(--color-accent-light)] to-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
+      {selectedSite ? (
+        <section className="rounded-2xl border-l-4 border-[var(--color-accent)] bg-gradient-to-r from-[var(--color-accent-light)] to-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <Building2 className="h-5 w-5 shrink-0 text-[var(--color-accent)]" strokeWidth={1.9} />
-                <span className="font-bold text-[var(--color-navy)]">{selectedSite.name}</span>
+                <span className="truncate font-bold text-[var(--color-navy)]">{selectedSite.name}</span>
                 <SiteStatusBadge status={selectedSite.status} />
               </div>
-              {selectedSite.company && (
-                <div className="mt-2 text-sm text-[var(--color-text-secondary)]">
-                  원청사: {selectedSite.company}
-                </div>
-              )}
-              {selectedSite.affiliation && (
-                <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                  소속: {selectedSite.affiliation}
-                </div>
-              )}
-              {selectedSite.address && (
-                <div className="mt-1 flex items-start gap-1 text-sm text-[var(--color-text-secondary)]">
-                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.9} />
-                  <span className="line-clamp-1">{selectedSite.address}</span>
-                </div>
-              )}
+              <div className="mt-3 grid gap-1.5 text-sm text-[var(--color-text-secondary)]">
+                <div className="truncate">원청사: {selectedSite.company || '정보 없음'}</div>
+                <div className="truncate">소속: {selectedSite.affiliation || user?.profile?.affiliation || user?.company || '정보 없음'}</div>
+                {selectedSite.address && (
+                  <div className="flex min-w-0 items-start gap-1">
+                    <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.9} />
+                    <span className="line-clamp-1">{selectedSite.address}</span>
+                  </div>
+                )}
+              </div>
             </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <SelectedSiteMetric
+              label="누적 출역"
+              value={summaryLoading ? '확인 중' : siteSummary.attendanceCount === null ? '정보 없음' : `${siteSummary.attendanceCount}건`}
+            />
+            <div className={`rounded-xl px-3 py-2 ${getWorklogStatusClass(siteSummary.worklogStatus)}`}>
+              <div className="text-xs font-medium opacity-80">일지 상태</div>
+              <div className="mt-1 truncate text-sm font-bold">
+                {summaryLoading ? '확인 중' : getWorklogStatusLabel(siteSummary.worklogStatus)}
+              </div>
+            </div>
+            <SelectedSiteMetric
+              label="필수서류"
+              value={
+                summaryLoading
+                  ? '확인 중'
+                  : siteSummary.missingRequiredDocuments === null
+                    ? '정보 없음'
+                    : `${siteSummary.missingRequiredDocuments}건 미제출`
+              }
+            />
           </div>
 
           <div className="mt-4 flex gap-2">
             <Link
-              href={ROUTES.site}
-              className="flex-1 rounded-full border-2 border-[var(--color-accent)] px-4 py-2.5 text-center text-sm font-semibold text-[var(--color-accent)] transition hover:bg-[var(--color-accent-light)]"
+              href={selectedSiteRoute}
+              className="flex h-11 flex-1 items-center justify-center rounded-full border-2 border-[var(--color-accent)] px-4 text-center text-sm font-semibold text-[var(--color-accent)] transition hover:bg-[var(--color-accent-light)]"
             >
               현장 보기
             </Link>
-            {!isPartnerUser && selectedSiteId && (
-              <Link
-                href={`${ROUTES.worklog}?site=${selectedSiteId}&date=${selectedWorkDate}`}
-                className="flex-1 rounded-full bg-[var(--color-navy)] px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-[var(--color-navy-hover)]"
-              >
-                일지 작성
-              </Link>
-            )}
-          </div>
-        </section>
-      )}
-
-      <section className="grid grid-cols-3 gap-3">
-        {QUICK_ACTIONS.filter(item => item.show).map(
-          ({ href, label, icon: Icon, colorClass }) => (
             <Link
-              key={href}
-              href={href}
-              className="rounded-2xl bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              href={worklogRoute}
+              className="flex h-11 flex-1 items-center justify-center rounded-full bg-[var(--color-navy)] px-4 text-center text-sm font-semibold text-white transition hover:bg-[var(--color-navy-hover)]"
             >
-              <div
-                className={`mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full ${colorClass}`}
-              >
-                <Icon className="h-[18px] w-[18px]" strokeWidth={1.9} />
-              </div>
-              <div className="text-sm font-semibold text-[var(--color-text)]">{label}</div>
+              일지 작성
             </Link>
-          )
-        )}
-      </section>
-
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-[var(--color-navy)]">현장 목록</h2>
-          <Link href={ROUTES.site} className="text-sm font-medium text-[var(--color-accent)]">
-            전체 보기
-          </Link>
-        </div>
-
-        {accessibleSites.length === 0 ? (
-          <div className="rounded-2xl bg-white p-6 text-center text-[var(--color-text-secondary)] shadow-sm">
-            접근 가능한 현장이 없습니다.
           </div>
-        ) : (
-          <div className="space-y-3">
-            {accessibleSites.slice(0, 5).map(site => (
-              <button
-                key={site.id}
-                type="button"
-                onClick={() => {
-                  void setSelectedSiteId(site.id)
-                }}
-                className={`flex w-full items-center justify-between rounded-2xl bg-white p-4 shadow-sm transition hover:shadow-md ${
-                  site.id === selectedSiteId ? 'ring-2 ring-[var(--color-accent)]' : ''
-                }`}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate font-semibold text-[var(--color-text)]">{site.name}</span>
-                    {site.id === selectedSiteId && (
-                      <span className="shrink-0 rounded-full bg-[var(--color-accent)] px-2 py-0.5 text-xs font-semibold text-white">
-                        선택됨
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-1 text-sm text-[var(--color-text-secondary)]">{site.company}</div>
-                </div>
 
-                <div className="ml-4 flex items-center gap-3">
-                  <SiteStatusBadge status={site.status} />
-                  <ChevronRight className="h-4 w-4 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
-                </div>
-              </button>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {quickActions.filter(action => action.show).map(({ href, label, icon: Icon, imageSrc }) => (
+              <Link
+                key={`${href}-${label}`}
+                href={href}
+                className="flex min-h-[72px] items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm transition hover:shadow-md"
+              >
+                <span className="min-w-0 flex-1 truncate">{label}</span>
+                <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--color-bg)]">
+                  <Image
+                    src={imageSrc}
+                    alt=""
+                    fill
+                    sizes="56px"
+                    className="object-contain p-1.5"
+                  />
+                  <span className="sr-only">{label}</span>
+                </span>
+              </Link>
             ))}
           </div>
-        )}
-      </section>
-
-      {!isPartnerUser && (
-        <section>
-          <Link
-            href={`${ROUTES.output}?date=${selectedWorkDate}`}
-            className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-[var(--color-navy)] to-[var(--color-navy-light)] p-5 text-white shadow-sm"
-          >
-            <div>
-              <div className="text-sm text-white/70">이번 달 요약</div>
-              <div className="mt-1 text-lg font-semibold">출역/급여 현황 보기</div>
-            </div>
-            <ChevronRight className="h-5 w-5" strokeWidth={1.9} />
-          </Link>
+        </section>
+      ) : (
+        <section className="rounded-2xl border-2 border-dashed border-[var(--color-border)] bg-white p-6 text-center text-sm text-[var(--color-text-secondary)] shadow-sm">
+          현장을 검색해서 선택하면 오늘 기준 요약이 표시됩니다.
         </section>
       )}
 
@@ -314,8 +446,14 @@ export default function HomePage() {
         userId={user?.userId}
         siteId={selectedSiteId}
         partnerMode={isPartnerUser}
-        limit={3}
+        limit={4}
       />
+
+      {!selectedSite && accessibleSites.length === 0 && (
+        <section className="rounded-2xl bg-white p-6 text-center text-[var(--color-text-secondary)] shadow-sm">
+          접근 가능한 현장이 없습니다.
+        </section>
+      )}
     </div>
   )
 }

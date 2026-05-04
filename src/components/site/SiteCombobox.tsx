@@ -75,7 +75,7 @@ export function SiteCombobox({
         <div className="mb-2 flex items-center justify-between gap-2">
           <span className="text-sm font-semibold text-[var(--color-navy)]">{label}</span>
           {selected && (
-            <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-xs font-bold text-[#3b4b7c]">
+            <span className="shrink-0 whitespace-nowrap rounded-full bg-[var(--color-accent-light)] px-2.5 py-1 text-xs font-semibold text-[var(--color-accent)]">
               {selectionReason}
             </span>
           )}
@@ -99,7 +99,7 @@ export function SiteCombobox({
             </span>
           </span>
         ) : (
-          <span className="flex-1 text-[var(--color-text-tertiary)]">{placeholder}</span>
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--color-text-secondary)]">{placeholder}</span>
         )}
         <ChevronDown
           className={`h-5 w-5 shrink-0 text-[var(--color-text-tertiary)] transition-transform ${open ? 'rotate-180' : ''}`}
@@ -118,7 +118,7 @@ export function SiteCombobox({
                 placeholder={placeholder}
                 value={query}
                 onChange={event => setQuery(event.target.value)}
-                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text)] placeholder-[var(--color-text-tertiary)] outline-none"
+                className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[var(--color-text)] placeholder-[var(--color-text-secondary)] outline-none"
               />
               {query && (
                 <button
@@ -188,4 +188,3 @@ export function SiteCombobox({
     </div>
   )
 }
-
