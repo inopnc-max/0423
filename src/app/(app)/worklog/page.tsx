@@ -546,12 +546,6 @@ export default function WorklogPage() {
     if (selectedLog) {
       return (
         <div className="space-y-4 p-4">
-          <div>
-            <h1 className="text-xl font-bold text-[var(--color-navy)]">일지 상세</h1>
-            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-              현장별 작업일지를 확인합니다.
-            </p>
-          </div>
           <WorklogDetailView log={selectedLog} onBack={handleBack} />
         </div>
       )
@@ -559,12 +553,6 @@ export default function WorklogPage() {
 
     return (
       <div className="space-y-4 p-4">
-        <div>
-          <h1 className="text-xl font-bold text-[var(--color-navy)]">일지 조회</h1>
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            현장별로 작성된 작업일지를 확인할 수 있습니다.
-          </p>
-        </div>
         <WorklogListView
           sites={sites}
           selectedSiteId={worklogSelectedSiteId}
@@ -1494,13 +1482,6 @@ function WorklogEditorView({
 
   return (
     <div className="space-y-4 p-4 pb-28">
-      <div>
-        <h1 className="text-xl font-bold text-[var(--color-navy)]">작업일지</h1>
-        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          마지막 현장과 작업일, 작성 중이던 입력 내용을 자동으로 복원합니다.
-        </p>
-      </div>
-
       <div className="rounded-2xl bg-white p-4 shadow-sm">
         <SiteCombobox
           sites={siteOptions}

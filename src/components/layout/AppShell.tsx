@@ -39,6 +39,19 @@ function getParentRoute(pathname: string): string {
   return `/${segments[0]}`
 }
 
+// Main routes that should go to home on back
+const HOME_BACK_ROUTES = [
+  ROUTES.output,
+  ROUTES.worklog,
+  ROUTES.site,
+  ROUTES.documents,
+  ROUTES.settings,
+] as const
+
+function isHomeBackRoute(pathname: string): boolean {
+  return HOME_BACK_ROUTES.some(route => pathname === route)
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -103,6 +116,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const secondaryActions = getSecondaryActions(user.role)
 
   const handleBack = () => {
+    // Main tab routes always go to home
+    if (isHomeBackRoute(pathname)) {
+      void router.push(ROUTES.home)
+      return
+    }
+
+    // Sub-routes go to parent route
     const parent = getParentRoute(pathname)
     if (parent === pathname) {
       void router.push(ROUTES.home)
@@ -186,9 +206,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         },
       ]
 
-  // 메인 네비게이션 및 헤더 액션 라우트에서는 헤더 타이틀 숨김
+  // Main navigation and header action routes show no title (logo only)
   // exact match routes
-  const hideTitleExactRoutes = ['/home', '/output', '/worklog', '/site', '/documents', '/settings', '/search', '/confirm-sheet', '/hq-requests', '/notifications', '/production']
+  const hideTitleExactRoutes = ['/home', '/search', '/confirm-sheet', '/hq-requests', '/notifications', '/production']
   // prefix match routes (production 하위 경로 모두 숨김)
   const hideTitlePrefixRoutes = ['/production/']
   const shouldHideTitle = hideTitleExactRoutes.includes(pathname) ||

@@ -18,6 +18,8 @@ export interface HeaderBehavior {
 }
 
 const BACK_LEADING_ROUTES = [
+  ROUTES.output,
+  ROUTES.worklog,
   ROUTES.site,
   ROUTES.settings,
   ROUTES.notifications,
@@ -33,12 +35,7 @@ export function getHeaderBehavior(pathname: string): HeaderBehavior {
     return { kind: 'hidden', leading: 'logo' }
   }
 
-  if (
-    pathname === ROUTES.home ||
-    pathname === ROUTES.output ||
-    pathname === ROUTES.worklog ||
-    pathname === ROUTES.admin
-  ) {
+  if (pathname === ROUTES.home || pathname === ROUTES.admin) {
     return { kind: 'default', leading: 'logo' }
   }
 
