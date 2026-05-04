@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { format } from 'date-fns'
+import { format, addMonths, subMonths } from 'date-fns'
 import Link from 'next/link'
 import { ko } from 'date-fns/locale'
-import { Info, Search, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, EyeOff, FileText, Save, Share2 } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { createClient } from '@/lib/supabase/client'
@@ -146,7 +146,7 @@ function getDateStatus(logsForDate: DailyLog[]): 'approved' | 'pending' | 'rejec
 function getCalendarCells(year: number, month: number) {
   const firstDate = new Date(year, month - 1, 1)
   const lastDate = new Date(year, month, 0)
-  const startWeekday = firstDate.getDay() // 0 (Sun) - 6 (Sat)
+  const startWeekday = firstDate.getDay()
   const totalDays = lastDate.getDate()
 
   const cells: Array<
@@ -176,6 +176,10 @@ function getCalendarCells(year: number, month: number) {
   return { firstDate, lastDate, cells }
 }
 
+function formatMoney(amount: number): string {
+  return amount.toLocaleString()
+}
+
 export default function OutputPage() {
   const { user } = useAuth()
   const { selectedSiteId, selectedSite, accessibleSites, setSelectedSiteId } = useSelectedSite()
@@ -192,6 +196,7 @@ export default function OutputPage() {
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return queryDate || getSelectedWorkDate() || format(new Date(), 'yyyy-MM-dd')
   })
+  const [showSalary, setShowSalary] = useState(false)
 
   const isPartnerUser = user ? hideSalary(user.role) : false
   const isSiteManagerUser = user?.role === 'site_manager'
@@ -267,7 +272,6 @@ export default function OutputPage() {
         if (logsResponse.data) {
           const rawLogs = logsResponse.data as unknown as DailyLog[]
           if (isPartner) {
-            // Partner must not receive raw worker_array in UI data.
             const sanitized = rawLogs.map(log => ({
               ...log,
               worker_array: null,
@@ -339,6 +343,18 @@ export default function OutputPage() {
     setSelectedWorkDate(dateKey)
   }
 
+  function handlePrevMonth() {
+    const newDate = new Date(selectedYear, selectedMonth - 2, 1)
+    setSelectedYear(newDate.getFullYear())
+    setSelectedMonth(newDate.getMonth() + 1)
+  }
+
+  function handleNextMonth() {
+    const newDate = new Date(selectedYear, selectedMonth, 1)
+    setSelectedYear(newDate.getFullYear())
+    setSelectedMonth(newDate.getMonth() + 1)
+  }
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -349,7 +365,36 @@ export default function OutputPage() {
 
   return (
     <div className="space-y-4 p-4">
-      {/* 현장 콤보박스 */}
+      {/* 1. 년/월 선택기 */}
+      <section className="rounded-2xl bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={handlePrevMonth}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-text-tertiary)] transition hover:bg-[var(--color-accent-light)] hover:text-[var(--color-accent)]"
+            aria-label="이전 월"
+          >
+            <ChevronLeft className="h-5 w-5" strokeWidth={2} />
+          </button>
+
+          <div className="text-center">
+            <span className="text-lg font-bold text-[var(--color-navy)]">
+              {selectedYear}년 {selectedMonth}월
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleNextMonth}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-text-tertiary)] transition hover:bg-[var(--color-accent-light)] hover:text-[var(--color-accent)]"
+            aria-label="다음 월"
+          >
+            <ChevronRight className="h-5 w-5" strokeWidth={2} />
+          </button>
+        </div>
+      </section>
+
+      {/* 2. 현장 콤보박스 */}
       <SiteCombobox
         sites={accessibleSites}
         selectedId={selectedSiteId}
@@ -373,35 +418,11 @@ export default function OutputPage() {
         />
       )}
 
-      {/* 4. 검색창 */}
-      <div className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-white px-3 py-2">
-        <Search className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
-        <input
-          type="text"
-          placeholder="현장명, 날짜, 작업 항목, 상태 검색..."
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text)] placeholder-[var(--color-text-tertiary)] outline-none"
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={clear}
-            className="rounded-full p-0.5 text-[var(--color-text-tertiary)] hover:bg-[var(--color-border)]"
-          >
-            <X className="h-4 w-4" strokeWidth={1.9} />
-          </button>
-        )}
-      </div>
-
-      {/* 5. 출역 보기 전환 */}
+      {/* 4. 출역 보기 전환 */}
       <section className="rounded-2xl bg-white p-4 shadow-sm">
         <div className="ui-output-view-switch">
           <div className="ui-output-view-switch__label">
             <div className="ui-output-view-switch__title">출역 보기</div>
-            <div className="ui-output-view-switch__desc">
-              목록으로 확인하거나 월 전체 달력 기준으로 확인합니다.
-            </div>
           </div>
           <div className="ui-output-view-toggle" role="group" aria-label="출역 보기 방식">
             <button
@@ -424,36 +445,7 @@ export default function OutputPage() {
         </div>
       </section>
 
-      {/* 6. 연/월 선택 컨트롤 */}
-      <section className="rounded-2xl bg-white p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-[var(--color-text-secondary)]">기간 선택</label>
-          <select
-            value={selectedYear}
-            onChange={event => setSelectedYear(Number(event.target.value))}
-            className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
-          >
-            {[2024, 2025, 2026].map(year => (
-              <option key={year} value={year}>
-                {year}년
-              </option>
-            ))}
-          </select>
-          <select
-            value={selectedMonth}
-            onChange={event => setSelectedMonth(Number(event.target.value))}
-            className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
-          >
-            {Array.from({ length: 12 }, (_, index) => index + 1).map(month => (
-              <option key={month} value={month}>
-                {month}월
-              </option>
-            ))}
-          </select>
-        </div>
-      </section>
-
-      {/* 7. 달력 또는 리스트 */}
+      {/* 5. 달력 또는 리스트 */}
       <section>
         <h2 className="mb-3 font-semibold text-[var(--color-navy)]">
           {isSearching ? '검색 결과' : viewMode === 'calendar' ? '월별 출역 달력' : '최근 출역 기록'}
@@ -462,25 +454,11 @@ export default function OutputPage() {
         {viewMode === 'calendar' && (
           <>
             {!selectedSiteId ? (
-              <section className="ui-notice-box ui-notice-box--info">
-                <span className="ui-notice-box__icon">
-                  <Info size={18} strokeWidth={2} />
-                </span>
-                <div className="ui-notice-box__body">
-                  <div className="ui-notice-box__title">현장을 선택해주세요</div>
-                  <div className="ui-notice-box__desc">
-                    전체보기(달력)는 선택된 현장 기준으로만 조회합니다.
-                  </div>
-                </div>
-              </section>
+              <div className="rounded-2xl bg-[var(--color-bg)] p-6 text-center text-sm text-[var(--color-text-secondary)]">
+                현장을 선택해주세요.
+              </div>
             ) : (
               <section className="ui-calendar">
-                <div className="ui-calendar__header">
-                  <div className="ui-calendar__title">
-                    {selectedYear}년 {selectedMonth}월
-                  </div>
-                </div>
-
                 <div className="ui-calendar__grid" role="grid" aria-label="월별 출역 달력">
                   {['일', '월', '화', '수', '목', '금', '토'].map((label, idx) => (
                     <div
@@ -503,9 +481,7 @@ export default function OutputPage() {
 
                     const firstLog = logsForDate[0]
                     const siteName = firstLog?.site_info?.name ?? ''
-                    const taskSummary = isPartnerUser
-                      ? normalizeTaskSummary(firstLog?.task_tags)
-                      : normalizeTaskSummary(firstLog?.task_tags)
+                    const taskSummary = normalizeTaskSummary(firstLog?.task_tags)
 
                     const manDayText = (() => {
                       if (isPartnerUser) {
@@ -536,16 +512,15 @@ export default function OutputPage() {
                           type="button"
                           className={`ui-date-cell__button${
                             cell.dateKey === selectedDate
-                              ? ' is-selected ring-2 ring-[var(--color-accent)] ring-offset-2'
+                              ? ' is-selected outline outline-2 outline-[var(--color-accent)] outline-offset-[-2px]'
                               : ''
                           }`}
                           aria-pressed={cell.dateKey === selectedDate}
                           onClick={() => handleSelectCalendarDate(cell.dateKey)}
                         >
                           <div className="ui-date-cell__day">{cell.day}</div>
-                          <div className="ui-date-cell__site">{siteName}</div>
+                          <div className="ui-date-cell__site min-w-0 overflow-hidden truncate">{siteName}</div>
                           {manDayText ? <div className="ui-date-cell__man-day">{manDayText}</div> : <div className="ui-date-cell__man-day">&nbsp;</div>}
-                          {taskSummary ? <div className="ui-date-cell__summary">{taskSummary}</div> : <div className="ui-date-cell__summary">&nbsp;</div>}
                           <div className="ui-date-cell__dots" aria-hidden="true">
                             {dots.map(dot => (
                               <span
@@ -564,7 +539,7 @@ export default function OutputPage() {
           </>
         )}
 
-        {/* 8. 선택 날짜 카드 - 달력 아래에 표시 */}
+        {/* 선택 날짜 카드 */}
         {viewMode === 'calendar' && selectedSiteId && (() => {
           const selectedLogs = logsByDate.get(selectedDate) ?? []
           const parsedSelected = new Date(selectedDate)
@@ -575,9 +550,7 @@ export default function OutputPage() {
           const selectedTotalManDay = selectedLogs.reduce((sum, log) => sum + getLogTotalManDay(log), 0)
           const firstSelectedLog = selectedLogs[0]
           const selectedSiteName = firstSelectedLog?.site_info?.name ?? ''
-          const selectedTaskSummary = isPartnerUser
-            ? normalizeTaskSummary(firstSelectedLog?.task_tags)
-            : normalizeTaskSummary(firstSelectedLog?.task_tags)
+          const selectedTaskSummary = normalizeTaskSummary(firstSelectedLog?.task_tags)
 
           return (
             <section className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
@@ -678,37 +651,7 @@ export default function OutputPage() {
         )}
       </section>
 
-      {/* 9. 급여 현황 */}
-      {!isPartnerUser && (
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-semibold text-[var(--color-navy)]">급여 현황</h2>
-          </div>
-
-          {salary ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl bg-blue-50 p-3">
-                <div className="text-xs text-blue-600">일당</div>
-                <div className="mt-1 text-lg font-bold text-blue-700">{salary.daily_rate.toLocaleString()}원</div>
-              </div>
-              <div className="rounded-xl bg-green-50 p-3">
-                <div className="text-xs text-green-600">총 공수</div>
-                <div className="mt-1 text-lg font-bold text-green-700">{salary.man}공수</div>
-              </div>
-              <div className="col-span-2 rounded-xl bg-[var(--color-navy)] p-3 text-white">
-                <div className="text-xs text-white/70">실수령액</div>
-                <div className="mt-1 text-xl font-bold">{salary.net_pay.toLocaleString()}원</div>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-xl bg-[var(--color-bg)] px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]">
-              등록된 급여 데이터가 없습니다.
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* 10. 출역 요약 */}
+      {/* 6. 월간 요약 */}
       <section className="rounded-2xl bg-white p-4 shadow-sm">
         <h2 className="font-semibold text-[var(--color-navy)]">출역 요약</h2>
         <div className="mt-4 grid grid-cols-3 gap-3">
@@ -718,7 +661,7 @@ export default function OutputPage() {
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-[var(--color-accent)]">{totalMan}</div>
-            <div className="text-xs text-[var(--color-text-secondary)]">총 인원</div>
+            <div className="text-xs text-[var(--color-text-secondary)]">총 공수</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">
@@ -728,6 +671,86 @@ export default function OutputPage() {
           </div>
         </div>
       </section>
+
+      {/* 7. 급여 현황 */}
+      {!isPartnerUser && (
+        <section className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-semibold text-[var(--color-navy)]">급여 현황</h2>
+            <button
+              type="button"
+              onClick={() => setShowSalary(v => !v)}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg)]"
+              aria-label={showSalary ? '급여 숨기기' : '급여 보기'}
+            >
+              {showSalary ? <EyeOff className="h-4 w-4" strokeWidth={1.9} /> : <Eye className="h-4 w-4" strokeWidth={1.9} />}
+              {showSalary ? '숨기기' : '보기'}
+            </button>
+          </div>
+
+          {salary ? (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-blue-50 p-3">
+                  <div className="text-xs text-blue-600">일당</div>
+                  <div className="mt-1 text-lg font-bold text-blue-700">
+                    {showSalary ? `${formatMoney(salary.daily_rate)}원` : '******'}
+                  </div>
+                </div>
+                <div className="rounded-xl bg-green-50 p-3">
+                  <div className="text-xs text-green-600">총 공수</div>
+                  <div className="mt-1 text-lg font-bold text-green-700">{salary.man}공수</div>
+                </div>
+                <div className="col-span-2 rounded-xl bg-[var(--color-navy)] p-3 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-white/70">실수령액</div>
+                    {showSalary && (
+                      <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium text-white/80">
+                        3.3% 세금공제
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 text-xl font-bold">
+                    {showSalary ? `${formatMoney(salary.net_pay)}원` : '******'}
+                  </div>
+                </div>
+              </div>
+
+              {/* 급여명세서 퀵 버튼 */}
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  disabled
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-xs font-medium text-[var(--color-text-tertiary)] transition disabled:opacity-50"
+                >
+                  <FileText className="h-4 w-4" strokeWidth={1.9} />
+                  보기
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-xs font-medium text-[var(--color-text-tertiary)] transition disabled:opacity-50"
+                >
+                  <Save className="h-4 w-4" strokeWidth={1.9} />
+                  저장(PDF)
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-xs font-medium text-[var(--color-text-tertiary)] transition disabled:opacity-50"
+                >
+                  <Share2 className="h-4 w-4" strokeWidth={1.9} />
+                  공유
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="rounded-xl bg-[var(--color-bg)] px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]">
+              등록된 급여 데이터가 없습니다.
+            </div>
+          )}
+        </section>
+      )}
     </div>
   )
 }
