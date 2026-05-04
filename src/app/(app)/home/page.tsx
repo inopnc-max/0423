@@ -236,24 +236,28 @@ export default function HomePage() {
         href: worklogRoute,
         label: '일지작성',
         imageSrc: '/home/quick-actions/worklog.png',
+        textClassName: 'text-[var(--color-text)]',
         show: !isPartnerUser,
       },
       {
         href: outputRoute,
         label: '출역확인',
-        imageSrc: '/home/quick-actions/output.png',
+        imageSrc: '/home/quick-actions/output-green.png',
+        textClassName: 'text-[var(--color-text)]',
         show: true,
       },
       {
         href: photosRoute,
         label: '사진/도면',
-        imageSrc: '/home/quick-actions/photo-drawing.png',
+        imageSrc: '/home/quick-actions/photo-drawing-green.png',
+        textClassName: 'text-[var(--color-text)]',
         show: true,
       },
       {
         href: documentsRoute,
         label: '문서함',
-        imageSrc: '/home/quick-actions/documents.png',
+        imageSrc: '/home/quick-actions/documents-purple.png',
+        textClassName: 'text-[var(--color-text)]',
         show: true,
       },
     ],
@@ -420,13 +424,13 @@ export default function HomePage() {
           </section>
 
           <section className="grid grid-cols-2 gap-2">
-            {quickActions.filter(action => action.show).map(({ href, label, imageSrc }) => (
+            {quickActions.filter(action => action.show).map(({ href, label, imageSrc, textClassName }) => (
               <Link
                 key={`${href}-${label}`}
                 href={href}
                 className="flex min-h-[72px] items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm transition hover:shadow-md"
               >
-                <span className="min-w-0 flex-1 truncate">{label}</span>
+                <span className={`min-w-0 flex-1 truncate ${textClassName}`}>{label}</span>
                 <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--color-bg)]">
                   <Image
                     src={imageSrc}
