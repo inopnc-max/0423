@@ -284,9 +284,12 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <div className="mt-4 text-center">
-            <Link href="/login" className="text-sm text-[var(--color-accent)] hover:underline">
-              이미 계정이 있으신가요? 로그인
+          <div className="mt-6 text-center">
+            <Link
+              href="/login"
+              className="text-sm font-medium text-slate-800 hover:text-slate-900 transition-colors"
+            >
+              이미 계정이 있으신가요? <span className="underline underline-offset-2 text-[#3b4b7c]">로그인</span>
             </Link>
           </div>
         </div>
