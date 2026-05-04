@@ -23,6 +23,7 @@ export interface SiteSummary {
   affiliation: string
   status: string
   address?: string
+  manager?: string
 }
 
 interface SelectedSiteContextValue {

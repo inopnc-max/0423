@@ -4,11 +4,12 @@ import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { Building2, Calendar, ClipboardList, PenTool, User, Briefcase, MapPin, StickyNote } from 'lucide-react'
 import type { ConfirmSheetDraft } from './types'
+import type { SiteSummary } from '@/contexts/selected-site-context'
 import { WORK_CONTENT_PRESETS, SPECIAL_NOTES_PRESETS, PRESET_CATEGORIES } from './phrasePresets'
 
 interface ConfirmSheetFormProps {
   draft: ConfirmSheetDraft
-  sites: { id: string; name: string; company: string; address: string; manager: string }[]
+  sites: SiteSummary[]
   onDraftChange: (updates: Partial<ConfirmSheetDraft>) => void
   selectedSiteId: string
   selectedDate: string

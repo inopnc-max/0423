@@ -6,11 +6,8 @@ import { useAuth } from '@/contexts/auth-context'
 import { createClient } from '@/lib/supabase/client'
 import { isAdmin, isSiteManager } from '@/lib/roles'
 import { usePreview } from '@/components/preview'
-
-interface SiteOption {
-  id: string
-  name: string
-}
+import type { SiteSummary } from '@/contexts/selected-site-context'
+import { SiteCombobox } from '@/components/site/SiteCombobox'
 
 interface SubmittedRequest {
   id: string
@@ -106,8 +103,8 @@ export default function HQRequestsPage() {
   const isSiteManagerUser = user ? isSiteManager(user.role) : false
   const isManagerUser = isAdminUser || isSiteManagerUser
 
-  const [sites, setSites] = useState<SiteOption[]>([])
-  const [siteId, setSiteId] = useState('')
+  const [sites, setSites] = useState<SiteSummary[]>([])
+  const [siteId, setSiteId] = useState<string | null>(null)
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>('일정')
   const [title, setTitle] = useState('')
   const [message, setMessage] = useState('')
@@ -132,7 +129,7 @@ export default function HQRequestsPage() {
 
     async function fetchSites() {
       try {
-        const { data } = await supabase.from('sites').select('id, name').order('name')
+        const { data } = await supabase.from('sites').select('id, name, company, affiliation, status, address').order('name')
         if (data) setSites(data)
       } catch (error) {
         console.error('Failed to load sites for HQ request:', error)
@@ -397,7 +394,7 @@ export default function HQRequestsPage() {
         .from('hq_requests')
         .insert({
           user_id: user.userId,
-          site_id: siteId || null,
+          site_id: siteId,
           category,
           message: composedMessage,
           source: 'app',
@@ -433,7 +430,7 @@ export default function HQRequestsPage() {
 
       setTitle('')
       setMessage('')
-      setSiteId('')
+      setSiteId(null)
       setCategory('일정')
       setFeedback({
         type: 'success',
@@ -588,18 +585,12 @@ export default function HQRequestsPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-[var(--color-text)]">현장</span>
-            <select
-              value={siteId}
-              onChange={event => setSiteId(event.target.value)}
-              className="w-full rounded-xl border border-[var(--color-border)] px-3 py-3 text-sm outline-none focus:border-[var(--color-accent)]"
-            >
-              <option value="">현장 선택</option>
-              {sites.map(site => (
-                <option key={site.id} value={site.id}>
-                  {site.name}
-                </option>
-              ))}
-            </select>
+            <SiteCombobox
+              sites={sites}
+              selectedId={siteId}
+              onSelect={id => setSiteId(id)}
+              placeholder="현장 선택"
+            />
           </label>
 
           <label className="block">

@@ -93,9 +93,9 @@ export function PreviewCenter({
   const content = (
     <div
       className={`flex flex-col bg-[var(--color-bg-surface)] ${
-        isModal
+        mode === 'modal'
           ? `mx-auto h-[85dvh] ${maxWidth} rounded-2xl shadow-2xl`
-          : 'min-h-screen'
+          : 'flex-1'
       }`}
     >
       {/* Header */}
@@ -139,20 +139,24 @@ export function PreviewCenter({
     </div>
   )
 
-  if (isModal) {
+  if (mode === 'fullscreen') {
     return (
-      <div
-        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm ${backdropClassName}`}
-        onClick={e => {
-          if (e.target === e.currentTarget && onClose) {
-            onClose()
-          }
-        }}
-      >
+      <div className="fixed inset-0 z-50 flex flex-col bg-[var(--color-bg)]">
         {content}
       </div>
     )
   }
 
-  return content
+  return (
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm ${backdropClassName}`}
+      onClick={e => {
+        if (e.target === e.currentTarget && onClose) {
+          onClose()
+        }
+      }}
+    >
+      {content}
+    </div>
+  )
 }
