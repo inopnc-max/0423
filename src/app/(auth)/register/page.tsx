@@ -105,9 +105,15 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         {/* Logo */}
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-[var(--color-navy)]">INOPNC</h1>
-          <p className="text-[var(--color-text-secondary)] mt-1">파트너 등록</p>
+        <div className="flex justify-center mb-8">
+          <Image
+            src="/logo_w.png"
+            alt="INOPNC Logo"
+            width={160}
+            height={48}
+            priority
+            className="h-12 w-auto object-contain"
+          />
         </div>
 
         {/* Form */}
@@ -191,7 +197,7 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg
                              focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                  placeholder="협력업체명 (예: (주)삼일씨엔에스)"
+                  placeholder="(예: (주)이노피앤씨)"
                   disabled={loading}
                 />
               </div>
