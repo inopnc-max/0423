@@ -303,6 +303,9 @@
   --color-navy-hover: var(--role-worker-primary);
   --active-role-color: var(--role-worker-primary);
   --active-role-color-soft: var(--role-worker-primary-soft);
+  /* Input focus tokens */
+  --form-focus-border: #46558C;
+  --form-focus-ring: var(--role-worker-focus-ring);
 }
 
 .ui-role-site-manager {
@@ -315,6 +318,9 @@
   --color-navy-hover: var(--role-site-manager-primary);
   --active-role-color: var(--role-site-manager-primary);
   --active-role-color-soft: var(--role-site-manager-primary-soft);
+  /* Input focus tokens */
+  --form-focus-border: #24B47E;
+  --form-focus-ring: var(--role-site-manager-focus-ring);
 }
 
 .ui-role-partner {
@@ -327,6 +333,9 @@
   --color-navy-hover: var(--role-partner-primary);
   --active-role-color: var(--role-partner-primary);
   --active-role-color-soft: var(--role-partner-primary-soft);
+  /* Input focus tokens */
+  --form-focus-border: #D97706;
+  --form-focus-ring: var(--role-partner-focus-ring);
 }
 
 .ui-role-admin {
@@ -339,6 +348,9 @@
   --color-navy-hover: var(--role-admin-primary);
   --active-role-color: var(--role-admin-primary);
   --active-role-color-soft: var(--role-admin-primary-soft);
+  /* Input focus tokens */
+  --form-focus-border: #7C3AED;
+  --form-focus-ring: var(--role-admin-focus-ring);
 }
 
 .ui-role-production-manager {
@@ -351,6 +363,9 @@
   --color-navy-hover: var(--role-production-manager-primary);
   --active-role-color: var(--role-production-manager-primary);
   --active-role-color-soft: var(--role-production-manager-primary-soft);
+  /* Input focus tokens */
+  --form-focus-border: #6D5BD0;
+  --form-focus-ring: rgba(109, 91, 208, 0.22);
 }
 
 /* ─────────────────────────────────────────────────────────────────
