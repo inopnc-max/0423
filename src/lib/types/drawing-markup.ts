@@ -114,3 +114,112 @@ export type DrawingMarkupMark =
   | DrawingMarkupRectangle
   | DrawingMarkupEllipse
   | DrawingMarkupText
+
+/**
+ * Optional calibration metadata for future area calculation.
+ *
+ * This is a data contract only. Current editor/save flows do not create or
+ * persist calibration data yet.
+ */
+export type DrawingMarkupScale = {
+  mode: 'manual-ratio' | 'reference-line'
+  unit: 'm' | 'mm'
+  pageNo: number
+  ratio?: {
+    metersPerNormalizedX: number
+    metersPerNormalizedY: number
+  }
+  referenceLine?: {
+    start: DrawingMarkupPoint
+    end: DrawingMarkupPoint
+    realLengthMeters: number
+  }
+}
+
+/**
+ * Optional derived summary for future polygon area reporting.
+ *
+ * Marks plus scale remain the source of truth; this summary is only a cached
+ * read model for review/export surfaces.
+ */
+export type DrawingMarkupAreaSummary = {
+  rawNormalizedArea?: number
+  areaM2?: number
+  areaPyeong?: number
+  calibrationId?: string
+  calculatedAt?: string
+}
+
+/**
+ * Future page-scoped mark group.
+ */
+export type DrawingMarkupPageGroup = {
+  pageNo: number
+  marks: DrawingMarkupMark[]
+  scale?: DrawingMarkupScale
+  areaSummary?: DrawingMarkupAreaSummary
+}
+
+/**
+ * Canonical JSON shapes accepted from markup_json.
+ *
+ * The legacy shape is still DrawingMarkupMark[]. Future multipage data may be
+ * stored as { pages: DrawingMarkupPageGroup[] } without breaking read paths.
+ */
+export type DrawingMarkupJson = DrawingMarkupMark[] | {
+  pages: DrawingMarkupPageGroup[]
+}
+
+export function normalizeDrawingMarkupPageNo(pageNo?: number | null): number {
+  return Math.max(1, Math.trunc(pageNo ?? 1))
+}
+
+export function normalizeDrawingMarkupPages(value: unknown): DrawingMarkupPageGroup[] {
+  if (Array.isArray(value)) {
+    return [{ pageNo: 1, marks: value as DrawingMarkupMark[] }]
+  }
+
+  if (!value || typeof value !== 'object') return []
+
+  const pages = (value as { pages?: unknown }).pages
+  if (!Array.isArray(pages)) return []
+
+  const normalizedPages: DrawingMarkupPageGroup[] = []
+
+  for (const page of pages) {
+    if (!page || typeof page !== 'object') continue
+
+    const pageValue = page as {
+      pageNo?: unknown
+      marks?: unknown
+      scale?: DrawingMarkupScale
+      areaSummary?: DrawingMarkupAreaSummary
+    }
+    const rawPageNo = typeof pageValue.pageNo === 'number' ? pageValue.pageNo : 1
+    const marks = Array.isArray(pageValue.marks) ? (pageValue.marks as DrawingMarkupMark[]) : []
+    const normalizedPage: DrawingMarkupPageGroup = {
+      pageNo: normalizeDrawingMarkupPageNo(rawPageNo),
+      marks,
+    }
+
+    if (pageValue.scale) {
+      normalizedPage.scale = pageValue.scale
+    }
+    if (pageValue.areaSummary) {
+      normalizedPage.areaSummary = pageValue.areaSummary
+    }
+
+    normalizedPages.push(normalizedPage)
+  }
+
+  return normalizedPages
+}
+
+export function normalizeDrawingMarkupMarks(value: unknown, pageNo = 1): DrawingMarkupMark[] {
+  if (Array.isArray(value)) return value as DrawingMarkupMark[]
+
+  const normalizedPageNo = normalizeDrawingMarkupPageNo(pageNo)
+  const page = normalizeDrawingMarkupPages(value).find(item => item.pageNo === normalizedPageNo)
+
+  return page?.marks ?? []
+}
