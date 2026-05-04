@@ -4,6 +4,12 @@ import { ROUTES, canAccessRoute } from '@/lib/routes'
 import { getSupabasePublicConfig } from '@/lib/supabase/config'
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
+  if (pathname.startsWith('/qa/')) {
+    return NextResponse.next()
+  }
+
   const { url, publishableKey } = getSupabasePublicConfig()
 
   let response = NextResponse.next({ request })
@@ -25,11 +31,6 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  const pathname = request.nextUrl.pathname
-
-  if (pathname.startsWith('/qa/')) {
-    return NextResponse.next()
-  }
 
   if ([ROUTES.login, ROUTES.register].some(route => pathname.startsWith(route))) {
     if (user) return NextResponse.redirect(new URL(ROUTES.home, request.url))
