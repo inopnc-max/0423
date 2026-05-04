@@ -12,12 +12,9 @@ import {
   CloudOff,
   MapPin,
   RefreshCw,
-  Search,
-  X,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { useSync } from '@/contexts/sync-context'
-import { useMenuSearch } from '@/hooks/useMenuSearch'
 import { useSelectedSite } from '@/contexts/selected-site-context'
 import { isPartner } from '@/lib/roles'
 import { ROUTES } from '@/lib/routes'
@@ -29,142 +26,6 @@ import { SiteCombobox as SharedSiteCombobox } from '@/components/site/SiteCombob
 import { SiteManagerHomeSummary } from '@/components/site-manager/SiteManagerAttendancePanel'
 import { useSiteManagerDashboard } from '@/hooks/site-manager/useSiteManagerDashboard'
 import { getSelectedWorkDate, setSelectedWorkDate } from '@/lib/ui-state'
-import type { SiteSummary } from '@/contexts/selected-site-context'
-
-function SiteCombobox({
-  sites,
-  selectedId,
-  onSelect,
-}: {
-  sites: SiteSummary[]
-  selectedId: string | null
-  onSelect: (id: string) => void
-}) {
-  const { query, setQuery, filteredSites } = useMenuSearch({ scope: 'site_select' })
-  const [open, setOpen] = useState(false)
-
-  const selected = sites.find(s => s.id === selectedId)
-
-  useEffect(() => {
-    if (!open) setQuery('')
-  }, [open, setQuery])
-
-  if (sites.length === 0) {
-    return (
-      <div className="rounded-2xl bg-[var(--color-accent-light)] p-4 text-center text-sm text-[var(--color-text-secondary)]">
-        접근 가능한 현장이 없습니다.
-      </div>
-    )
-  }
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="flex w-full items-center gap-3 rounded-2xl border-2 border-[var(--color-border)] bg-white px-4 py-3 text-left transition hover:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-      >
-        <Search className="h-5 w-5 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
-        {selected ? (
-          <span className="min-w-0 flex-1">
-            <span className="block truncate font-semibold text-[var(--color-text)]">{selected.name}</span>
-            <span className="block truncate text-sm text-[var(--color-text-secondary)]">
-              {selected.company}
-              {selected.affiliation ? ` · ${selected.affiliation}` : ''}
-            </span>
-          </span>
-        ) : (
-          <span className="flex-1 text-[var(--color-text-tertiary)]">현장 검색...</span>
-        )}
-        <ChevronRight
-          className={`h-5 w-5 shrink-0 text-[var(--color-text-tertiary)] transition-transform ${open ? 'rotate-90' : ''}`}
-          strokeWidth={1.9}
-        />
-      </button>
-
-      {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-64 overflow-hidden rounded-2xl border-2 border-[var(--color-border)] bg-white shadow-lg">
-          <div className="sticky top-0 bg-white p-2">
-            <div className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2">
-              <Search className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
-              <input
-                autoFocus
-                type="text"
-                placeholder="현장명, 원청사, 소속, 주소 검색..."
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text)] placeholder-[var(--color-text-tertiary)] outline-none"
-              />
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => setQuery('')}
-                  className="rounded-full p-0.5 text-[var(--color-text-tertiary)] hover:bg-[var(--color-border)]"
-                >
-                  <X className="h-4 w-4" strokeWidth={1.9} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="max-h-48 overflow-y-auto">
-            {filteredSites.length === 0 ? (
-              <div className="p-4 text-center text-sm text-[var(--color-text-secondary)]">
-                검색 결과가 없습니다.
-              </div>
-            ) : (
-              filteredSites.map(site => (
-                <button
-                  key={site.id}
-                  type="button"
-                  onClick={() => {
-                    onSelect(site.id)
-                    setOpen(false)
-                    setQuery('')
-                  }}
-                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-[var(--color-accent-light)]"
-                >
-                  <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" strokeWidth={1.9} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate font-semibold text-[var(--color-text)]">{site.name}</span>
-                      <SiteStatusBadge status={site.status} />
-                    </div>
-                    <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                      {site.company}
-                      {site.affiliation ? ` · ${site.affiliation}` : ''}
-                    </div>
-                    {site.address && (
-                      <div className="mt-1 flex items-start gap-1 text-xs text-[var(--color-text-tertiary)]">
-                        <MapPin className="mt-0.5 h-3 w-3 shrink-0" strokeWidth={1.9} />
-                        <span className="line-clamp-1">{site.address}</span>
-                      </div>
-                    )}
-                  </div>
-                  {site.id === selectedId && (
-                    <span className="shrink-0 rounded-full bg-[var(--color-accent)] px-2 py-0.5 text-xs font-semibold text-white">
-                      선택됨
-                    </span>
-                  )}
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {open && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => {
-            setOpen(false)
-            setQuery('')
-          }}
-        />
-      )}
-    </div>
-  )
-}
 
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth()
