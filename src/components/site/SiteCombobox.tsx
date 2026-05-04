@@ -75,7 +75,7 @@ export function SiteCombobox({
         <div className="mb-2 flex items-center justify-between gap-2">
           <span className="text-sm font-semibold text-[var(--color-navy)]">{label}</span>
           {selected && (
-            <span className="rounded-full bg-[var(--color-accent-light)] px-2.5 py-1 text-xs font-semibold text-[var(--color-accent)]">
+            <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-xs font-bold text-[#3b4b7c]">
               {selectionReason}
             </span>
           )}
