@@ -130,8 +130,7 @@ export default function RegisterPage() {
                   name="email"
                   value={form.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg
-                             focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  className="w-full px-4 py-3 border bg-white rounded-lg border-[var(--form-border)] text-[var(--color-text-main)] focus:outline-none focus:border-[var(--form-focus-border)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
                   placeholder="email@example.com"
                   disabled={loading}
                 />
@@ -147,8 +146,7 @@ export default function RegisterPage() {
                     name="password"
                     value={form.password}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg
-                               focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                    className="w-full px-4 py-3 border bg-white rounded-lg border-[var(--form-border)] text-[var(--color-text-main)] focus:outline-none focus:border-[var(--form-focus-border)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
                     placeholder="6자 이상"
                     disabled={loading}
                   />
@@ -164,8 +162,7 @@ export default function RegisterPage() {
                   name="confirmPassword"
                   value={form.confirmPassword}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg
-                             focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  className="w-full px-4 py-3 border bg-white rounded-lg border-[var(--form-border)] text-[var(--color-text-main)] focus:outline-none focus:border-[var(--form-focus-border)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
                   placeholder="비밀번호 재입력"
                   disabled={loading}
                 />
@@ -180,8 +177,7 @@ export default function RegisterPage() {
                   name="name"
                   value={form.name}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg
-                             focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  className="w-full px-4 py-3 border bg-white rounded-lg border-[var(--form-border)] text-[var(--color-text-main)] focus:outline-none focus:border-[var(--form-focus-border)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
                   placeholder="이름"
                   disabled={loading}
                 />
@@ -196,8 +192,7 @@ export default function RegisterPage() {
                   name="company"
                   value={form.company}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg
-                             focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  className="w-full px-4 py-3 border bg-white rounded-lg border-[var(--form-border)] text-[var(--color-text-main)] focus:outline-none focus:border-[var(--form-focus-border)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
                   placeholder="(예: (주)이노피앤씨)"
                   disabled={loading}
                 />
@@ -212,8 +207,7 @@ export default function RegisterPage() {
                   name="affiliation"
                   value={form.affiliation}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg
-                             focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  className="w-full px-4 py-3 border bg-white rounded-lg border-[var(--form-border)] text-[var(--color-text-main)] focus:outline-none focus:border-[var(--form-focus-border)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
                   placeholder="팀장, 매니저 등"
                   disabled={loading}
                 />
@@ -228,8 +222,7 @@ export default function RegisterPage() {
                   name="title"
                   value={form.title}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg
-                             focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  className="w-full px-4 py-3 border bg-white rounded-lg border-[var(--form-border)] text-[var(--color-text-main)] focus:outline-none focus:border-[var(--form-focus-border)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
                   placeholder="현장소장, 대리 등"
                   disabled={loading}
                 />
@@ -244,8 +237,7 @@ export default function RegisterPage() {
                   name="phone"
                   value={form.phone}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg
-                             focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  className="w-full px-4 py-3 border bg-white rounded-lg border-[var(--form-border)] text-[var(--color-text-main)] focus:outline-none focus:border-[var(--form-focus-border)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
                   placeholder="010-0000-0000"
                   disabled={loading}
                 />

@@ -2332,6 +2332,19 @@ select option {
   box-shadow: 0 0 0 3px var(--color-role-primary-ring, var(--color-primary-ring, rgba(67, 81, 135, 0.22)));
 }
 
+/* ─── Unified Input Focus Style (Auth Pages) ─── */
+/* Login/Register pages should use these focus classes for consistent UX */
+.ui-input-focus {
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.ui-input-focus:focus,
+.ui-input-focus:focus-visible {
+  outline: none;
+  border-color: var(--form-focus-border);
+  box-shadow: 0 0 0 2px var(--form-focus-ring);
+}
+
 /* .ui-field-box.is-active — 역할색 border + inset ring 안전 보완 */
 .ui-app-shell .ui-field-box.is-active {
   background: var(--active-role-color-soft);

@@ -74,6 +74,16 @@
   --form-select-option-text: #23262f;
   --form-dashed-border: #d3dae5;
 
+  /* Input focus tokens (auth pages unified) */
+  --form-focus-border: var(--form-border-focus);
+  --form-focus-ring: var(--color-accent-ring);
+
+  /* Role-specific focus ring colors */
+  --role-worker-focus-ring: rgba(70, 85, 140, 0.24);
+  --role-site-manager-focus-ring: rgba(36, 180, 126, 0.22);
+  --role-partner-focus-ring: rgba(217, 119, 6, 0.22);
+  --role-admin-focus-ring: rgba(124, 58, 237, 0.22);
+
   /* Semantic Status */
   --color-success: #2f9a72;
   --color-warning: #cb8b2d;
@@ -286,6 +296,7 @@
 .ui-role-worker {
   --color-role-primary: var(--role-worker-primary);
   --color-role-primary-soft: var(--role-worker-primary-soft);
+  --color-role-primary-ring: var(--role-worker-focus-ring);
   --color-primary-strong: var(--role-worker-primary);
   --color-primary-soft: var(--role-worker-primary-soft);
   --color-navy: var(--role-worker-primary);
@@ -297,6 +308,7 @@
 .ui-role-site-manager {
   --color-role-primary: var(--role-site-manager-primary);
   --color-role-primary-soft: var(--role-site-manager-primary-soft);
+  --color-role-primary-ring: var(--role-site-manager-focus-ring);
   --color-primary-strong: var(--role-site-manager-primary);
   --color-primary-soft: var(--role-site-manager-primary-soft);
   --color-navy: var(--role-site-manager-primary);
@@ -308,6 +320,7 @@
 .ui-role-partner {
   --color-role-primary: var(--role-partner-primary);
   --color-role-primary-soft: var(--role-partner-primary-soft);
+  --color-role-primary-ring: var(--role-partner-focus-ring);
   --color-primary-strong: var(--role-partner-primary);
   --color-primary-soft: var(--role-partner-primary-soft);
   --color-navy: var(--role-partner-primary);
@@ -319,6 +332,7 @@
 .ui-role-admin {
   --color-role-primary: var(--role-admin-primary);
   --color-role-primary-soft: var(--role-admin-primary-soft);
+  --color-role-primary-ring: var(--role-admin-focus-ring);
   --color-primary-strong: var(--role-admin-primary);
   --color-primary-soft: var(--role-admin-primary-soft);
   --color-navy: var(--role-admin-primary);
@@ -330,6 +344,7 @@
 .ui-role-production-manager {
   --color-role-primary: var(--role-production-manager-primary);
   --color-role-primary-soft: var(--role-production-manager-primary-soft);
+  --color-role-primary-ring: rgba(109, 91, 208, 0.22);
   --color-primary-strong: var(--role-production-manager-primary);
   --color-primary-soft: var(--role-production-manager-primary-soft);
   --color-navy: var(--role-production-manager-primary);
